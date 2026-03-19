@@ -69,13 +69,19 @@ Every SmartModel workbook uses a consistent tab color system:
 
 **R- sheets** (prefix "R-"): Data import layer. One R- sheet per import declaration. Populated by the add-in from connected data sources, or manually by the user. Template formula sheets reference R- sheets dynamically via Excel formulas. The agent does not need to declare wiring between templates — connections are discerned at runtime by reading the formula layer.
 
-**Settings tab**: Machine-readable key-value configuration. Four columns: `id`, `setting`, `value`, `description`. Add-in owned, never user-edited directly.
+**Settings tab**: Machine-readable key-value configuration. Column A is reserved/empty; columns B–E contain `id`, `setting`, `value`, `description`. Add-in owned, never user-edited directly.
 
 ---
 
 ## Settings Tab Structure
 
 The Settings tab stores model configuration as a key-value table. The agent reads this tab to understand the model's identity and operational parameters.
+
+**Column layout**: Column A is reserved (narrow, empty). Data starts at column B:
+- Column B: `id` — dot-notation identifier (monospace font), e.g. `settings.smartmodelSpec`
+- Column C: `setting` — human-readable label
+- Column D: `value` — the stored value
+- Column E: `description` — explanatory note
 
 Required settings fields:
 
