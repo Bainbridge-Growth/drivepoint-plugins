@@ -7,7 +7,7 @@ allowed-tools: Read, Grep, Glob
 
 # SmartModel Protocol Skill — v6.0
 **Issuer**: Drivepoint (drivepoint.io)
-**Hosted at**: `https://raw.githubusercontent.com/Bainbridge-Growth/drivepoint-smartmodel-protocol/main/protocol/v6.0/smartmodel-skill.md`
+**Hosted at**: `https://raw.githubusercontent.com/Bainbridge-Growth/drivepoint-smartmodel-plugin/main/protocol/v6.0/smartmodel-spec.md`
 **Loaded by**: Drivepoint Excel add-in on workbook open
 **Purpose**: Teach any AI agent the SmartModel grammar so it can read, navigate, assist with, and populate Drivepoint SmartModel workbooks
 
@@ -28,7 +28,7 @@ A SmartModel xlsx is a standard Excel zip archive. The file's job is to be a wel
 **What's in the file:**
 
 | Component | Purpose |
-|-----------|---------|
+|-----------|--------|
 | Settings tab | Model identity, protocol version, configuration |
 | Index tab | Template registry — lists all templates and their sheets |
 | Schedule sheets (yellow) | Primary financial modeling sheets |
@@ -39,7 +39,7 @@ A SmartModel xlsx is a standard Excel zip archive. The file's job is to be a wel
 **What's on the server** (fetched by the add-in via Drivepoint API):
 
 | Component | Purpose |
-|-----------|---------|
+|-----------|--------|
 | Protocol skill | Universal SmartModel grammar (this document) |
 | Template skills | Template-specific instructions (one per template) |
 | Import declarations | Data source definitions for each template's R- sheets |
@@ -54,7 +54,7 @@ The WebExtension is the only custom content injected into the xlsx zip structure
 Every SmartModel workbook uses a consistent tab color system:
 
 | Tab Color   | Sheet Type  | Purpose |
-|-------------|-------------|---------|
+|-------------|-------------|--------|
 | White       | Index       | Table of contents — first tab users see |
 | Yellow      | Schedule    | Primary financial schedule sheets (forecasting, planning) |
 | Blue        | Report      | Output reports and summaries |
@@ -86,7 +86,7 @@ The Settings tab stores model configuration as a key-value table. The agent read
 Required settings fields:
 
 | ID | Setting | Value |
-|----|---------|-------|
+|----|---------|------|
 | `settings.smartmodelSpec` | Protocol Version | `6.0` |
 | `settings.modelVersion` | Model Version | semver (e.g., `1.0.0`) |
 | `settings.modelName` | Model Name | Human-readable string |
@@ -243,7 +243,7 @@ Actual-period cells and all Key Result cells remain white background, black text
 The identifier system is how the add-in and agent address specific data points. The conventions are strict:
 
 | Prefix | Usage | Example |
-|--------|-------|---------|
+|--------|-------|--------|
 | `metadata___` | Metadata fields (triple underscore) | `metadata___name` |
 | `settings___` | Settings fields (triple underscore, always plural) | `settings___fy1_end_date` |
 | `dim_` | Dimension registry entries | `dim_sku_1` |
@@ -326,7 +326,7 @@ The Index tab contains a structured template manifest — a machine-readable tab
 The manifest is a table in the Index tab with the following columns:
 
 | Column | Header | Content |
-|--------|--------|---------|
+|--------|--------|--------|
 | A | Template ID | Machine-readable identifier (e.g., `dtc-revenue`) |
 | B | Version | Semver (e.g., `1.0.0`) |
 | C | Sheets | Comma-separated list of owned sheet names |
