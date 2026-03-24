@@ -363,38 +363,6 @@ Each schedule sheet still declares `metadata___template_id` in its metadata bloc
 
 ---
 
-## Converting an Existing Workbook to SmartModel
-
-An existing Excel financial model can be converted to SmartModel v6.0 without rewriting its formulas or restructuring its layout. The conversion adds the protocol's machine-readable layer on top of the customer's existing content.
-
-### What the Conversion Adds
-
-1. **Settings tab** — model identity and `settings.smartmodelSpec = "6.0"` detection gate
-2. **Index tab** — template manifest listing all templates and their sheets
-3. **Header block** (rows 1–8) inserted at the top of each schedule sheet
-4. **Metadata block** (rows 9–15) — `metadata___template_id`, version, grain
-5. **Storage markers** in column A — classifying every data row as Key Driver, Key Result, or visual-only
-6. **Identifiers** in column B — machine-readable row names in monospace font
-7. **Tab colors** and **WebExtension** for add-in compatibility
-
-### Conversion Principles
-
-1. **Preserve, don't replace.** The customer's model is the model. SmartModel adds a layer on top.
-2. **Identifiers describe what's already there.** Derived from the customer's row labels, not imposed from templates.
-3. **One template per logical unit.** Each sheet or group of related sheets becomes one template.
-4. **Confirm before applying.** The agent proposes template boundaries; the user approves.
-
-### Process
-
-1. **Analyze** — inventory sheets, identify date axis, classify rows, map data flow
-2. **Infrastructure** — create Settings + Index tabs, rename data sheets with "R - " prefix
-3. **Convert sheets** — insert header block, add metadata/markers/identifiers, apply formatting
-4. **Validate** — verify formulas, cross-sheet references, protocol compliance
-
-For the full conversion skill with detailed instructions, see the `convert-to-smartmodel` template in the drivepoint-smartmodel-templates repository.
-
----
-
 ## Quick Reference — Reading a Sheet Cold
 
 When you open an unfamiliar SmartModel schedule sheet and need to orient quickly:

@@ -15,7 +15,6 @@ When installed, this plugin gives Claude the ability to:
 - Read and interpret machine-readable identifiers in column B
 - Understand the date spine, period types, metadata block, settings block, and data sections
 - Consult the imports system to know what external data the model needs
-- Convert existing customer Excel models to SmartModel format while preserving their structure and formulas
 
 ---
 
