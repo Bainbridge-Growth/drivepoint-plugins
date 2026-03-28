@@ -21,6 +21,42 @@ Teaches any Claude session the SmartModel Protocol v6.0 grammar — the AI-reada
 ## Usage
 Once installed, the `smartmodel-protocol` skill loads automatically when working with a SmartModel workbook. Can also invoke explicitly: `/skill smartmodel-protocol`
 
+## SmartModel Tools
+
+The `smartmodel-tools` skill exposes five utility tools for working with SmartModel workbooks via the Raptor service API:
+
+| Tool | Description |
+|------|-------------|
+| `generate_smartmodel` | Create a new SmartModel workbook from a template configuration |
+| `validate_smartmodel` | Run v6 protocol compliance checks on an existing workbook |
+| `upgrade_smartmodel` | Upgrade a v5 workbook to v6 protocol format |
+| `convert_to_smartmodel` | Convert a plain xlsx file into SmartModel format |
+| `list_smartmodel_templates` | List available templates in the catalog |
+
+Invoke with `/skill smartmodel-tools` or use tools directly in a Claude session.
+
+### Authentication Setup
+
+SmartModel tools authenticate against the Raptor service using a **scoped API key** that is only valid for `/api/v1/smartmodel/*` routes. Configure the token in the Raptor service settings:
+
+```json
+{
+  "service": {
+    "smartmodel_access_token": "<your-scoped-token>"
+  }
+}
+```
+
+The scoped token is separate from the primary `service.access_token` and cannot access other Raptor service routes. The primary access token continues to work for all routes, including SmartModel.
+
+The bearer token is resolved from the plugin's authenticated session and is not visible to end users.
+
+### group_id Resolution
+
+The `group_id` required by SmartModel operations is resolved from the authenticated user's company profile via the `sharepoint_site_id` field. Callers do not need to supply it explicitly — it is injected by the plugin's server-side component based on the tenant context.
+
+> **Note**: The `group_id` resolution approach is subject to change. See the TODO in `skills/smartmodel-tools/SKILL.md` for details.
+
 ## Plugin Structure
 ```
 drivepoint-smartmodel-plugin/
@@ -33,6 +69,8 @@ drivepoint-smartmodel-plugin/
   skills/
     smartmodel-protocol/
       SKILL.md           ← protocol grammar (plugin entry point)
+    smartmodel-tools/
+      SKILL.md           ← SmartModel utility tool definitions
   .mcp.json              ← MCP stub (ready for future server integration)
   README.md
 ```
