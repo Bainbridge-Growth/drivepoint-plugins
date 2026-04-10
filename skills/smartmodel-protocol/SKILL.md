@@ -377,3 +377,11 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 8. **Data sections** → What does column A say? If `•⚡ Key Driver`, it's user input. If `  ⚡ Key Result`, it's calculated.
 9. **Column B** → What is the machine identifier for this specific row?
 10. **R- sheets** → What real data is imported and feeding this model?
+
+---
+
+## Related Skills
+
+| Skill | Path | Purpose |
+|-------|------|---------|
+| Build Schedule | `builders/build-schedule.md` | Construct a new v6.0-compliant schedule sheet from scratch when no pre-built template exists |
