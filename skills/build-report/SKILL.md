@@ -54,19 +54,26 @@ Call `read_smartmodel_date_spine` on the consolidation sheet → confirm the mos
 
 ## Phase 3 — Pull Data from Model
 
-Call `read_smartmodel_data_section` on relevant sheets:
+**If a prior analysis skill ran this session** (e.g., `/variance_analysis`, `/margin_analysis`), reuse the data and findings already gathered. Do not re-read sheets that were already read — skip directly to the data points you still need.
 
-| Data Point | Sheet | What to look for |
-|-----------|-------|-----------------|
-| Revenue by channel | DTC, AMZN, Wholesale | Revenue identifiers |
-| Total revenue | M - Monthly consolidation | Revenue rollup row |
-| COGS | Product sheet or consolidation | COGS identifiers |
-| Gross profit / margin % | Consolidation or derived | Gross profit row |
-| Opex by category | Opex sheet | Section headers |
-| EBITDA / net income | Consolidation | Bottom of P&L |
-| Plan / forecast comparison | Same rows, Forecast columns | For the same period |
+**Step 3.1 — Read the relevant sheet(s) — one call per sheet**
+Determine which sheet(s) to read based on the report scope from Phase 1:
 
-Always pull: **Actual for the period**, **Plan/Forecast for the same period**, and **Prior period Actual** for trend context.
+- **Full P&L report** (Monthly Close, Board Report, Investor Update): Call `read_smartmodel_data_section` on the consolidation sheet (M - Monthly).
+- **Channel-specific report** (e.g., DTC performance, Amazon review): Call `read_smartmodel_data_section` on that channel's schedule sheet directly.
+- **Department report** (e.g., marketing spend, headcount): Call `read_smartmodel_data_section` on the relevant schedule sheet (Opex, Payroll, etc.).
+- **Channel breakdown needed**: Only after reading the primary sheet, read additional channel sheets if the report requires a breakdown across channels.
+
+Read the minimum number of sheets needed. One `read_smartmodel_data_section` call per sheet — never call `read_range` cell-by-cell to assemble data that a single data section read would return.
+
+**Step 3.3 — Note the cell references**
+As you read each sheet, record the **sheet name, row number, and column letters** for the Actual period, Plan/Forecast period, and Prior Month period. You will need these to construct formulas in Phase 4. Build a reference map before writing anything:
+
+```
+{ line_item: "Total Revenue", sheet: "M - Monthly", row: 42, actual_col: "K", plan_col: "K", prior_col: "J" }
+```
+
+Do not proceed to Phase 4 without this map.
 
 ---
 
@@ -81,44 +88,37 @@ Call `write_range` to populate:
 - Row 2: "Prepared: [today's date]" + "Confidential" (gray italic)
 
 **Step 4.3 — Write P&L summary table**
-Call `write_range` to populate the core table with headers and labels. Call `insert_formula` to reference the source data cells from schedule sheets — do not hardcode values. Table structure:
+Using the reference map from Step 3.3, build the entire table in as few tool calls as possible:
 
-```
-| | Actual | Plan | Var ($) | Var (%) | Prior Month |
-| Revenue | =formula | =formula | =formula | =formula | =formula |
-| COGS | | | | | |
-| Gross Profit | | | | | |
-| Gross Margin % | | | | | |
-| Opex | | | | | |
-| EBITDA | | | | | |
-```
+1. Call `write_range` once to write all row labels and column headers:
+   ```
+   | | Actual | Plan | Var ($) | Var (%) | Prior Month |
+   | Revenue | | | | | |
+   | COGS | | | | | |
+   | Gross Profit | | | | | |
+   | Gross Margin % | | | | | |
+   | Opex | | | | | |
+   | EBITDA | | | | | |
+   ```
 
-**Step 4.4 — Write channel revenue breakdown**
-Call `write_range` for a channel breakdown table. Call `insert_formula` to reference each channel sheet's revenue row.
+2. Call `insert_formula` for each row's Actual and Plan cells, referencing the consolidation sheet using the reference map (e.g., `='M - Monthly'!K42` for Revenue Actual). Then add Var ($) as `=B4-C4`, Var (%) as `=IF(C4<>0,(B4-C4)/ABS(C4),"N/A")`, and Prior Month referencing the prior column.
 
-**Step 4.5 — Key metrics table (if data available)**
+   Batch formula writes by row — write all 5 formulas for a line item before moving to the next row.
 
-```
-| Metric | Actual | Plan | Trend |
-| Total Orders | | | |
-| AOV | | | |
-| New Customers | | | |
-| Gross Margin % | | | |
-```
+**Step 4.4 — Write channel revenue breakdown (if needed)**
+Only if the report type requires it. Call `write_range` once for the full channel table labels, then `insert_formula` for each channel's revenue reference.
 
-**Step 4.6 — Apply formatting**
-Call `format_range` to apply:
-- Currency format to $ rows
-- Percentage format to margin/variance % rows
-- Bold to header rows and total rows
-- Light gray background to alternating data rows for readability
+**Step 4.5 — Apply formatting (one pass)**
+Call `format_range` once per format type — not per cell:
+- Currency format: select the entire data range for $ rows
+- Percentage format: select all margin/variance % rows
+- Bold: header row and total rows
+- Call `resize_columns` to fit column widths
 
-Call `resize_columns` to fit column widths to content.
-
-**Step 4.7 — Add chart (optional)**
+**Step 4.6 — Add chart (optional)**
 If the user wants a visual: call `create_chart` with type ColumnClustered (revenue by channel) or Line (trend over trailing 6 months). Position below the tables.
 
-**Step 4.8 — Open the new report tab**
+**Step 4.7 — Open the new report tab**
 Call `activate_sheet` with the new report tab's name to bring it into focus for the user.
 
 ---
