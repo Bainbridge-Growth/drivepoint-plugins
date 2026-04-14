@@ -380,6 +380,49 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 
 ---
 
+## Error Handling Protocol
+
+All skills that depend on the SmartModel Protocol inherit these rules. Skill-specific fallbacks (e.g., cohort analysis Path C) supplement but do not replace them.
+
+### Rule 1 — Tool call fails
+
+If any tool call returns an error, **stop and report it**. Do not guess what the data would have been, do not silently skip the step, and do not retry the same call without telling the user.
+
+State clearly:
+- What tool was called and what data you were trying to get
+- The error returned
+- What this means for the current analysis (can you continue without it, or is it blocking?)
+
+### Rule 2 — Required data is missing or empty
+
+Distinguish between **central** and **peripheral** data:
+
+- **Central** (the analysis cannot proceed without it): Stop. Tell the user what data is missing, which sheet or R- sheet it should live in, and how to populate it. Do not produce a partial analysis that omits the main subject.
+  - Examples: no revenue data for variance analysis, no cohort data for cohort analysis, no inventory data for inventory analysis
+- **Peripheral** (the analysis can proceed but a secondary metric is unavailable): Note the gap explicitly, continue with available data, and flag which sections of the output are affected.
+  - Examples: no marketing spend when computing gross margin (contribution margin section is skipped), no prior-year data for trend context
+
+When in doubt, treat it as central and stop rather than producing misleading output.
+
+### Rule 3 — Write fails mid-construction
+
+If a write operation (`write_range`, `insert_formula`, `create_sheet`, `format_range`) fails during sheet construction:
+
+1. **Stop writing immediately** — do not continue to the next step
+2. Report what was successfully written and what was not
+3. Do not attempt to undo or delete partial work — the user may want to keep it
+4. Ask the user: "The [tool] call failed at [step]. The sheet is partially built through [last successful step]. Would you like me to retry the failed step, or would you prefer to clean up manually?"
+
+### Rule 4 — Required sheet doesn't exist
+
+If a skill expects a sheet (by name or template ID) and it doesn't exist:
+
+1. Check if the data is available on an alternative sheet (e.g., channel-level data may be on the consolidation sheet instead of a dedicated channel sheet)
+2. If an alternative exists, use it and note the substitution
+3. If no alternative exists, stop and tell the user: "This analysis requires [sheet name / template type] which is not present in the workbook. The model has these sheets: [list]. Would you like to proceed with a different sheet, or do you need to add this template first?"
+
+---
+
 ## Related Skills
 
 ### Builders
