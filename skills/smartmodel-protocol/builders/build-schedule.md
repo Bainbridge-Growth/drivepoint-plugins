@@ -128,6 +128,9 @@ If data was imported in Phase 1, link the R- sheet data into the schedule's Key 
 **Step 10 — Register in Index tab**
 Call `read_smartmodel_index` to read the current manifest, then call `write_range` to add a row: Template ID, version, sheet name, skill file reference, imports file reference (if applicable).
 
+**Step 11 — Open the new sheet**
+Call `activate_sheet` with the new sheet's name to bring it into focus for the user.
+
 ---
 
 ## Phase 3 — Self-Audit

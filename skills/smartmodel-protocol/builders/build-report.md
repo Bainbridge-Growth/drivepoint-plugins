@@ -119,6 +119,9 @@ Call `resize_columns` to fit column widths to content.
 **Step 4.7 — Add chart (optional)**
 If the user wants a visual: call `create_chart` with type ColumnClustered (revenue by channel) or Line (trend over trailing 6 months). Position below the tables.
 
+**Step 4.8 — Open the new report tab**
+Call `activate_sheet` with the new report tab's name to bring it into focus for the user.
+
 ---
 
 ## Phase 5 — Write the Narrative

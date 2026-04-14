@@ -96,6 +96,7 @@ Default recommendation: **Approach A** unless the user explicitly wants to repla
 
 1. Call `create_sheet` with a descriptive name (e.g., "Scenario - Price Increase") and blue tab color
 2. Call `write_range` to set up the comparison framework:
+
    ```
    | Period | Base | Scenario | Delta $ | Delta % |
    ```
@@ -117,6 +118,11 @@ Call `bulk_write_smartmodel_drivers` with:
 ```
 
 Call this with `confirm: true` for batches >10 changes.
+
+### After any approach — open the result
+
+For Approach A: call `activate_sheet` with the new scenario tab name.
+For Approach B: call `activate_sheet` with the modified source sheet name so the user sees the updated drivers.
 
 ---
 
