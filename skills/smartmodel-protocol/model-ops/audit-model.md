@@ -82,8 +82,8 @@ Call `sheet_error_find` → scan all sheets for formula errors. Check for:
 - [ ] No #VALUE! errors
 
 Call `read_smartmodel_data_section` on schedule sheets and verify:
-- [ ] Key Result rows (marked `⚡ Key Result` in column A) contain formulas, not hardcoded values
-- [ ] Key Driver rows (marked `⚡ Key Driver`) contain user-entered values or import formulas
+- [ ] Key Result rows (marked `  ⚡ Key Result` in column A) contain formulas, not hardcoded values
+- [ ] Key Driver rows (marked `•⚡ Key Driver` in column A) contain user-entered values or import formulas
 
 ### Check 6 — Cross-Sheet Consistency
 
