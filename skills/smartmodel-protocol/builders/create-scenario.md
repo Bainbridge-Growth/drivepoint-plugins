@@ -59,7 +59,7 @@ Call `read_smartmodel_date_spine` on the relevant sheet → identify which colum
 
 **Step 2.3 — Find the Key Driver rows**
 Call `read_smartmodel_data_section` on each affected sheet. For each variable being changed:
-1. Locate the Key Driver row (column A = `⚡ Key Driver`)
+1. Locate the Key Driver row (column A = `•⚡ Key Driver`)
 2. Confirm the current value for the affected periods via `read_range`
 3. Identify downstream Key Result rows that reference this driver
 
