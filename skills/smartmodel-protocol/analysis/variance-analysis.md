@@ -33,8 +33,23 @@ Call `read_smartmodel_date_spine` on the consolidation sheet (M - Monthly) or pr
 - Determine the comparison period (user-specified or default to most recent closed month)
 
 **Step 1.3 — Identify comparison basis**
-Ask or infer: Plan (original budget), Forecast (latest reforecast), Prior Year, or Prior Month.
+Infer from the user's request: Plan (original budget), Forecast (latest reforecast), Prior Year, or Prior Month.
 Default to **Actuals vs. Forecast** for the most recently closed month if not specified.
+
+**Step 1.4 — State the comparison basis explicitly**
+Before proceeding to Phase 2, output this line:
+
+```
+Comparison: [Month] Actuals vs. [Month] [Plan / Forecast / Prior Month / Prior Year]
+```
+
+Rules:
+- If the user specifies the basis ("vs. plan", "vs. last year"), use what they asked for.
+- If not specified, default to: Actuals for the most recently closed month vs. Forecast/Plan for that same month.
+- If the model has no retained plan/forecast column for the closed period (i.e., forecast was overwritten when actuals landed), default to **prior month** or **prior year** — whichever gives a more meaningful baseline — and state the choice: "This model doesn't retain a separate plan for closed months, so I'm comparing [month] actuals to [prior month / prior year] actuals."
+- Do not ask the user to choose. Pick the most useful basis, state it, and proceed. The user can redirect if they want something different.
+
+**Hard rule: never start Phase 2 without having stated the comparison basis in plain English.**
 
 ---
 
@@ -55,6 +70,26 @@ Use column B identifiers to locate rows. Do not rely on row numbers — they shi
 
 Pull both **Actual** and **Plan/Forecast** columns for the same period. If comparing to Prior Period, pull the preceding month's Actual columns.
 
+For forecast reasonableness (Phase 2.5), also pull the trailing 12 months of Actuals for each major P&L line.
+
+---
+
+## Phase 2.5 — Forecast Reasonableness Scan
+
+**Run this phase only when the comparison involves a forecast period. Skip for actuals-vs-prior-period or actuals-vs-prior-year comparisons.**
+
+For each major P&L line item (revenue by channel, total COGS, total opex), compare the forecasted value against the min and max of the trailing 12 months of Actuals gathered in Phase 2.
+
+Flag if any forecasted line item **exceeds the 12-month actual max by >20%**:
+> "The [month] forecast for [line item] ($X) is [Y]% above the highest actual month in the trailing 12 months ($Z in [month]). This is achievable but represents a level the business hasn't sustained before — execution risk is elevated."
+
+Flag if any forecasted line item is **below the 12-month actual min by >20%**:
+> "The [month] forecast for [line item] ($X) is [Y]% below the lowest actual month in the trailing 12 months ($Z in [month]). This may reflect a structural change or conservative planning — worth noting before interpreting the variance."
+
+Present flags as a brief **Forecast Notes** section before the variance analysis — not buried in the deep-dives. If no flags are triggered, skip this section entirely.
+
+This does not invalidate the forecast. There may be excellent reasons for ambitious numbers (new channel launch, confirmed PO, seasonal event). The check gives the user historical context to interpret the variance analysis that follows.
+
 ---
 
 ## Phase 3 — Compute Variances
@@ -66,7 +101,20 @@ Variance ($) = Actual − Plan
 Variance (%) = (Actual − Plan) / |Plan|
 ```
 
-**Sign convention**: Positive = favorable for revenue/margin lines. Positive = unfavorable for expense lines. Always label favorability explicitly.
+**Sign convention for revenue and margin lines**: Positive variance = favorable (beat plan). Always label favorability explicitly.
+
+**Sign convention for variable cost lines (COGS, fulfillment, platform fees)**: Evaluate on a **rate basis**, not absolute dollars. A cost that rises in lockstep with revenue is not a variance — it's the business model working.
+
+- If COGS as % of revenue **improved** (went down) vs. comparison period → **Favorable**
+- If COGS as % of revenue **worsened** (went up) vs. comparison period → **Unfavorable**
+- If COGS % is roughly flat but absolute COGS increased proportionally with revenue → **Neutral** — label as "Volume-driven"
+
+In the summary table, for variable cost lines show both absolute $ and % of revenue for both periods:
+```
+COGS  |  $753K (31.6% of rev)  |  $1,635K (35.6% of rev)  |  +$882K  |  ⚠️ Unfav (+4.0pp margin pressure)
+```
+
+The summary table and deep-dive must tell the same story. If the deep-dive concludes COGS growth is volume-driven, the summary table must not flag it as unfavorable.
 
 ### Materiality threshold
 
@@ -88,13 +136,12 @@ Report only on material variances. Do not list every line item.
 | Timing | Revenue recognized earlier/later than planned (wholesale ship dates, subscription renewals) |
 | New vs. existing | Split by acquisition vs. returning if cohort data available |
 
-**COGS variances:**
-| Driver | How to identify |
-|--------|----------------|
-| Input cost | Raw material or unit cost changes vs. plan |
-| Volume | More/fewer units sold |
-| Freight / fulfillment | Shipping cost per order vs. plan |
-| Product mix | Higher vs. lower margin SKU mix shift |
+**COGS variances** — always decompose into these three components before assigning favorability:
+| Driver | How to identify | Favorability |
+|--------|----------------|-------------|
+| Volume effect | More units sold × same cost per unit | Neutral — cost rising with revenue is expected |
+| Rate effect | Same units × higher cost per unit | Unfavorable — efficiency declined |
+| Mix effect | Shift toward higher/lower cost products or channels | Favorable or unfavorable depending on direction |
 
 **Opex variances:**
 | Driver | How to identify |
@@ -127,16 +174,29 @@ For wholesale with lumpy shipments: caveat that pacing may not be linear — che
 
 ## Phase 5 — Output
 
+### Criticality reordering (apply before presenting output)
+
+After computing all variances, reorder the deep-dives by business criticality — not dollar size:
+
+1. 🔴 **Critical** — Cash/liquidity risk: ending cash drops below 2 months of opex, or cash declines >50% period-over-period. Always surfaces as finding #1 regardless of dollar amount.
+2. 🔴 **Critical** — Revenue concentration risk: >50% of forecasted revenue depends on a single channel, customer, or event (e.g., one wholesale shipment). Flag in top 2 findings.
+3. 🟡 **Material** — Gross margin compression >3 percentage points vs. comparison period. Always top 3 — signals a structural shift, not just timing.
+4. 🟡 **Material** — All other material variances, ranked by absolute dollar impact.
+5. 🟢 **Watch** — Variances trending toward concern but not yet material.
+
+Add the severity tag (🔴 Critical / 🟡 Material / 🟢 Watch) to each deep-dive heading.
+
 ### Narrative output (default)
 
 Present in this order:
-1. **Headline**: One sentence — did we beat or miss, by how much, and the single biggest driver
-2. **Summary table**: Top-level P&L lines with Actual, Plan, Variance $, Variance %, favorability flag
-3. **Material variance deep-dives**: Driver decomposition for each material line
-4. **Channel-level detail**: Variance by channel if multi-channel data is present
-5. **Pacing section** (if mid-month): Run rate vs. plan by channel with status flags
-6. **Watch items**: Variances not yet material but trending toward concern
-7. **Recommended actions**: What should the operator do based on this analysis
+1. **Comparison basis**: Restate the comparison (from Step 1.4) so the reader knows what they're looking at
+2. **Forecast Notes** (if Phase 2.5 produced flags): Brief reasonableness callouts before the variance table
+3. **Headline**: One sentence — did we beat or miss, by how much, and the single biggest driver
+4. **Summary table**: Top-level P&L lines with Actual, Plan, Variance $, Variance %, favorability flag (variable cost lines include % of revenue for both periods)
+5. **Material variance deep-dives**: Ordered by criticality (🔴 → 🟡 → 🟢), with driver decomposition for each
+6. **Channel-level detail**: Variance by channel if multi-channel data is present
+7. **Pacing section** (if mid-month): Run rate vs. plan by channel with status flags
+8. **Recommended actions**: What should the operator do based on this analysis
 
 ### Excel output (if user requests)
 
