@@ -63,7 +63,8 @@ For each line item across all scenarios:
 
 ```
 Delta vs. Base ($) = Scenario Value − Base Case Value
-Delta vs. Base (%) = (Scenario Value − Base Case Value) / |Base Case Value|
+Delta vs. Base (%) = (Scenario Value − Base Case Value) / |Base Case Value|, only when |Base Case Value| is not near 0
+If Base Case Value = 0 (or extremely close to 0), show Delta vs. Base (%) as N/A and use Delta vs. Base ($) only
 ```
 
 For 3-way comparison, also compute:
