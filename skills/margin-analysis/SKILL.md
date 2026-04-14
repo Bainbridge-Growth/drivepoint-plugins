@@ -1,7 +1,6 @@
 ---
 name: margin-analysis
 description: Analyze gross margin, contribution margin, and COGS decomposition across channels and products. Use when a user asks about margins, profitability by channel, COGS breakdown, "why are margins declining?", "what's our most profitable channel?", "Amazon vs. DTC profitability", margin bridge, or unit economics. Also triggers on "gross profit", "contribution margin", "blended margin", "margin mix", or "channel profitability".
-user-invocable: true
 ---
 
 # Margin Analysis

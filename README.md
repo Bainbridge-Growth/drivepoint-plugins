@@ -25,17 +25,36 @@ Once installed, the `smartmodel-protocol` skill loads automatically when working
 ```
 drivepoint-smartmodel-plugin/
   .claude-plugin/
-    plugin.json          ← plugin manifest
-    marketplace.json     ← marketplace registry entry
+    plugin.json                      ← plugin manifest
+    marketplace.json                 ← marketplace registry entry
   protocol/
     v6.0/
-      smartmodel-spec.md ← canonical protocol specification
+      smartmodel-spec.md             ← canonical protocol specification
   skills/
-    smartmodel-protocol/
-      SKILL.md           ← protocol grammar (plugin entry point)
-  .mcp.json              ← MCP stub (ready for future server integration)
+    smartmodel-protocol/SKILL.md    ← protocol grammar (plugin entry point)
+    build-schedule/SKILL.md         ← Builders
+    build-report/SKILL.md
+    create-scenario/SKILL.md
+    variance-analysis/SKILL.md      ← Analysis
+    margin-analysis/SKILL.md
+    sku-rationalization/SKILL.md
+    cohort-analysis/SKILL.md
+    investor-readiness-analysis/SKILL.md
+    product-cost-analysis/SKILL.md
+    marketing-efficiency-analysis/SKILL.md
+    inventory-analysis/SKILL.md
+    trade-spend-analysis/SKILL.md
+    summarize-model/SKILL.md        ← Model Ops
+    interrogate-model/SKILL.md
+    audit-model/SKILL.md
+    clean-model/SKILL.md
+    optimize-model/SKILL.md
+    compare-scenarios/SKILL.md      ← Scenarios
+  .mcp.json                          ← MCP stub (ready for future server integration)
   README.md
 ```
+
+Each skill is a `<name>/SKILL.md` directory following the Claude plugin spec. The logical groupings (Builders, Analysis, Model Ops, Scenarios) are documented above but the actual directory structure is flat — all skills are direct children of `skills/`.
 
 ## The Protocol
 The canonical SmartModel Protocol v6.0 specification lives at `protocol/v6.0/smartmodel-spec.md`. The `SKILL.md` in `skills/smartmodel-protocol/` contains the same content, packaged as a Claude plugin skill entry point.

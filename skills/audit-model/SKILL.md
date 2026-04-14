@@ -1,7 +1,6 @@
 ---
 name: audit-model
 description: Perform structural integrity and data quality checks on a SmartModel workbook. Use when a user asks to "audit", "check", "validate", or "QA" their model, when something seems off ("numbers don't look right", "something is broken", "formulas are wrong"), or before sharing a model externally. Also triggers on "reconcile", "sanity check", "data integrity", "model health check", or "pre-flight check".
-user-invocable: true
 ---
 
 # Audit Model

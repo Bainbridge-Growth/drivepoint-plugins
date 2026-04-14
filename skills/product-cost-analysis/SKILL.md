@@ -1,7 +1,6 @@
 ---
 name: product-cost-analysis
 description: Decompose COGS into component-level unit economics — materials, manufacturing, packaging, freight, duties. Use when a user asks about product costs, unit economics, COGS breakdown, "what does it cost to make this?", "where are our costs going?", "landed cost per unit", or "cost per unit by SKU". Also triggers on "bill of materials", "unit cost", "COGS decomposition", "landed cost", or "cost structure".
-user-invocable: true
 ---
 
 # Product Cost Analysis

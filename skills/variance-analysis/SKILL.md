@@ -1,7 +1,6 @@
 ---
 name: variance-analysis
 description: Analyze performance vs. plan, forecast, or prior period — decomposing variances by driver (price, volume, mix, timing) and flagging material deviations. Use when a user asks to explain variances, compare actuals to plan/forecast, understand what's driving a miss or beat, check mid-month pacing, or asks "why did we miss?" / "what changed?" / "how are we tracking?" Also triggers on "budget vs. actual", "plan vs. actual", "pacing", "mid-month", or "variance report".
-user-invocable: true
 ---
 
 # Variance Analysis

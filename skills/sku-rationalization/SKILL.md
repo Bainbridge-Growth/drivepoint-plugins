@@ -1,7 +1,6 @@
 ---
 name: sku-rationalization
 description: Analyze product portfolio profitability and recommend which SKUs to invest in, maintain, or cut. Use when a user asks about SKU performance, "which products are profitable?", "what should we cut?", "SKU rationalization", "product portfolio analysis", "which SKUs are dragging margin?", or "where should we focus our product investment?" Also triggers on "product mix", "item profitability", or "portfolio review".
-user-invocable: true
 ---
 
 # SKU Rationalization

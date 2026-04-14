@@ -1,7 +1,6 @@
 ---
 name: investor-readiness-analysis
 description: Assess a SmartModel for fundraising and due diligence readiness — checking time coverage, assumption documentation, KPI completeness, and model consistency. Use when a user is preparing to fundraise, is in due diligence, asks "is this model investor-ready?", "what do investors want to see?", "prepare for due diligence", or "review for fundraise". Also triggers on "investor model", "due diligence", "Series A model", or "data room".
-user-invocable: true
 ---
 
 # Investor Readiness Analysis

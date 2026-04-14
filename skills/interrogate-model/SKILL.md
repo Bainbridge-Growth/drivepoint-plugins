@@ -1,7 +1,6 @@
 ---
 name: interrogate-model
 description: Answer ad-hoc questions about model data by tracing numbers back through formula dependencies and driver chains. Use when a user asks a specific question about their model — "where does that number come from?", "why is revenue $X?", "what's driving that line?", "explain this formula", or any specific data question. Also triggers on "trace this", "explain that number", "walk me through this", or "what's behind that figure?".
-user-invocable: true
 ---
 
 # Interrogate Model

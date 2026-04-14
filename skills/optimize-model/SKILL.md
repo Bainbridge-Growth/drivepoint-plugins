@@ -1,7 +1,6 @@
 ---
 name: optimize-model
 description: Optimize a SmartModel for performance, file size, and formula efficiency. Use when a user says the model is slow, "Excel is lagging", "the file is huge", "calculations take forever", or asks to "speed up the model", "optimize performance", or "reduce file size". Also triggers on "volatile formulas", "calculation mode", "slow spreadsheet", or "model performance".
-user-invocable: true
 ---
 
 # Optimize Model

@@ -1,7 +1,6 @@
 ---
 name: cohort-analysis
 description: Analyze customer retention curves and lifetime value (LTV) in a single consolidated pass. Use when a user asks about cohort retention, LTV, CAC payback period, "how long do customers stay?", "what's our LTV?", "are we retaining customers?", "LTV:CAC ratio", or "cohort performance". Also triggers on "retention analysis", "customer lifetime value", "churn", or "repeat purchase rate".
-user-invocable: true
 ---
 
 # Cohort Analysis

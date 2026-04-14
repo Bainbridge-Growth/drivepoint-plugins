@@ -1,7 +1,6 @@
 ---
 name: marketing-efficiency-analysis
 description: Analyze marketing spend efficiency — CAC, ROAS, blended vs. channel-level spend, and return on marketing investment. Use when a user asks about marketing performance, "what's our CAC?", "is our marketing efficient?", "ROAS by channel", "marketing spend analysis", "where should we cut/increase marketing?", or "how efficient is our acquisition spend?" Also triggers on "CAC", "ROAS", "marketing ROI", "ad spend efficiency", or "paid marketing performance".
-user-invocable: true
 ---
 
 # Marketing Efficiency Analysis

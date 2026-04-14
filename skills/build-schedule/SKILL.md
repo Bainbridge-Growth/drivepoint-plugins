@@ -1,7 +1,6 @@
 ---
 name: build-schedule
 description: Create or rebuild financial supporting schedules in a SmartModel workbook — revenue builds, COGS schedules, opex schedules, headcount plans, debt schedules, depreciation tables. Use when a user asks to "build a schedule", "create a revenue build", "make a COGS schedule", "build out the debt schedule", "build a headcount plan", or needs a detailed supporting schedule for any P&L area. Also triggers on "revenue build", "expense build", "payroll schedule", or "depreciation table".
-user-invocable: true
 ---
 
 # Build Schedule

@@ -1,7 +1,6 @@
 ---
 name: clean-model
 description: Fix structural issues, repair broken formulas, standardize formatting, and remove cruft from a SmartModel workbook. Use when a user asks to "clean up", "fix", "repair", or "tidy" their model, or after an audit reveals issues. Also triggers on "broken formulas", "fix the model", "standardize formatting", "remove errors", or "clean this up".
-user-invocable: true
 ---
 
 # Clean Model

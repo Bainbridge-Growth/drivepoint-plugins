@@ -2,7 +2,7 @@
 name: smartmodel-protocol
 description: Loads the SmartModel Protocol v6.0 grammar. Use when working with any Drivepoint SmartModel Excel workbook — reading structure, populating data, navigating sheets, rolling forward, or answering questions about financial model content.
 user-invocable: false
-allowed-tools: Read, Grep, Glob
+allowed-tools: Read Grep Glob
 ---
 
 # SmartModel Protocol Skill — v6.0
@@ -385,33 +385,33 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 ### Builders
 | Skill | Path | Purpose |
 |-------|------|---------|
-| Build Schedule | `builders/build-schedule.md` | Construct a new schedule sheet from scratch — data-first flow, any model version |
-| Build Report | `builders/build-report.md` | Create a blue report tab — board reports, monthly close, investor updates |
-| Create Scenario | `builders/create-scenario.md` | Build a named what-if scenario by adjusting Key Driver assumptions |
+| Build Schedule | `../../build-schedule/SKILL.md` | Construct a new schedule sheet from scratch — data-first flow, any model version |
+| Build Report | `../../build-report/SKILL.md` | Create a blue report tab — board reports, monthly close, investor updates |
+| Create Scenario | `../../create-scenario/SKILL.md` | Build a named what-if scenario by adjusting Key Driver assumptions |
 
 ### Analysis
 | Skill | Path | Purpose |
 |-------|------|---------|
-| Variance Analysis | `analysis/variance-analysis.md` | Actuals vs. plan/forecast with driver decomposition and mid-month pacing |
-| Margin Analysis | `analysis/margin-analysis.md` | Channel-aware gross and contribution margin decomposition |
-| SKU Rationalization | `analysis/sku-rationalization.md` | Rank product portfolio by contribution; flag SKUs to invest, maintain, or cut |
-| Cohort Analysis | `analysis/cohort-analysis.md` | Retention curves + LTV in one consolidated pass |
-| Investor Readiness | `analysis/investor-readiness-analysis.md` | Audit model for fundraise and due diligence gaps |
-| Product Cost Analysis | `analysis/product-cost-analysis.md` | COGS decomposition and per-unit economics by SKU |
-| Marketing Efficiency | `analysis/marketing-efficiency-analysis.md` | CAC, ROAS, blended vs. channel-level spend efficiency |
-| Inventory Analysis | `analysis/inventory-analysis.md` | Weeks of supply, stockout risk, dead stock, reorder timing |
-| Trade Spend Analysis | `analysis/trade-spend-analysis.md` | Promotional ROI, deduction rates, retailer-level P&L |
+| Variance Analysis | `../../variance-analysis/SKILL.md` | Actuals vs. plan/forecast with driver decomposition and mid-month pacing |
+| Margin Analysis | `../../margin-analysis/SKILL.md` | Channel-aware gross and contribution margin decomposition |
+| SKU Rationalization | `../../sku-rationalization/SKILL.md` | Rank product portfolio by contribution; flag SKUs to invest, maintain, or cut |
+| Cohort Analysis | `../../cohort-analysis/SKILL.md` | Retention curves + LTV in one consolidated pass |
+| Investor Readiness | `../../investor-readiness-analysis/SKILL.md` | Audit model for fundraise and due diligence gaps |
+| Product Cost Analysis | `../../product-cost-analysis/SKILL.md` | COGS decomposition and per-unit economics by SKU |
+| Marketing Efficiency | `../../marketing-efficiency-analysis/SKILL.md` | CAC, ROAS, blended vs. channel-level spend efficiency |
+| Inventory Analysis | `../../inventory-analysis/SKILL.md` | Weeks of supply, stockout risk, dead stock, reorder timing |
+| Trade Spend Analysis | `../../trade-spend-analysis/SKILL.md` | Promotional ROI, deduction rates, retailer-level P&L |
 
 ### Model Ops
 | Skill | Path | Purpose |
 |-------|------|---------|
-| Summarize Model | `model-ops/summarize-model.md` | Full workbook orientation — templates, data state, time range, health check |
-| Interrogate Model | `model-ops/interrogate-model.md` | Trace any number back through its formula and driver chain |
-| Audit Model | `model-ops/audit-model.md` | Structural integrity, formula errors, protocol compliance checklist |
-| Clean Model | `model-ops/clean-model.md` | Fix errors, restore protocol structure, standardize formatting |
-| Optimize Model | `model-ops/optimize-model.md` | Resolve slow calculation, phantom range bloat, volatile formulas |
+| Summarize Model | `../../summarize-model/SKILL.md` | Full workbook orientation — templates, data state, time range, health check |
+| Interrogate Model | `../../interrogate-model/SKILL.md` | Trace any number back through its formula and driver chain |
+| Audit Model | `../../audit-model/SKILL.md` | Structural integrity, formula errors, protocol compliance checklist |
+| Clean Model | `../../clean-model/SKILL.md` | Fix errors, restore protocol structure, standardize formatting |
+| Optimize Model | `../../optimize-model/SKILL.md` | Resolve slow calculation, phantom range bloat, volatile formulas |
 
 ### Scenarios
 | Skill | Path | Purpose |
 |-------|------|---------|
-| Compare Scenarios | `scenarios/compare-scenarios.md` | Side-by-side delta analysis across two or more scenarios or plans |
+| Compare Scenarios | `../../compare-scenarios/SKILL.md` | Side-by-side delta analysis across two or more scenarios or plans |

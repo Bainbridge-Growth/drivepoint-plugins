@@ -1,7 +1,6 @@
 ---
 name: create-scenario
 description: Create a named what-if scenario by adjusting Key Driver assumptions and computing the resulting financial impact. Use when a user asks to "model a scenario", "what if we...", "create a scenario", "model the impact of...", "what happens if we launch X", "what if we raise prices", or any hypothetical business question. Also triggers on "sensitivity analysis", "what-if", "scenario planning", "stress test", or "model a new assumption".
-user-invocable: true
 ---
 
 # Create Scenario

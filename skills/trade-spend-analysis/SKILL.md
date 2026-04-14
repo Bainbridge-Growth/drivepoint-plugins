@@ -1,7 +1,6 @@
 ---
 name: trade-spend-analysis
 description: Analyze retail trade spend — promotional effectiveness, deduction rates, accrual vs. actual, and retailer-level P&L. Use when a user asks about trade spend, "are our promotions working?", "what's our deduction rate?", "retailer profitability", "trade spend as % of revenue", or "promo ROI". Also triggers on "trade promotion", "retail deductions", "scan backs", "MCBs", "slotting fees", or "wholesale P&L".
-user-invocable: true
 ---
 
 # Trade Spend Analysis

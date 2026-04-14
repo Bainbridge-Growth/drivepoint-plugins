@@ -1,7 +1,6 @@
 ---
 name: build-report
 description: Build a structured financial report tab from SmartModel data — board reports, monthly close reviews, investor updates, department summaries. Use when a user asks to "build a report", "create a summary", "make a board report", "generate a monthly review", "put together an investor update", or wants model data packaged into a structured, shareable document. Also triggers on "executive summary", "board deck", "monthly close report", or "investor update".
-user-invocable: true
 ---
 
 # Build Report
