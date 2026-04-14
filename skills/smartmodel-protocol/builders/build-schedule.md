@@ -1,135 +1,166 @@
 ---
 name: build-schedule
-description: Guides construction of a new v6.0-compliant SmartModel schedule sheet from scratch. Use when no pre-built template exists and the user wants to build a custom schedule.
+description: Create or rebuild financial supporting schedules in a SmartModel workbook — revenue builds, COGS schedules, opex schedules, headcount plans, debt schedules, depreciation tables. Use when a user asks to "build a schedule", "create a revenue build", "make a COGS schedule", "build out the debt schedule", "build a headcount plan", or needs a detailed supporting schedule for any P&L area. Also triggers on "revenue build", "expense build", "payroll schedule", or "depreciation table".
 user-invocable: true
 ---
 
 # Build Schedule
 
-**Purpose**: Construct a new v6.0-compliant SmartModel schedule sheet from scratch.
+**Purpose**: Construct a new v6.0-compliant SmartModel schedule sheet from scratch — the calculation-layer worksheets that feed into the P&L, balance sheet, or cash flow statement.
 **Prerequisite**: The `smartmodel-protocol` skill must be loaded — this skill references the protocol grammar for all spec details rather than restating them.
 
 ---
 
-## Structural Patterns
+## Phase 1 — Discover Data and Confirm Structure
 
-Five patterns describe how financial math flows in a schedule. Match the user's request to one or more before designing the structure.
+Start by checking what data is available. Do not ask the user to describe the structure upfront — infer it from the data.
 
-**Volume × Rate** — A quantity multiplied by a per-unit amount. Dimensions are the countable things (SKUs, channels, orders); Key Drivers are volume and rate; Key Results are the derived amounts (e.g. revenue = units × price).
+### Step 1.1 — Greet and identify the schedule type
 
-**Headcount × Compensation** — A roster of roles multiplied by pay components, with step-function timing (hire dates, ramp periods). Key Drivers are headcount counts and comp rates per role; Key Results are total compensation by role and in aggregate.
+Ask: "What type of schedule are we building?" Accept free-form answers. Common types:
+- **Revenue schedule** (by channel: DTC, Amazon, Wholesale, TikTok)
+- **COGS / product cost schedule** (unit-level cost build)
+- **Operating expense schedule** (marketing, payroll, G&A)
+- **Headcount / payroll schedule** (employee-level compensation)
+- **Debt schedule** (draw, repay, interest)
+- **Depreciation / amortization schedule** (fixed assets)
 
-**Run Rate + Adjustments** — A base per-period amount with growth rates, step changes, or one-time overlays layered on top. Key Drivers are the base value and adjustment parameters; Key Results are the adjusted run rate per period.
+### Step 1.2 — Check for connected data
 
-**Balance Roll-Forward** — Beginning balance + additions − reductions = ending balance, chained across periods so each period's ending becomes the next period's beginning. Key Drivers are inflow/outflow amounts; Key Results are the ending balances.
+Call `list_import_definitions` to see if any data imports are available for this workbook.
 
-**Funnel / Conversion** — Top-of-funnel volume narrows through rate-based stages. Key Drivers are top-of-funnel inputs and conversion rates at each stage; Key Results are the output volume at each stage and the final converted quantity.
+- **If imports exist**: Offer to pull sample data. Call `build_custom_data_imports` with the relevant `importId` to load sample rows. Analyze the returned columns, grain, dimensions, and measures to infer structure.
+- **If no imports exist**: Ask: "Do you have a CSV or data file to upload, or would you like to describe the structure?" Accept either path.
 
----
+Do not gate this step on protocol version — it works regardless of model version.
 
-## Phase 1 — Infer and Confirm
+### Step 1.3 — Infer structure from data
 
-Read available context (user request, open workbook, existing sheets) and infer:
+From the data shape (or user description), infer:
 
 - **What is being modeled** — business process or metric category
-- **Structural pattern(s)** — match to one or more of the five patterns above
-- **Dimensions** — the entities being tracked (e.g. SKUs, channels, headcount roles)
-- **Measures** — the metrics tracked per dimension (e.g. units, revenue, spend)
-- **Input vs. calculated** — which measures are Key Drivers (user inputs) vs. Key Results (formulas)
-- **Sections** — logical groupings of data rows (e.g. "Orders & Revenue", "COGS")
-- **Time grain and range** — monthly/weekly, how many periods, where Actual ends and Forecast begins
-- **Cross-references** — which other sheets this schedule will reference or be referenced by
+- **Structural pattern** (internal, not user-facing):
+  - *Volume × Rate* — quantity × per-unit amount (e.g. orders × AOV = revenue)
+  - *Headcount × Compensation* — roster × pay components with hire-date step functions
+  - *Run Rate + Adjustments* — base amount with growth rates or one-time overlays
+  - *Balance Roll-Forward* — beginning + additions − reductions = ending, chained across periods
+  - *Funnel / Conversion* — top-of-funnel volume narrowing through rate-based stages
+- **Dimensions** — entities being tracked (SKUs, channels, headcount roles)
+- **Measures** — metrics per dimension (units, revenue, spend, headcount)
+- **Key Drivers vs. Key Results** — which rows are user inputs vs. formula-driven
+- **Sections** — logical groupings (e.g. "Orders & Revenue", "COGS")
+- **Time grain and range** — read from `read_smartmodel_date_spine` on an existing sheet; default to monthly
+- **Cross-references** — which other sheets this schedule feeds or is fed by
 
-Present a concise confirmation summary:
+### Step 1.4 — Present confirmation summary
 
 ```
 Schedule name:    [name]
-Pattern(s):       [matched patterns]
-Dimensions:       [list]
+Tab name:         [proposed tab name]
+Structural pattern: [inferred pattern]
+Dimensions:       [list, or "none" for single-entity schedules]
 Key Drivers:      [list]
 Key Results:      [list]
-Sections:         [list with brief description of each]
+Sections:         [list with brief description]
 Time range:       [start] → [end], Actual through [cutoff]
-Cross-references: [sheets this schedule links to/from, or "none"]
+Cross-references: [sheets this links to/from, or "none"]
+Data source:      [import used, CSV, or manual]
 ```
 
 **Hard gate**: Do not proceed to Phase 2 until the user explicitly approves.
 
-**Revision path**: If the user requests changes, update the relevant fields, re-present the full summary, and repeat the gate. Continue iterating until the user explicitly approves. Do not carry forward any detail the user has rejected in a prior iteration.
+**Revision path**: If the user requests changes, update the fields, re-present the full summary, and repeat the gate. Do not carry forward any detail the user rejected in a prior iteration.
 
 ---
 
 ## Phase 2 — Construct
 
-Build the sheet block by block. Each step references the protocol grammar for exact spec details (colors, fonts, border styles, identifier conventions) — do not re-derive them here.
+Build the sheet block by block. Each step references the protocol grammar for exact spec details — do not re-derive colors, fonts, or border styles here.
 
 **Step 1 — Create the sheet**
-Add a new sheet with a yellow tab color. Position it after any existing schedule sheets in the workbook.
+Call `create_sheet` with the confirmed tab name. Apply yellow tab color via `format_range`. Position after any existing schedule sheets.
 
 **Step 2 — Header Block (Rows 1–8)**
-Per the Header Block spec in the protocol:
-- Row 1: Title bar (light blue background, white text, `≡` in Col A, `=D9` formula in Col C)
-- Row 2: Date spine (black background, white bold, "End of Period" in Col C, month-end dates starting at Col K)
-- Row 3: Period type (gray background, white text, "Actual" or "Forecast" values starting at Col K)
+Call `write_range` to populate per the Header Block spec in the protocol:
+- Row 1: Title bar (light blue `#64B1FF`, white text, `≡` in Col A, `=D9` formula in Col C)
+- Row 2: Date spine (black background, white bold, "End of Period" in Col C, month-end dates starting at Col K). Use `convert_string_to_excel_date` if converting date strings.
+- Row 3: Period type (gray `#808080`, white text, "Actual" or "Forecast" starting at Col K). Read the boundary from an existing sheet via `read_smartmodel_date_spine`.
 - Row 4: Status bar
-- Rows 5–6: Leave blank
+- Rows 5–6: Blank
 - Row 7: Template title (`=D9` in Col C, thick blue bottom border from Col B to last data column)
 - Row 8: Template description (gray italic in Col C)
 - Cols D–J: Leave empty on all header rows
 
 **Step 3 — Metadata Block (Rows 9–15)**
-Per the Metadata Block spec in the protocol. `D9` must be a plain string value — never a formula. Include at minimum: `metadata___name`, `metadata___template_id`, `metadata___template_version`, `metadata___description`, `metadata___grain`.
-
-Leave Row 16 blank as a separator before the next block.
+Write via `write_range` per the Metadata Block spec. `D9` must be a plain string value — never a formula. Include at minimum: `metadata___name`, `metadata___template_id`, `metadata___template_version`, `metadata___description`, `metadata___grain`. Leave Row 16 blank as a separator.
 
 **Step 4 — Settings Block (Rows ~17–21)**
-Per the Settings Block spec in the protocol. All `settings___` identifiers must use the plural prefix. Include `settings___identifier_structure` as the last settings row — its value documents the identifier pattern used by all data rows in this sheet (e.g. `pattern: "{dimension-slug}_{measure-code}"`).
-
-Leave a blank row after the settings block before the dimension registry.
+All `settings___` identifiers must use the plural prefix. Include `settings___identifier_structure` as the last settings row — its value documents the identifier pattern for all data rows (e.g. `pattern: "{dimension-slug}_{measure-code}"`). Leave a blank row after the settings block.
 
 **Step 5 — Dimension Registry**
-Section header row, subheader row, blank row, then one `dim_` row per dimension confirmed in Phase 1. Col B monospace throughout. If the schedule has no meaningful dimensions (e.g. a single-entity run rate), omit this block and note the omission in the Phase 3 audit.
+Section header row, subheader row, blank row, then one `dim_` row per confirmed dimension. Col B monospace throughout. If no meaningful dimensions, omit and note the omission in Phase 3.
 
 **Step 6 — Measure Registry**
-Section header row, subheader row, blank row, then one `measure_` row per measure confirmed in Phase 1. Col B monospace throughout.
+Section header row, subheader row, blank row, then one `measure_` row per confirmed measure. Col B monospace throughout.
 
 **Step 7 — Data Sections**
 For each section confirmed in Phase 1:
 1. Section header row (bold 14pt, thick blue bottom border Col B → last column)
 2. Subheader row (gray italic description in Col C)
 3. Blank spacing row
-4. Data rows, one per dimension × measure combination:
+4. Data rows via `write_range`, one per dimension × measure combination:
    - Col A: correct marker — `•`, `•⚡ Key Driver`, or `  ⚡ Key Result`
-   - Col B: identifier formula whose output matches `settings___identifier_structure` — monospace font
+   - Col B: identifier formula matching `settings___identifier_structure` — monospace font
    - Col C: human-readable label
    - Cols D–J: leave empty
-   - Cols K onward: input values (Key Drivers) or Excel formulas (Key Results) across all time periods
+   - Cols K onward: input values (Key Drivers) or Excel formulas (Key Results) via `insert_formula`
 5. Close additive sections with a blank separator row (thin border) and a Key Result total row using SUM formulas
 
-**Step 8 — Formatting pass**
-- Apply monospace font (Menlo, size 10, black) to every cell in Col B across the entire sheet
-- Apply input cell styling (light gray background, blue-ish text) to all forecast-period cells in Key Driver rows
-- Confirm tab color is yellow
-- Confirm section header borders match the protocol spec
+**Step 8 — Wire imported data (if applicable)**
+If data was imported in Phase 1, link the R- sheet data into the schedule's Key Driver rows via `insert_formula`. Reference the R- sheet by column position aligned to the date spine.
 
-**Step 9 — Register in Index tab**
-Add a row to the Index tab manifest for this sheet: Template ID, version, sheet name, skill file reference, imports file reference (if applicable). Per the Index Tab spec in the protocol.
+**Step 9 — Formatting pass**
+- Call `format_range` to apply monospace font (Menlo, size 10, black) to every cell in Col B
+- Call `format_range` to apply input cell styling (light gray background, blue-ish text) to all forecast-period cells in Key Driver rows
+- Confirm tab color is yellow
+- Call `resize_columns` to set Col A = 4, Col B = 40
+
+**Step 10 — Register in Index tab**
+Call `read_smartmodel_index` to read the current manifest, then call `write_range` to add a row: Template ID, version, sheet name, skill file reference, imports file reference (if applicable).
 
 ---
 
 ## Phase 3 — Self-Audit
 
-Walk through each check in order. Narrate the result of each check to the user. If a check fails, fix the issue and re-verify before moving on.
+Walk through each check. Narrate the result of each check to the user. If a check fails, fix and re-verify before moving on.
 
-1. **Header block** — Rows 1–8 match the protocol spec. `C1` and `C7` contain `=D9`. Date spine starts at Col K. Cols D–J are empty.
-2. **Metadata block** — `D9` is a plain string value (not a formula). `metadata___template_id` is unique — no other sheet in the workbook declares the same ID.
-3. **Settings block** — All `settings___` identifiers use the plural prefix. `settings___identifier_structure` is present and its declared pattern matches the actual identifier format used in data rows.
-4. **Dimension registry** — Every dimension confirmed in Phase 1 is registered. No `dim_` entries are missing.
-5. **Measure registry** — Every measure confirmed in Phase 1 is registered. No `measure_` entries are missing.
-6. **Data row identifiers** — Every data row's Col B contains a formula (not a hardcoded string). No two rows share the same identifier. All identifiers conform to the `settings___identifier_structure` pattern.
-7. **Data row markers** — Key Driver rows carry editable input values in forecast columns. Key Result rows contain Excel formulas — no hardcoded values anywhere.
-8. **Formulas** — No Key Result cell contains a hardcoded number. All total rows use SUM formulas, not manually enumerated references.
-9. **Formatting** — Every Col B cell uses monospace font. All Key Driver forecast cells have input cell styling. Section header borders and tab color match the protocol spec.
+1. **Header block** — Rows 1–8 match the protocol spec. `C1` and `C7` contain `=D9`. Date spine starts at Col K. Cols D–J are empty on all header rows.
+2. **Metadata block** — `D9` is a plain string value (not a formula). `metadata___template_id` is unique — no other sheet declares the same ID.
+3. **Settings block** — All `settings___` identifiers use the plural prefix. `settings___identifier_structure` is present and matches the actual identifier format used in data rows.
+4. **Dimension registry** — Every dimension confirmed in Phase 1 is registered. No `dim_` entries missing.
+5. **Measure registry** — Every measure confirmed in Phase 1 is registered. No `measure_` entries missing.
+6. **Data row identifiers** — Every data row's Col B contains a formula (not a hardcoded string). No two rows share the same identifier. All identifiers conform to `settings___identifier_structure`.
+7. **Data row markers** — Key Driver rows carry editable input values in forecast columns. Key Result rows contain Excel formulas — no hardcoded values.
+8. **Formulas** — No Key Result cell contains a hardcoded number. All total rows use SUM formulas.
+9. **Formatting** — Every Col B cell uses monospace font. All Key Driver forecast cells have input cell styling. Section header borders and tab color match protocol spec.
 10. **Index registration** — This sheet's template ID appears in the Index tab manifest with correct version, sheet name, and file references.
 
-After all checks pass, report a brief summary: schedule name, sections built, Key Driver count, Key Result count, and any deviations from the Phase 1 plan made during construction.
+After all checks pass, report: schedule name, sections built, Key Driver count, Key Result count, and any deviations from the Phase 1 plan made during construction.
+
+---
+
+## Guardrails
+
+- Never write hardcoded values into Key Result cells — always use formulas
+- Never overwrite existing schedule sheets — only create new ones (unless the user explicitly asks to replace)
+- Confirm with the user before any step that creates or deletes sheets
+- If data import fails or returns no rows, fall back to manual structure and notify the user
+
+---
+
+## Integration with Other Skills
+
+- **`/summarize_model`**: Orient to the workbook before adding schedules
+- **`/build_report`**: Schedules feed reports — build the schedule first
+- **`/create_scenario`**: Scenarios may need new schedule assumptions
+- **`/audit_model`**: Validate the new schedule after construction

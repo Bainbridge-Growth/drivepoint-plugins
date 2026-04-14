@@ -382,6 +382,36 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 
 ## Related Skills
 
+### Builders
 | Skill | Path | Purpose |
 |-------|------|---------|
-| Build Schedule | `builders/build-schedule.md` | Construct a new v6.0-compliant schedule sheet from scratch when no pre-built template exists |
+| Build Schedule | `builders/build-schedule.md` | Construct a new schedule sheet from scratch — data-first flow, any model version |
+| Build Report | `builders/build-report.md` | Create a blue report tab — board reports, monthly close, investor updates |
+| Create Scenario | `builders/create-scenario.md` | Build a named what-if scenario by adjusting Key Driver assumptions |
+
+### Analysis
+| Skill | Path | Purpose |
+|-------|------|---------|
+| Variance Analysis | `analysis/variance-analysis.md` | Actuals vs. plan/forecast with driver decomposition and mid-month pacing |
+| Margin Analysis | `analysis/margin-analysis.md` | Channel-aware gross and contribution margin decomposition |
+| SKU Rationalization | `analysis/sku-rationalization.md` | Rank product portfolio by contribution; flag SKUs to invest, maintain, or cut |
+| Cohort Analysis | `analysis/cohort-analysis.md` | Retention curves + LTV in one consolidated pass |
+| Investor Readiness | `analysis/investor-readiness-analysis.md` | Audit model for fundraise and due diligence gaps |
+| Product Cost Analysis | `analysis/product-cost-analysis.md` | COGS decomposition and per-unit economics by SKU |
+| Marketing Efficiency | `analysis/marketing-efficiency-analysis.md` | CAC, ROAS, blended vs. channel-level spend efficiency |
+| Inventory Analysis | `analysis/inventory-analysis.md` | Weeks of supply, stockout risk, dead stock, reorder timing |
+| Trade Spend Analysis | `analysis/trade-spend-analysis.md` | Promotional ROI, deduction rates, retailer-level P&L |
+
+### Model Ops
+| Skill | Path | Purpose |
+|-------|------|---------|
+| Summarize Model | `model-ops/summarize-model.md` | Full workbook orientation — templates, data state, time range, health check |
+| Interrogate Model | `model-ops/interrogate-model.md` | Trace any number back through its formula and driver chain |
+| Audit Model | `model-ops/audit-model.md` | Structural integrity, formula errors, protocol compliance checklist |
+| Clean Model | `model-ops/clean-model.md` | Fix errors, restore protocol structure, standardize formatting |
+| Optimize Model | `model-ops/optimize-model.md` | Resolve slow calculation, phantom range bloat, volatile formulas |
+
+### Scenarios
+| Skill | Path | Purpose |
+|-------|------|---------|
+| Compare Scenarios | `scenarios/compare-scenarios.md` | Side-by-side delta analysis across two or more scenarios or plans |
