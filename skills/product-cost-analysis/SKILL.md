@@ -22,17 +22,11 @@ description: Decompose COGS into component-level unit economics — materials, m
 
 ## Phase 1 — Orient
 
-**Step 1.1 — Read model identity**
-Call `read_smartmodel_settings` → capture `settings.companyName`, `settings.currency`.
+**Step 1.1 — Use model context from the protocol**
+Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, note `companyName`, `currency`, identify the product sheet or COGS schedule (template IDs related to product or cost), and determine the analysis period — trailing 3–6 months of Actuals for cost analysis.
 
-**Step 1.2 — Locate product/COGS data**
-Call `read_smartmodel_index` → identify the product sheet, COGS schedule, or any sheet with template IDs related to product or cost.
-
-**Step 1.3 — Read product dimensions**
+**Step 1.2 — Read product dimensions**
 Call `read_smartmodel_registries` on the product sheet → extract `dim_` entries to get SKU list and `measure_` entries to understand what cost components are tracked.
-
-**Step 1.4 — Read time context**
-Call `read_smartmodel_date_spine` → determine analysis period. Use trailing 3–6 months of Actuals for cost analysis. Note any periods where costs appear to have stepped up or down.
 
 ---
 

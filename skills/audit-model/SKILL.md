@@ -22,9 +22,8 @@ description: Perform structural integrity and data quality checks on a SmartMode
 
 ## Phase 1 — Orient
 
-Call `read_smartmodel_settings` → capture model identity and check required settings fields.
-Call `read_smartmodel_index` → get the full list of templates and expected sheets.
-Call `get_sheet_names` → get all actual sheets and compare to Index manifest.
+Settings, index, and date spine are already loaded by the protocol's auto-orient. Use the model context for identity, template list, and time range.
+Call `get_sheet_names` → get all actual sheets and compare to Index manifest from the model context.
 
 ---
 

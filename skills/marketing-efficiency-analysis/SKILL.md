@@ -22,17 +22,11 @@ description: Analyze marketing spend efficiency — CAC, ROAS, blended vs. chann
 
 ## Phase 1 — Orient
 
-**Step 1.1 — Read model identity**
-Call `read_smartmodel_settings` → capture `settings.companyName`, `settings.currency`.
+**Step 1.1 — Use model context from the protocol**
+Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, note `companyName`, `currency`, identify the opex sheet (marketing), channel revenue sheets (DTC, AMZN), and any cohort/customer acquisition data. Determine the analysis period — use at least 3 months of Actuals for trend analysis; single-month CAC is noisy.
 
-**Step 1.2 — Locate marketing data**
-Call `read_smartmodel_index` → identify the opex sheet (marketing), channel revenue sheets (DTC, AMZN), and any cohort/customer acquisition data.
-
-**Step 1.3 — Read channel structure**
+**Step 1.2 — Read channel structure**
 Call `read_smartmodel_registries` on the opex/marketing sheet → identify how marketing spend is broken down (by channel: paid social, paid search, influencer, email, Amazon advertising, etc.).
-
-**Step 1.4 — Read time context**
-Call `read_smartmodel_date_spine` → determine analysis period. Use at least 3 months of Actuals for trend analysis; single-month CAC is noisy.
 
 ---
 

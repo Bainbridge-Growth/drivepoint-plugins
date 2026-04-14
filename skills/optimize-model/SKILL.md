@@ -24,8 +24,8 @@ description: Optimize a SmartModel for performance, file size, and formula effic
 
 **If `/audit_model` or `/clean_model` ran this session**, reuse settings, index, sheet inventory, and error findings already gathered. Do not re-read sheets that were already read.
 
-**Step 1.1 — Read workbook map**
-Call `read_smartmodel_index` → count templates, sheets, and data volume. Large workbooks with 10+ templates and 48+ months of data are candidates for formula optimization.
+**Step 1.1 — Use model context from the protocol**
+Settings and index are already loaded by the protocol's auto-orient. From the model context, count templates, sheets, and data volume. Large workbooks with 10+ templates and 48+ months of data are candidates for formula optimization.
 
 **Step 1.2 — Check used ranges for bloat**
 Call `get_sheet_summary` on each schedule sheet → note the reported used range dimensions. A sheet that should have data in columns A–AZ but reports a used range extending to column ZZ has phantom column bloat.

@@ -22,20 +22,17 @@ description: Analyze inventory health — weeks of supply, stockout risk, dead s
 
 ## Phase 1 — Orient
 
-**Step 1.1 — Read model identity**
-Call `read_smartmodel_settings` → capture `settings.companyName`, `settings.currency`.
+**Step 1.1 — Use model context from the protocol**
+Settings and index are already loaded by the protocol's auto-orient. From the model context, note `companyName`, `currency`, and identify sheets or R- sheets that contain inventory data (template IDs or sheet names related to inventory, supply chain, or operations).
 
-**Step 1.2 — Locate inventory data**
-Call `read_smartmodel_index` → identify sheets or R- sheets that contain inventory data. Look for template IDs or sheet names related to inventory, supply chain, or operations.
-
-**Step 1.3 — Check data availability**
+**Step 1.2 — Check data availability**
 Call `read_r_sheet` on any inventory R- sheets → verify if current inventory on-hand data is populated. Inventory analysis requires:
 - Current units on hand by SKU
 - Sales velocity (units sold per period)
 - Optionally: lead times, safety stock targets, reorder points
 
-**Step 1.4 — Read time context**
-Call `read_smartmodel_date_spine` → determine the most recent Actual period for sales velocity calculation.
+**Step 1.3 — Note time context**
+From the model context date spine, determine the most recent Actual period for sales velocity calculation.
 
 ---
 

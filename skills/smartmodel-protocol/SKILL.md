@@ -21,6 +21,20 @@ The agent's job is to help users understand their model, populate it with data, 
 
 ---
 
+## Auto-Orient (run once when this skill loads)
+
+When this skill loads, **immediately** make these 3 tool calls before the user's first request. Hold the results as **model context** for the entire session — every subsequent skill uses this context instead of re-reading.
+
+1. **`read_smartmodel_settings`** → capture model identity (`settings.companyName`, `settings.currency`, `settings.modelName`, `settings.modelVersion`, `settings.smartmodelSpec`, `settings.modelStartDate`, `settings.historicalStartDate`)
+2. **`read_smartmodel_index`** → capture the full template registry (template IDs, owned sheets, skill references, import references)
+3. **`read_smartmodel_date_spine`** on the consolidation sheet (M - Monthly, or the first available schedule sheet) → capture the time range, Actual/Forecast boundary, and most recently closed Actual month
+
+After these 3 calls, the agent knows: what company this is, what currency to use, what sheets exist, what templates are configured, and what time period is current. No other skill should repeat these calls — they reference the model context instead.
+
+If any of these calls fail, follow the Error Handling Protocol (Rule 1) below.
+
+---
+
 ## File Structure
 
 A SmartModel xlsx is a standard Excel zip archive. The file's job is to be a well-structured workbook — skills and import declarations live on the server, fetched at runtime by the authenticated add-in.

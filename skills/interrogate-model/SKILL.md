@@ -33,8 +33,8 @@ If the question is ambiguous, ask for clarification rather than guessing. A wron
 
 ## Phase 2 — Orient to the Relevant Sheet
 
-**Step 2.1 — Read model map (if not already loaded)**
-Call `read_smartmodel_index` → identify which template and sheet owns the metric the user is asking about.
+**Step 2.1 — Use model context from the protocol**
+The index is already loaded by the protocol's auto-orient. From the model context, identify which template and sheet owns the metric the user is asking about.
 
 **Step 2.2 — Read the sheet metadata**
 Call `read_smartmodel_sheet_metadata` on the relevant sheet → get the template name, structure overview, and section layout.

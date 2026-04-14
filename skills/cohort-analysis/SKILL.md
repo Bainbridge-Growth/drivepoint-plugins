@@ -21,19 +21,14 @@ description: Analyze customer retention curves and lifetime value (LTV) in a sin
 
 ## Phase 1 — Orient and Locate Cohort Data
 
-**Step 1.1 — Read model identity**
-Call `read_smartmodel_settings` → capture `settings.companyName`, `settings.currency`, `settings.historicalStartDate`.
+**Step 1.1 — Use model context from the protocol**
+Settings and index are already loaded by the protocol's auto-orient. From the model context, note `companyName`, `currency`, `historicalStartDate`, and look for R- sheets prefixed with cohort, retention, subscriber, or customer data, and schedule sheets with dimension registries listing cohort months.
 
-**Step 1.2 — Locate cohort data source**
-Call `read_smartmodel_index` → look for:
-- R- sheets prefixed with cohort, retention, subscriber, or customer data
-- Schedule sheets with dimension registries listing cohort months or customer acquisition periods
-
-**Step 1.3 — Check R- sheet population**
+**Step 1.2 — Check R- sheet population**
 Call `read_r_sheet` on any relevant R- sheets → check if cohort data is populated (rows beyond headers). If empty, note this and ask if the user can provide cohort data or if it needs to be derived from order-level data in another R- sheet.
 
-**Step 1.4 — Read time context**
-Call `read_smartmodel_date_spine` → determine how many cohort months are available. Cohort analysis needs a minimum of 6 months of data for meaningful curves; 12+ months preferred.
+**Step 1.3 — Assess time depth**
+From the model context date spine, determine how many cohort months are available. Cohort analysis needs a minimum of 6 months of data for meaningful curves; 12+ months preferred.
 
 ---
 

@@ -22,19 +22,10 @@ description: Assess a SmartModel for fundraising and due diligence readiness —
 
 ## Phase 1 — Orient
 
-**Step 1.1 — Read model identity and time coverage**
-Call `read_smartmodel_settings` → capture `settings.modelName`, `settings.modelStartDate`, `settings.historicalStartDate`, `settings.companyName`.
+**Step 1.1 — Use model context from the protocol**
+Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, note: `modelName`, `modelStartDate`, `historicalStartDate`, `companyName`, all templates and sheet names, historical depth, forecast horizon, and Actual/Forecast boundary.
 
-**Step 1.2 — Read workbook map**
-Call `read_smartmodel_index` → get all templates, sheet names, and what data sources are configured.
-
-**Step 1.3 — Read time context**
-Call `read_smartmodel_date_spine` on the consolidation sheet → determine:
-- How far back actuals go (months of historical data)
-- How far forward the forecast runs (months of forward projection)
-- Where the Actual/Forecast boundary sits
-
-**Step 1.4 — Check structural integrity**
+**Step 1.2 — Check structural integrity**
 Call `sheet_validate` → flag any structural errors before the investor readiness analysis.
 
 ---

@@ -20,9 +20,9 @@ description: Generate a structured summary of a SmartModel workbook — what's i
 
 ---
 
-## Phase 1 — Read Model Identity
+## Phase 1 — Use Model Context
 
-Call `read_smartmodel_settings` → extract:
+Settings, index, and date spine are already loaded by the protocol's auto-orient. Extract from the model context:
 
 | Field | What it tells you |
 |-------|------------------|
@@ -37,23 +37,11 @@ Call `read_smartmodel_settings` → extract:
 
 If `settings.smartmodelSpec` is not "6.0", note the protocol version and proceed cautiously — some structural assumptions in this skill are v6-specific.
 
----
-
-## Phase 2 — Read the Workbook Map
-
-Call `read_smartmodel_index` → read the template manifest.
-
-For each template, capture:
-- Template ID and version
-- Owned sheets (list)
-- Skill file reference (if present)
-- Imports file reference (if present)
-
-This gives the **complete map of the workbook** — how many templates, which sheets belong to which, and what data sources are expected.
+The model context also includes the full template manifest from the index (template IDs, owned sheets, skill references, import references) and the date spine (time range, Actual/Forecast boundary).
 
 ---
 
-## Phase 3 — Assess Sheet Inventory
+## Phase 2 — Assess Sheet Inventory
 
 Call `get_sheet_names` → get the full list of tabs. Categorize each:
 
@@ -70,24 +58,24 @@ Call `get_sheet_names` → get the full list of tabs. Categorize each:
 
 ---
 
-## Phase 4 — Read Time Horizon
+## Phase 3 — Assess Time Horizon
 
-Call `read_smartmodel_date_spine` on the consolidation sheet (or first available schedule sheet):
+Time range and Actual/Forecast boundary are already in the model context from auto-orient. Note:
 - First date in Row 2 = model start
 - Last date in Row 2 = model end
 - Last "Actual" column in Row 3 = actuals-through date
 
-Also call `get_todays_date` to assess how current the actuals are. Flag if actuals are more than 2 months stale.
+Call `get_todays_date` to assess how current the actuals are. Flag if actuals are more than 2 months stale.
 
 ---
 
-## Phase 5 — Read Key Dimensions
+## Phase 4 — Read Key Dimensions
 
 For schedule sheets where the Index indicates dimensions exist, call `read_smartmodel_registries` → extract `dim_` entries. Only read registries on sheets that the Index references as having dimensions — do not read every schedule sheet. Report what entities are being modeled (e.g., "DTC sheet models 3 channels: Shopify, Subscription, Retail").
 
 ---
 
-## Phase 6 — Quick Health Check
+## Phase 5 — Quick Health Check
 
 Call `sheet_validate` → capture any structural validation errors.
 Also call `sheet_error_find` → check for formula errors (#REF!, #DIV/0!, etc.) across all sheets.
@@ -102,7 +90,7 @@ Flag:
 
 ---
 
-## Phase 7 — Headline Numbers (if consolidation is populated)
+## Phase 6 — Headline Numbers (if consolidation is populated)
 
 Call `read_smartmodel_data_section` on the consolidation sheet → extract the most recent Actual month's headline metrics:
 - Total Revenue

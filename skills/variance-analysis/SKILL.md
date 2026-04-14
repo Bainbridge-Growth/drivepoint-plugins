@@ -22,20 +22,14 @@ description: Analyze performance vs. plan, forecast, or prior period — decompo
 
 ## Phase 1 — Orient
 
-**Step 1.1 — Read model identity**
-Call `read_smartmodel_settings` → capture `settings.companyName`, `settings.currency`, `settings.modelStartDate`.
+**Step 1.1 — Use model context from the protocol**
+Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, note: `companyName`, `currency`, which columns are Actual vs. Forecast, the most recently closed Actual month, and the consolidation sheet name.
 
-**Step 1.2 — Establish time context**
-Call `read_smartmodel_date_spine` on the consolidation sheet (M - Monthly) or primary schedule sheet.
-- Identify which columns are "Actual" vs. "Forecast" from Row 3
-- Determine the most recently closed Actual month
-- Determine the comparison period (user-specified or default to most recent closed month)
-
-**Step 1.3 — Identify comparison basis**
+**Step 1.2 — Identify comparison basis**
 Infer from the user's request: Plan (original budget), Forecast (latest reforecast), Prior Year, or Prior Month.
 Default to **Actuals vs. Forecast** for the most recently closed month if not specified.
 
-**Step 1.4 — State the comparison basis explicitly**
+**Step 1.3 — State the comparison basis explicitly**
 Before proceeding to Phase 2, output this line:
 
 ```

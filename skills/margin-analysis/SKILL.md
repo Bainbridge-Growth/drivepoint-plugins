@@ -38,17 +38,11 @@ These are benchmarks. Always use the model's actual data.
 
 ## Phase 1 — Orient
 
-**Step 1.1 — Read model identity**
-Call `read_smartmodel_settings` → capture `settings.companyName`, `settings.currency`.
+**Step 1.1 — Use model context from the protocol**
+Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, identify which schedule sheets correspond to which channels (DTC, AMZN, Wholesale, etc.) and the consolidation sheet (M - Monthly). Note the analysis period (most recent closed month, or user-specified).
 
-**Step 1.2 — Read Index to map channel sheets**
-Call `read_smartmodel_index` → identify which schedule sheets correspond to which channels (DTC, AMZN, Wholesale, etc.) and which sheet is the consolidation (M - Monthly).
-
-**Step 1.3 — Read dimension registries**
-Call `read_smartmodel_registries` on each channel sheet → identify channel dimensions, product dimensions, and measure identifiers for revenue, COGS, and gross margin rows.
-
-**Step 1.4 — Read time context**
-Call `read_smartmodel_date_spine` on the consolidation sheet → determine the analysis period (most recent closed month, or user-specified period).
+**Step 1.2 — Read dimension registries**
+Call `read_smartmodel_registries` on the channel sheets relevant to the analysis → identify channel dimensions, product dimensions, and measure identifiers for revenue, COGS, and gross margin rows. Only read registries on sheets the user's question involves.
 
 ---
 

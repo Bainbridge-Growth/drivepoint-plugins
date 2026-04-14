@@ -22,17 +22,11 @@ description: Analyze product portfolio profitability and recommend which SKUs to
 
 ## Phase 1 — Orient
 
-**Step 1.1 — Read model identity and currency**
-Call `read_smartmodel_settings` → capture `settings.companyName`, `settings.currency`.
+**Step 1.1 — Use model context from the protocol**
+Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, note `companyName`, `currency`, and identify which sheet(s) contain product/SKU dimensions (template IDs like `product`, `dtc-revenue`, `cogs`). Determine the analysis period — default to trailing 3–6 months of Actuals.
 
-**Step 1.2 — Locate SKU-level data**
-Call `read_smartmodel_index` → identify which sheet(s) contain product/SKU dimensions. Look for sheets with template IDs like `product`, `dtc-revenue`, `cogs`, or any sheet whose dimension registry lists SKUs.
-
-**Step 1.3 — Read SKU dimensions**
+**Step 1.2 — Read SKU dimensions**
 Call `read_smartmodel_registries` on the product/SKU sheets → extract `dim_` entries to get the full list of SKUs being modeled.
-
-**Step 1.4 — Read time context**
-Call `read_smartmodel_date_spine` → determine the analysis period. Default to trailing 3–6 months of Actuals for rationalization decisions.
 
 ---
 

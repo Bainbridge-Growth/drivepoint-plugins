@@ -49,14 +49,10 @@ If the user is vague ("what if we grow faster?"), ask for specifics. Scenarios r
 
 ## Phase 2 — Orient and Locate Assumptions
 
-**Step 2.1 — Read model identity and map**
-Call `read_smartmodel_settings` → get `settings.companyName`, `settings.currency`.
-Call `read_smartmodel_index` → identify which sheets contain the relevant Key Drivers.
+**Step 2.1 — Use model context from the protocol**
+Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, identify which sheets contain the relevant Key Drivers and which columns correspond to the scenario start period and duration.
 
-**Step 2.2 — Read time context**
-Call `read_smartmodel_date_spine` on the relevant sheet → identify which columns correspond to the scenario start period and duration.
-
-**Step 2.3 — Find the Key Driver rows**
+**Step 2.2 — Find the Key Driver rows**
 Call `read_smartmodel_data_section` on each affected sheet. For each variable being changed:
 1. Locate the Key Driver row (column A = `•⚡ Key Driver`)
 2. Note the current value for the affected periods from the data section response — do not make a separate `read_range` call for data already returned

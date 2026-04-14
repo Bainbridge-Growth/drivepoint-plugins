@@ -41,14 +41,7 @@ If not specified, default to **Monthly Close Report** for the most recently clos
 
 ## Phase 2 — Orient to Data Sources
 
-**Step 2.1 — Read model identity**
-Call `read_smartmodel_settings` → capture `settings.companyName`, `settings.currency`, `settings.modelName`.
-
-**Step 2.2 — Map available data**
-Call `read_smartmodel_index` → identify the consolidation sheet, channel sheets, and any other templates needed for the report.
-
-**Step 2.3 — Read time context**
-Call `read_smartmodel_date_spine` on the consolidation sheet → confirm the most recently closed Actual period and which column(s) to pull.
+Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, note: `companyName`, `currency`, `modelName`, the consolidation sheet, channel sheets, most recently closed Actual period, and which columns to pull.
 
 ---
 

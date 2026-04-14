@@ -22,17 +22,11 @@ description: Analyze retail trade spend — promotional effectiveness, deduction
 
 ## Phase 1 — Orient
 
-**Step 1.1 — Read model identity**
-Call `read_smartmodel_settings` → capture `settings.companyName`, `settings.currency`.
+**Step 1.1 — Use model context from the protocol**
+Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, note `companyName`, `currency`, identify the wholesale schedule sheet and any trade spend or deductions sections (may live on wholesale revenue sheet, dedicated trade sheet, or opex sheet). Determine the analysis period — typically a promotion period or rolling 3–6 months.
 
-**Step 1.2 — Locate trade spend and wholesale data**
-Call `read_smartmodel_index` → identify the wholesale schedule sheet and any trade spend or deductions sections. Trade spend may live on the wholesale revenue sheet, a dedicated trade sheet, or the opex sheet.
-
-**Step 1.3 — Read wholesale structure**
+**Step 1.2 — Read wholesale structure**
 Call `read_smartmodel_registries` on the wholesale sheet → identify retailer dimensions (Walmart, Target, Whole Foods, etc.) and trade spend measure identifiers.
-
-**Step 1.4 — Read time context**
-Call `read_smartmodel_date_spine` → determine analysis period. Trade spend analysis typically covers a promotion period (event-based) or rolling 3–6 months.
 
 ---
 
