@@ -394,6 +394,54 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 
 ---
 
+## Quick vs. Full Mode
+
+Before running a skill's full phased workflow, assess whether the user's question actually requires it.
+
+**Quick mode** — If the user's question can be answered with a single data read and a direct response, answer it directly. Do not run a multi-phase analysis for a lookup question.
+
+Examples of quick-mode questions:
+- "What was March revenue?" → Read the consolidation sheet, return the number with brief context.
+- "What's our gross margin?" → Read the relevant row, return the %, note the trend if visible.
+- "How many SKUs do we have?" → Read the dimension registry, return the count.
+- "When do actuals end?" → Answer from the model context (already loaded).
+
+**Full mode** — Run the complete phased workflow when the user asks for analysis, explanation, comparison, a report, or uses trigger phrases like "why", "what's driving", "compare", "build", "analyze".
+
+Examples of full-mode questions:
+- "Why did we miss on revenue?" → Full variance analysis
+- "Build me a board report" → Full build-report workflow
+- "What's driving our margin decline?" → Full margin analysis
+
+**When in doubt**: Answer the direct question first (quick mode), then offer: "Would you like me to run the full [skill name] analysis?" This lets the user get a fast answer and opt into the deeper workflow.
+
+---
+
+## Output Formatting Standards
+
+All skills inherit these formatting rules. Do not restate them in individual skills.
+
+### Number formatting
+- Use currency from `settings.currency` in the model context (default USD)
+- Round to thousands (e.g., $1,245K) for companies with >$10M annual revenue; round to dollars for smaller companies
+- Always show both $ and % when presenting variances, margins, or deltas
+- Percentages: one decimal place (e.g., 31.6%), except basis point changes which show as integers (e.g., +400bps or +4.0pp)
+
+### Narrative rules
+- Never present raw data without interpretation — every number needs a "so what"
+- Lead with the headline finding, then support with data
+- Quantify everything — never say "revenue increased significantly"; say "revenue increased $95K (8%)"
+- Be specific about direction: "up", "down", "flat" — not "changed"
+
+### Excel output (when user requests a workbook tab)
+- Report tabs get blue tab color
+- Use `write_range` for labels and data, `insert_formula` for computed cells
+- Apply `format_range` once per format type (currency, percentage, bold), not per cell
+- Call `resize_columns` to fit column widths after writing
+- Call `activate_sheet` at the end to bring the new tab into focus
+
+---
+
 ## Error Handling Protocol
 
 All skills that depend on the SmartModel Protocol inherit these rules. Skill-specific fallbacks (e.g., cohort analysis Path C) supplement but do not replace them.

@@ -122,11 +122,9 @@ After building the tables, draft narrative sections:
 
 ### Writing rules
 
-1. Lead with the headline — "March revenue was $1.2M, 8% above plan, driven by DTC outperformance"
-2. Quantify everything — never say "revenue increased significantly" — say "revenue increased $95K (8%)"
-3. Explain the "so what" — every number needs an implication
-4. Be honest about misses — pair bad news with context and remediation
-5. End sections with a forward look — what does this mean for next period?
+Follow the **Output Formatting Standards** in the protocol, plus these report-specific rules:
+- Be honest about misses — pair bad news with context and remediation
+- End sections with a forward look — what does this mean for next period?
 
 ### Tone by audience
 

@@ -198,10 +198,9 @@ Call `create_sheet` with blue tab color, then `write_range` to populate the vari
 
 ### Formatting rules
 
-- Use currency from `settings.currency` (default USD)
-- Round to thousands for companies >$10M revenue; round to dollars for smaller
-- Always show both $ and % variance
-- Never present raw data without interpretation — every number needs a "so what"
+See **Output Formatting Standards** in the protocol. Additionally for variance output:
+- Always show both $ and % variance for every line item
+- Label favorability explicitly on every variance (Favorable / Unfavorable / Neutral)
 
 ---
 
