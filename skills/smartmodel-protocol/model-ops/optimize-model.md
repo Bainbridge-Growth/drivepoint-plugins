@@ -39,7 +39,7 @@ Call `read_range` on a sample of formula cells across each sheet. Flag if any ce
 - `RAND()` or `RANDBETWEEN()` — recalculates constantly
 
 **Step 1.4 — Check calculation mode**
-Call `read_smartmodel_settings` → check if `settings___calculation_mode` is set. If not set or set to Automatic, note this as an optimization opportunity for large models.
+Call `read_smartmodel_settings` → check if `settings.calculation_mode` is set. If not set or set to Automatic, note this as an optimization opportunity for large models.
 
 ---
 
