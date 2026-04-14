@@ -124,10 +124,7 @@ If data was imported in Phase 1, link the R- sheet data into the schedule's Key 
 - Confirm tab color is yellow
 - Call `resize_columns` to set Col A = 4, Col B = 40
 
-**Step 10 — Register in Index tab**
-Call `read_smartmodel_index` to read the current manifest, then call `write_range` to add a row: Template ID, version, sheet name, skill file reference, imports file reference (if applicable).
-
-**Step 11 — Open the new sheet**
+**Step 10 — Open the new sheet**
 Call `activate_sheet` with the new sheet's name to bring it into focus for the user.
 
 ---
@@ -145,7 +142,7 @@ Walk through each check. Narrate the result of each check to the user. If a chec
 7. **Data row markers** — Key Driver rows carry editable input values in forecast columns. Key Result rows contain Excel formulas — no hardcoded values.
 8. **Formulas** — No Key Result cell contains a hardcoded number. All total rows use SUM formulas.
 9. **Formatting** — Every Col B cell uses monospace font. All Key Driver forecast cells have input cell styling. Section header borders and tab color match protocol spec.
-10. **Index registration** — This sheet's template ID appears in the Index tab manifest with correct version, sheet name, and file references.
+10. **Index registration** — Do not manually write to the Index manifest; the add-in maintains it automatically. Verify the sheet's `metadata___template_id` is set correctly so the add-in can register it on next sync.
 
 After all checks pass, report: schedule name, sections built, Key Driver count, Key Result count, and any deviations from the Phase 1 plan made during construction.
 

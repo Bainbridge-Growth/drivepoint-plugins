@@ -94,11 +94,12 @@ Adjust thresholds based on declared lead time — a SKU with 12-week lead time n
 ### Reorder timing
 
 ```
-Reorder Date = Today − Lead Time Days + (Safety Stock Weeks × 7)
-Units to Order = (Forecast Demand × Target WOS) − Units On Hand − Units In Transit
+Expected Stockout Date = Today + (WOS × 7)
+Reorder Date = Expected Stockout Date − Lead Time Days − (Safety Stock Weeks × 7)
+Units to Order = (Average Weekly Units Sold × Target WOS) − Units On Hand − Units In Transit
 ```
 
-Call `get_todays_date` to anchor reorder date calculations.
+Call `get_todays_date` to anchor reorder date calculations. If `Reorder Date` is in the past, the reorder is already overdue — flag as urgent.
 
 ### Dead stock / slow-mover identification
 

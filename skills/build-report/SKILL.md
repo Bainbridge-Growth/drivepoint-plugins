@@ -153,7 +153,7 @@ Call `write_range` to add narrative text cells below or alongside the tables. Us
 1. **Formulas**: Confirm all data cells contain formulas referencing source sheets, not hardcoded values
 2. **Period accuracy**: Confirm all data is from the intended period (check against date spine)
 3. **Actual vs. Forecast labeling**: Confirm there's no mixing of Actual and Forecast periods without explicit labeling
-4. **Tab registration**: Optionally add the report tab to the Index manifest via `read_smartmodel_index` + `write_range`
+4. **Tab registration**: Do not manually update the Index manifest — the add-in maintains the manifest automatically. If a dedicated registration API/tool becomes available, use that instead
 
 ---
 

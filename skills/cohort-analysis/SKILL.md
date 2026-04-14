@@ -68,10 +68,12 @@ Compute for each cohort month (M1, M2, M3, ..., M12+).
 
 ### Blended retention rates
 
-Average retention across all cohorts at each cohort month to produce a blended retention curve:
+Compute cohort-size-weighted retention across all cohorts at each cohort month:
 ```
-Blended Retention at Month N = Average(Cohort Retention at Month N) across all cohorts with N months of data
+Blended Retention at Month N = Sum(Cohort Size × Cohort Retention at Month N) / Sum(Cohort Size), across all cohorts with N months of data
 ```
+
+Weight by the number of customers acquired in each cohort (M0 size). Do not use a simple average — cohorts with 500 customers should count more than cohorts with 50.
 
 ### LTV (cumulative revenue per acquired customer)
 
