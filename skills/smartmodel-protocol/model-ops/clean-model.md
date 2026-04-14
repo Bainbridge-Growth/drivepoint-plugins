@@ -59,7 +59,7 @@ If formulas reference renamed or deleted sheets, call `read_range` to identify t
 
 ### 3.1 — Hardcoded Key Result cells
 
-Call `read_smartmodel_data_section` to find Key Result rows (column A = `⚡ Key Result`) with hardcoded values instead of formulas. For each:
+Call `read_smartmodel_data_section` to find Key Result rows (column A = `  ⚡ Key Result`) with hardcoded values instead of formulas. Preserve protocol-accurate leading spaces when matching markers (and do the same for Key Driver markers, e.g. `  → Key Driver`, wherever those are checked). For each:
 - Ask the user: "Row [id] is a Key Result but has hardcoded value [X]. What formula should it use?"
 - Call `insert_formula` with the correct formula after confirmation.
 
