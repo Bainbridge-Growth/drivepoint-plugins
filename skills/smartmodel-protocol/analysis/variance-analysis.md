@@ -98,7 +98,11 @@ For each line item:
 
 ```
 Variance ($) = Actual − Plan
-Variance (%) = (Actual − Plan) / |Plan|
+If Plan ≠ 0:
+  Variance (%) = (Actual − Plan) / |Plan|
+If Plan = 0:
+  Variance (%) = N/A
+  Report the dollar variance only
 ```
 
 **Sign convention for revenue and margin lines**: Positive variance = favorable (beat plan). Always label favorability explicitly.
