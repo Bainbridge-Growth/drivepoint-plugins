@@ -38,6 +38,8 @@ Call `read_smartmodel_date_spine` → determine analysis period. Use trailing 3�
 
 ## Phase 2 — Gather Data
 
+**If a prior skill ran this session** (e.g., `/margin_analysis`), reuse settings, index, date spine, and any COGS or product data already gathered. Do not re-read sheets that were already read.
+
 Call `read_smartmodel_data_section` on the product/COGS sheet:
 
 | Cost Component | Identifier pattern | What it represents |

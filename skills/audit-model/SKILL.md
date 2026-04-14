@@ -30,11 +30,13 @@ Call `get_sheet_names` → get all actual sheets and compare to Index manifest.
 
 ## Phase 2 — Run Audit Checklist
 
+**If `/summarize_model` ran this session**, reuse settings, index, date spine, sheet inventory, and health check results already gathered. Do not re-read data that was already read.
+
 Run checks in order. For each: record Pass, Warning, or Fail with location and detail.
 
 ### Check 1 — Protocol Compliance
 
-Call `read_smartmodel_settings` and verify:
+Use settings data from Phase 1 (already read). Verify:
 - [ ] `settings.smartmodelSpec` = "6.0"
 - [ ] `settings.modelType` is "model" or "template" (not blank)
 - [ ] `settings.modelVersion` is valid semver (e.g., "1.0.0")

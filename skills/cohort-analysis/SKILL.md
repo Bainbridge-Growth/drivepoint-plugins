@@ -39,6 +39,8 @@ Call `read_smartmodel_date_spine` → determine how many cohort months are avail
 
 ## Phase 2 — Gather Data
 
+**If a prior skill ran this session** (e.g., `/margin_analysis` for gross margin %), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
+
 Depending on what's available in the model:
 
 **Path A — Cohort sheet exists**

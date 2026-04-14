@@ -54,22 +54,19 @@ Rules:
 
 ## Phase 2 — Gather Data
 
-Call `read_smartmodel_data_section` on the relevant sheets for the comparison period:
+**If a prior skill ran this session** (e.g., `/summarize_model`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
 
-| Data Point | Sheet | Section |
-|-----------|-------|---------|
-| Total revenue | M - Monthly (consolidation) | Revenue section |
-| Revenue by channel | DTC, AMZN, Wholesale sheets | Revenue rows |
-| COGS | Product sheet or consolidation | COGS section |
-| Gross margin | Derived: Revenue − COGS | — |
-| Opex | Opex sheet | All sections |
-| Net income / EBITDA | Consolidation | Bottom of P&L |
+**Step 2.1 — Read the consolidation sheet (one call)**
+Call `read_smartmodel_data_section` on **M - Monthly** (the consolidation sheet). This single call returns the full P&L for the comparison period: total revenue, COGS, gross profit, opex, EBITDA/net income. Extract everything you need from this one response.
+
+**Step 2.2 — Read channel sheets only for driver decomposition**
+Only if the consolidation reveals a material revenue or COGS variance that requires channel-level decomposition, call `read_smartmodel_data_section` on the specific channel sheet(s) involved. Do not read every channel sheet upfront.
 
 Use column B identifiers to locate rows. Do not rely on row numbers — they shift between models.
 
 Pull both **Actual** and **Plan/Forecast** columns for the same period. If comparing to Prior Period, pull the preceding month's Actual columns.
 
-For forecast reasonableness (Phase 2.5), also pull the trailing 12 months of Actuals for each major P&L line.
+For forecast reasonableness (Phase 2.5), also pull the trailing 12 months of Actuals for each major P&L line from the consolidation sheet.
 
 ---
 

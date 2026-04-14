@@ -38,6 +38,8 @@ Call `read_smartmodel_date_spine` → determine analysis period. Use at least 3 
 
 ## Phase 2 — Gather Data
 
+**If a prior skill ran this session** (e.g., `/margin_analysis`, `/variance_analysis`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
+
 Call `read_smartmodel_data_section` on marketing and channel sheets:
 
 | Metric | Sheet | Identifier pattern |

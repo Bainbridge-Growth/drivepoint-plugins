@@ -41,9 +41,11 @@ Call `sheet_validate` → flag any structural errors before the investor readine
 
 ## Phase 2 — Gather and Assess
 
+**If a prior skill ran this session** (e.g., `/summarize_model`, `/audit_model`), reuse settings, index, date spine, health check results, and any data already gathered. Do not re-read sheets that were already read.
+
 ### 2.1 — Time coverage check
 
-Read date spine data and assess:
+Read date spine data (from Phase 1.3) and assess:
 
 | Requirement | Minimum | Preferred |
 |-------------|---------|-----------|
@@ -53,9 +55,11 @@ Read date spine data and assess:
 
 Call `get_todays_date` to verify how stale the actuals are.
 
-### 2.2 — P&L completeness check
+### 2.2 — P&L completeness and assumption check (one call)
 
-Call `read_smartmodel_data_section` on the consolidation sheet (M - Monthly). Verify the following line items are present and populated:
+Call `read_smartmodel_data_section` on the **consolidation sheet (M - Monthly)** — this single call covers P&L completeness, assumption transparency, and cross-sheet consistency. Verify the following from this one response:
+
+**P&L line items present and populated:**
 
 | Line Item | Required | Notes |
 |-----------|---------|-------|
@@ -68,18 +72,19 @@ Call `read_smartmodel_data_section` on the consolidation sheet (M - Monthly). Ve
 | CAC (if DTC) | Preferred | Critical for consumer brand investors |
 | LTV or retention | Preferred | Strong signal for subscription businesses |
 
-### 2.3 — Assumption transparency check
+**Assumption transparency (from the same read):**
+- Count Key Driver rows vs. Key Result rows
+- Flag Key Driver rows with no values populated (blank assumptions)
+- Flag growth rate assumptions that seem unrealistic (>100% YoY without explanation)
+- Flag assumptions hardcoded without identifiers (no column B id = can't be traced)
 
-Call `read_smartmodel_data_section` on each schedule sheet → count Key Driver rows vs. Key Result rows.
+**Cross-sheet consistency (from the same read):**
+- Verify totals reconcile (revenue, COGS should tie)
+- Flag any #REF! or #VALUE! errors
 
-Flag if:
-- Key Driver rows have no values populated (blank assumptions)
-- Growth rate assumptions seem unrealistic (>100% YoY without explanation)
-- Assumptions are hardcoded without identifiers (no column B id = can't be traced)
+### 2.3 — Revenue quality check (only if channel detail needed)
 
-### 2.4 — Revenue quality check
-
-Call `read_smartmodel_data_section` on channel sheets. Assess:
+Only call `read_smartmodel_data_section` on individual channel sheets if the consolidation read doesn't show channel-level revenue breakdown. Assess:
 - Is revenue broken out by channel? Investors want this.
 - Is there a distinction between Actual and Forecast? (Row 3 check)
 - Are there cohort or retention assumptions for subscription revenue?
@@ -87,16 +92,9 @@ Call `read_smartmodel_data_section` on channel sheets. Assess:
 
 Bottom-up revenue builds are far more credible to investors than top-down.
 
-### 2.5 — Cash and runway check
+### 2.4 — Cash and runway check
 
-Look for a cash flow or cash runway section. If absent, flag as a gap — investors will always ask about runway.
-
-### 2.6 — Cross-sheet consistency check
-
-Call `read_smartmodel_data_section` on the consolidation sheet and compare totals to channel-level sheets. Flag if:
-- Consolidation revenue ≠ sum of channel revenues
-- COGS in consolidation ≠ COGS in product sheet
-- Any #REF! or #VALUE! errors in consolidation rows
+Look for a cash flow or cash runway section in the consolidation data already read. If absent, flag as a gap — investors will always ask about runway.
 
 ---
 

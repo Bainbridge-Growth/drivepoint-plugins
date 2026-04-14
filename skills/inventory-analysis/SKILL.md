@@ -41,6 +41,8 @@ Call `read_smartmodel_date_spine` → determine the most recent Actual period fo
 
 ## Phase 2 — Gather Data
 
+**If a prior skill ran this session** (e.g., `/summarize_model`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
+
 Call `read_smartmodel_data_section` on inventory and channel sheets:
 
 | Data Point | Source | Identifier pattern |

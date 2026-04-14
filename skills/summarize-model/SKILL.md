@@ -83,7 +83,7 @@ Also call `get_todays_date` to assess how current the actuals are. Flag if actua
 
 ## Phase 5 — Read Key Dimensions
 
-For each schedule sheet with a dimension registry, call `read_smartmodel_registries` → extract `dim_` entries. Report what entities are being modeled (e.g., "DTC sheet models 3 channels: Shopify, Subscription, Retail").
+For schedule sheets where the Index indicates dimensions exist, call `read_smartmodel_registries` → extract `dim_` entries. Only read registries on sheets that the Index references as having dimensions — do not read every schedule sheet. Report what entities are being modeled (e.g., "DTC sheet models 3 channels: Shopify, Subscription, Retail").
 
 ---
 

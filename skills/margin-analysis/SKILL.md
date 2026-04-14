@@ -54,16 +54,25 @@ Call `read_smartmodel_date_spine` on the consolidation sheet → determine the a
 
 ## Phase 2 — Gather Data
 
-Call `read_smartmodel_data_section` on each relevant sheet:
+**If a prior skill ran this session** (e.g., `/summarize_model`, `/variance_analysis`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
 
-| Data Point | Sheet | What to Look For |
-|-----------|-------|-----------------|
-| Revenue by channel | DTC, AMZN, Wholesale sheets | Identifiers containing `revenue`, `net_revenue`, `sales` |
-| COGS by channel | Channel sheets or product sheet | Identifiers containing `cogs`, `cost_of_goods`, `landed_cost` |
-| Gross profit | Channel sheets or consolidation | Identifiers containing `gross_profit`, `gross_margin` |
-| Fulfillment / platform fees | Channel sheets | Identifiers for shipping, FBA fees, platform fees |
-| Marketing spend | Opex sheet | Identifiers for marketing by channel |
-| Blended totals | M - Monthly consolidation | Revenue, COGS, gross profit rollup rows |
+**Step 2.1 — Read the consolidation sheet first (one call)**
+Call `read_smartmodel_data_section` on **M - Monthly** → get blended revenue, COGS, gross profit, and EBITDA. This gives you the blended margin picture before drilling into channels.
+
+**Step 2.2 — Read individual channel sheets for channel-level decomposition**
+Call `read_smartmodel_data_section` on each channel sheet that the user wants analyzed (DTC, AMZN, Wholesale, etc.). Look for:
+
+| Data Point | Identifier pattern |
+|-----------|-------------------|
+| Revenue | `revenue`, `net_revenue`, `sales` |
+| COGS | `cogs`, `cost_of_goods`, `landed_cost` |
+| Gross profit | `gross_profit`, `gross_margin` |
+| Fulfillment / platform fees | shipping, FBA fees, platform fees |
+
+Only read channel sheets relevant to the analysis scope. If the user asks about DTC margins, do not read the Wholesale sheet.
+
+**Step 2.3 — Read opex only if contribution margin is needed**
+If the user asks about contribution margin (not just gross margin), call `read_smartmodel_data_section` on the Opex sheet for marketing spend by channel.
 
 Pull both the current period and prior period for trend context. Pull plan/forecast columns for the same period for variance context.
 

@@ -41,6 +41,8 @@ Always include the **base case** as the reference point. Confirm with user:
 
 ## Phase 2 — Gather Data
 
+**If `/create_scenario` ran this session**, reuse the base case data and scenario assumptions already gathered. Do not re-read sheets that were already read.
+
 **Step 2.1 — Read base case**
 Call `read_smartmodel_date_spine` → confirm the comparison period.
 Call `read_smartmodel_data_section` on the consolidation sheet (M - Monthly) → extract P&L line items for the comparison period from the base case.
