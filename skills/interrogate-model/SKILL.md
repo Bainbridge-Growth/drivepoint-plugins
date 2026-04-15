@@ -125,7 +125,7 @@ If tracing leads to an empty R- sheet or a Key Driver with no value:
 
 ## Integration with Other Skills
 
-- **`/summarize_model`**: Run first to get the workbook map before interrogating specific cells
-- **`/variance_analysis`**: Use when the user's question is "why did X change vs. plan?"
-- **`/audit_model`**: If tracing reveals formula errors or broken references
-- **`/build_report`**: If the user wants to document the findings from interrogation
+- **`/summarize-model`**: Run first to get the workbook map before interrogating specific cells
+- **`/variance-analysis`**: Use when the user's question is "why did X change vs. plan?"
+- **`/audit-model`**: If tracing reveals formula errors or broken references
+- **`/build-report`**: If the user wants to document the findings from interrogation

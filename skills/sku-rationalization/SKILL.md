@@ -32,7 +32,7 @@ Call `read_smartmodel_registries` on the product/SKU sheets → extract `dim_` e
 
 ## Phase 2 — Gather Data
 
-**If a prior skill ran this session** (e.g., `/margin_analysis`, `/product_cost_analysis`), reuse settings, index, date spine, and any product or channel data already gathered. Do not re-read sheets that were already read.
+**If a prior skill ran this session** (e.g., `/margin-analysis`, `/product-cost-analysis`), reuse settings, index, date spine, and any product or channel data already gathered. Do not re-read sheets that were already read.
 
 Call `read_smartmodel_data_section` on product and channel sheets to collect:
 
@@ -129,7 +129,7 @@ Call `create_sheet` with blue tab. Call `write_range` for the ranked SKU table. 
 
 ## Integration with Other Skills
 
-- **`/margin_analysis`**: Use to understand the COGS structure behind SKU margins
-- **`/product_cost_analysis`**: Go deeper on unit economics for flagged SKUs
-- **`/variance_analysis`**: Check if SKU performance is a variance from plan or structural
-- **`/build_report`**: Package rationalization findings for a leadership or board presentation
+- **`/margin-analysis`**: Use to understand the COGS structure behind SKU margins
+- **`/product-cost-analysis`**: Go deeper on unit economics for flagged SKUs
+- **`/variance-analysis`**: Check if SKU performance is a variance from plan or structural
+- **`/build-report`**: Package rationalization findings for a leadership or board presentation

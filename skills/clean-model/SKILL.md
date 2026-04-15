@@ -5,14 +5,14 @@ description: Fix structural issues, repair broken formulas, standardize formatti
 
 # Clean Model
 
-**Purpose**: Systematically repair and standardize a SmartModel — fixing structural issues found by `/audit_model`, removing clutter, restoring protocol compliance, and preparing the model for reliable analysis or external sharing.
-**Prerequisite**: The `smartmodel-protocol` skill must be loaded. Run `/audit_model` first to identify what needs fixing — this skill fixes issues, not discovers them.
+**Purpose**: Systematically repair and standardize a SmartModel — fixing structural issues found by `/audit-model`, removing clutter, restoring protocol compliance, and preparing the model for reliable analysis or external sharing.
+**Prerequisite**: The `smartmodel-protocol` skill must be loaded. Run `/audit-model` first to identify what needs fixing — this skill fixes issues, not discovers them.
 
 ---
 
 ## When This Skill Activates
 
-- After `/audit_model` identifies specific issues
+- After `/audit-model` identifies specific issues
 - User explicitly asks to clean, fix, or repair the model
 - User reports specific broken elements (errors, wrong colors, broken references)
 - Before sharing a model with investors or external parties
@@ -23,7 +23,7 @@ description: Fix structural issues, repair broken formulas, standardize formatti
 ## Phase 1 — Establish Scope
 
 **Step 1.1 — Load audit findings (if available)**
-If `/audit_model` was already run this session, use those findings as the work list. If not, call `sheet_validate` and `sheet_error_find` to establish a baseline.
+If `/audit-model` was already run this session, use those findings as the work list. If not, call `sheet_validate` and `sheet_error_find` to establish a baseline.
 
 **Step 1.2 — Confirm with user before destructive operations**
 Before any operation that deletes content or rewrites formulas, state what you're about to do and get explicit user confirmation. Examples:
@@ -182,6 +182,6 @@ After completing all fixes:
 
 ## Integration with Other Skills
 
-- **`/audit_model`**: Always run audit first to identify what needs cleaning
-- **`/optimize_model`**: After cleaning, optimize for performance and efficiency
-- **`/summarize_model`**: Re-run summary after cleaning to confirm model state
+- **`/audit-model`**: Always run audit first to identify what needs cleaning
+- **`/optimize-model`**: After cleaning, optimize for performance and efficiency
+- **`/summarize-model`**: Re-run summary after cleaning to confirm model state

@@ -184,6 +184,6 @@ Periods affected: [list]
 
 ## Integration with Other Skills
 
-- **`/compare_scenarios`**: After creating multiple scenarios, compare them side by side
-- **`/summarize_model`**: Orient to model structure before creating scenarios
-- **`/build_report`**: Package scenario analysis into a board-ready presentation
+- **`/compare-scenarios`**: After creating multiple scenarios, compare them side by side
+- **`/summarize-model`**: Orient to model structure before creating scenarios
+- **`/build-report`**: Package scenario analysis into a board-ready presentation

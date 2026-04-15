@@ -1,6 +1,6 @@
 ---
 name: compare-scenarios
-description: Compare two or more scenarios or plans side by side, highlighting key financial differences and trade-offs. Use when a user asks to "compare scenarios", "which scenario is better?", "show me the options side by side", "what's the difference between plan A and B?", or after creating scenarios with /create_scenario. Also triggers on "scenario comparison", "option analysis", "plan comparison", "decision matrix", or "compare plans".
+description: Compare two or more scenarios or plans side by side, highlighting key financial differences and trade-offs. Use when a user asks to "compare scenarios", "which scenario is better?", "show me the options side by side", "what's the difference between plan A and B?", or after creating scenarios with /create-scenario. Also triggers on "scenario comparison", "option analysis", "plan comparison", "decision matrix", or "compare plans".
 ---
 
 # Compare Scenarios
@@ -28,7 +28,7 @@ Call `list_plans` → get the list of available plans/scenarios. Present to the 
 If comparing named plans from the server: call `import_plans` with the selected `planIds` to load the comparison plan data into the current session.
 
 **Step 1.3 — Check for in-model scenarios**
-If comparing scenarios created via `/create_scenario` within the current workbook: call `get_sheet_names` → identify any blue scenario tabs. Call `read_range` on each scenario tab to get the assumption sets and P&L impact tables.
+If comparing scenarios created via `/create-scenario` within the current workbook: call `get_sheet_names` → identify any blue scenario tabs. Call `read_range` on each scenario tab to get the assumption sets and P&L impact tables.
 
 **Step 1.4 — Confirm comparison basis**
 Always include the **base case** as the reference point. Confirm with user:
@@ -41,7 +41,7 @@ Always include the **base case** as the reference point. Confirm with user:
 
 ## Phase 2 — Gather Data
 
-**If `/create_scenario` ran this session**, reuse the base case data and scenario assumptions already gathered. Do not re-read sheets that were already read.
+**If `/create-scenario` ran this session**, reuse the base case data and scenario assumptions already gathered. Do not re-read sheets that were already read.
 
 **Step 2.1 — Read base case**
 Call `read_smartmodel_date_spine` → confirm the comparison period.
@@ -51,7 +51,7 @@ Call `read_smartmodel_data_section` on the consolidation sheet (M - Monthly) →
 For each scenario:
 - If it's an in-model scenario tab: call `read_range` on the scenario tab's P&L impact table
 - If it's a loaded comparison plan: call `read_smartmodel_data_section` on the consolidation sheet for that plan's data
-- If it's a side-by-side tab from `/create_scenario`: call `read_range` on the scenario columns
+- If it's a side-by-side tab from `/create-scenario`: call `read_range` on the scenario columns
 
 **Step 2.3 — Extract assumption differences**
 For each scenario, document which Key Drivers differ from the base case — this is the "what's different" table that makes comparisons interpretable.
@@ -141,7 +141,7 @@ Call `create_sheet` with blue tab (e.g., "Scenario Comparison"). Call `write_ran
 
 - Never write to Actual columns or overwrite Key Drivers in the base model
 - Always include the base case as a reference — a comparison without a baseline is not a comparison
-- If fewer than 2 scenarios can be identified, ask the user to specify scenarios or create them via `/create_scenario` first
+- If fewer than 2 scenarios can be identified, ask the user to specify scenarios or create them via `/create-scenario` first
 - Confirm with user before writing any output tab to the workbook
 
 ---
@@ -158,7 +158,7 @@ Call `create_sheet` with blue tab (e.g., "Scenario Comparison"). Call `write_ran
 
 ## Integration with Other Skills
 
-- **`/create_scenario`**: Create the scenarios first, then compare
-- **`/build_report`**: Package the comparison into a board-ready format
-- **`/interrogate_model`**: If user asks follow-up questions about specific scenario details
-- **`/variance_analysis`**: Compare scenario assumptions to actual performance after the fact
+- **`/create-scenario`**: Create the scenarios first, then compare
+- **`/build-report`**: Package the comparison into a board-ready format
+- **`/interrogate-model`**: If user asks follow-up questions about specific scenario details
+- **`/variance-analysis`**: Compare scenario assumptions to actual performance after the fact

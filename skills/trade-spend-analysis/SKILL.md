@@ -32,7 +32,7 @@ Call `read_smartmodel_registries` on the wholesale sheet → identify retailer d
 
 ## Phase 2 — Gather Data
 
-**If a prior skill ran this session** (e.g., `/margin_analysis`, `/variance_analysis`), reuse settings, index, date spine, and any wholesale data already gathered. Do not re-read sheets that were already read.
+**If a prior skill ran this session** (e.g., `/margin-analysis`, `/variance-analysis`), reuse settings, index, date spine, and any wholesale data already gathered. Do not re-read sheets that were already read.
 
 Call `read_smartmodel_data_section` on wholesale and trade spend sheets:
 
@@ -162,7 +162,7 @@ Call `create_sheet` with blue tab. Call `write_range` for the retailer P&L table
 
 ## Integration with Other Skills
 
-- **`/margin_analysis`**: Trade spend is a major driver of wholesale channel margin
-- **`/variance_analysis`**: Check if trade spend is running above or below plan
-- **`/sku_rationalization`**: Trade spend ROI by SKU informs which products are worth promotional investment
-- **`/build_report`**: Include retailer P&L in board or investor reports for wholesale-heavy brands
+- **`/margin-analysis`**: Trade spend is a major driver of wholesale channel margin
+- **`/variance-analysis`**: Check if trade spend is running above or below plan
+- **`/sku-rationalization`**: Trade spend ROI by SKU informs which products are worth promotional investment
+- **`/build-report`**: Include retailer P&L in board or investor reports for wholesale-heavy brands

@@ -38,7 +38,7 @@ From the model context date spine, determine the most recent Actual period for s
 
 ## Phase 2 — Gather Data
 
-**If a prior skill ran this session** (e.g., `/summarize_model`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
+**If a prior skill ran this session** (e.g., `/summarize-model`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
 
 Call `read_smartmodel_data_section` on inventory and channel sheets:
 
@@ -163,7 +163,7 @@ Call `create_sheet` with blue tab. Call `write_range` for the inventory health t
 
 ## Integration with Other Skills
 
-- **`/product_cost_analysis`**: Unit cost data needed for inventory value calculations
-- **`/variance_analysis`**: Check if inventory build or depletion is per plan
-- **`/sku_rationalization`**: Dead-stock SKUs are rationalization candidates
-- **`/build_report`**: Include inventory health in operational or board reports
+- **`/product-cost-analysis`**: Unit cost data needed for inventory value calculations
+- **`/variance-analysis`**: Check if inventory build or depletion is per plan
+- **`/sku-rationalization`**: Dead-stock SKUs are rationalization candidates
+- **`/build-report`**: Include inventory health in operational or board reports

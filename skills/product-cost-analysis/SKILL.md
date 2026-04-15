@@ -32,7 +32,7 @@ Call `read_smartmodel_registries` on the product sheet → extract `dim_` entrie
 
 ## Phase 2 — Gather Data
 
-**If a prior skill ran this session** (e.g., `/margin_analysis`), reuse settings, index, date spine, and any COGS or product data already gathered. Do not re-read sheets that were already read.
+**If a prior skill ran this session** (e.g., `/margin-analysis`), reuse settings, index, date spine, and any COGS or product data already gathered. Do not re-read sheets that were already read.
 
 Call `read_smartmodel_data_section` on the product/COGS sheet:
 
@@ -140,7 +140,7 @@ Call `create_sheet` with blue tab. Call `write_range` for the waterfall table an
 
 ## Integration with Other Skills
 
-- **`/margin_analysis`**: This skill feeds the COGS side of margin analysis
-- **`/sku_rationalization`**: Use per-SKU cost data to rank products by true profitability
-- **`/variance_analysis`**: Check cost variances against plan
-- **`/build_report`**: Package cost analysis for leadership or investor review
+- **`/margin-analysis`**: This skill feeds the COGS side of margin analysis
+- **`/sku-rationalization`**: Use per-SKU cost data to rank products by true profitability
+- **`/variance-analysis`**: Check cost variances against plan
+- **`/build-report`**: Package cost analysis for leadership or investor review

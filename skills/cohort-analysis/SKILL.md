@@ -34,7 +34,7 @@ From the model context date spine, determine how many cohort months are availabl
 
 ## Phase 2 — Gather Data
 
-**If a prior skill ran this session** (e.g., `/margin_analysis` for gross margin %), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
+**If a prior skill ran this session** (e.g., `/margin-analysis` for gross margin %), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
 
 Depending on what's available in the model:
 
@@ -141,7 +141,7 @@ Call `create_sheet` with blue tab. Call `write_range` for the cohort retention g
 
 ## Integration with Other Skills
 
-- **`/margin_analysis`**: LTV:CAC requires gross margin — run margin analysis first
-- **`/marketing_efficiency_analysis`**: CAC is the other half of the LTV:CAC equation
-- **`/variance_analysis`**: Check if retention changes are a recent variance from historical trend
-- **`/build_report`**: Package cohort analysis for an investor or board presentation
+- **`/margin-analysis`**: LTV:CAC requires gross margin — run margin analysis first
+- **`/marketing-efficiency-analysis`**: CAC is the other half of the LTV:CAC equation
+- **`/variance-analysis`**: Check if retention changes are a recent variance from historical trend
+- **`/build-report`**: Package cohort analysis for an investor or board presentation

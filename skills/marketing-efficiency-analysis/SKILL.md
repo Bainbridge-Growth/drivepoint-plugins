@@ -32,7 +32,7 @@ Call `read_smartmodel_registries` on the opex/marketing sheet → identify how m
 
 ## Phase 2 — Gather Data
 
-**If a prior skill ran this session** (e.g., `/margin_analysis`, `/variance_analysis`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
+**If a prior skill ran this session** (e.g., `/margin-analysis`, `/variance-analysis`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
 
 Call `read_smartmodel_data_section` on marketing and channel sheets:
 
@@ -156,7 +156,7 @@ Call `create_sheet` with blue tab. Call `write_range` for the efficiency table. 
 
 ## Integration with Other Skills
 
-- **`/cohort_analysis`**: LTV is the other half of the CAC:LTV equation
-- **`/margin_analysis`**: Contribution margin context is needed for CAC payback calculations
-- **`/variance_analysis`**: Check if efficiency metrics are a variance from plan
-- **`/build_report`**: Package marketing efficiency for a board or investor update
+- **`/cohort-analysis`**: LTV is the other half of the CAC:LTV equation
+- **`/margin-analysis`**: Contribution margin context is needed for CAC payback calculations
+- **`/variance-analysis`**: Check if efficiency metrics are a variance from plan
+- **`/build-report`**: Package marketing efficiency for a board or investor update

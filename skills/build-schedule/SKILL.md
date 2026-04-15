@@ -159,7 +159,7 @@ After all checks pass, report: schedule name, sections built, Key Driver count, 
 
 ## Integration with Other Skills
 
-- **`/summarize_model`**: Orient to the workbook before adding schedules
-- **`/build_report`**: Schedules feed reports — build the schedule first
-- **`/create_scenario`**: Scenarios may need new schedule assumptions
-- **`/audit_model`**: Validate the new schedule after construction
+- **`/summarize-model`**: Orient to the workbook before adding schedules
+- **`/build-report`**: Schedules feed reports — build the schedule first
+- **`/create-scenario`**: Scenarios may need new schedule assumptions
+- **`/audit-model`**: Validate the new schedule after construction

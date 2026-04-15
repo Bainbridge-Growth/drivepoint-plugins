@@ -32,7 +32,7 @@ Call `sheet_validate` → flag any structural errors before the investor readine
 
 ## Phase 2 — Gather and Assess
 
-**If a prior skill ran this session** (e.g., `/summarize_model`, `/audit_model`), reuse settings, index, date spine, health check results, and any data already gathered. Do not re-read sheets that were already read.
+**If a prior skill ran this session** (e.g., `/summarize-model`, `/audit-model`), reuse settings, index, date spine, health check results, and any data already gathered. Do not re-read sheets that were already read.
 
 ### 2.1 — Time coverage check
 
@@ -141,7 +141,7 @@ Critical gaps: [count] | Recommended improvements: [count] | Nice-to-haves: [cou
 ## Guardrails
 
 - Never write to Actual columns or overwrite Key Drivers
-- This skill assesses the model — it does not fix issues. Reference `/audit_model` and `/clean_model` for repairs.
+- This skill assesses the model — it does not fix issues. Reference `/audit-model` and `/clean-model` for repairs.
 - Do not fabricate assessments for data that isn't in the model — if a section is missing, flag it as missing
 
 ---
@@ -158,7 +158,7 @@ Critical gaps: [count] | Recommended improvements: [count] | Nice-to-haves: [cou
 
 ## Integration with Other Skills
 
-- **`/audit_model`**: Fix structural issues identified here
-- **`/variance_analysis`**: Populate the actuals vs. plan commentary investors expect
-- **`/cohort_analysis`**: Build the retention and LTV section if missing
-- **`/build_report`**: Create the investor update or board deck from the model
+- **`/audit-model`**: Fix structural issues identified here
+- **`/variance-analysis`**: Populate the actuals vs. plan commentary investors expect
+- **`/cohort-analysis`**: Build the retention and LTV section if missing
+- **`/build-report`**: Create the investor update or board deck from the model

@@ -47,7 +47,7 @@ Settings, index, and date spine are already loaded by the protocol's auto-orient
 
 ## Phase 3 — Pull Data from Model
 
-**If a prior analysis skill ran this session** (e.g., `/variance_analysis`, `/margin_analysis`), reuse the data and findings already gathered. Do not re-read sheets that were already read — skip directly to the data points you still need.
+**If a prior analysis skill ran this session** (e.g., `/variance-analysis`, `/margin-analysis`), reuse the data and findings already gathered. Do not re-read sheets that were already read — skip directly to the data points you still need.
 
 **Step 3.1 — Read the relevant sheet(s) — one call per sheet**
 Determine which sheet(s) to read based on the report scope from Phase 1:
@@ -168,7 +168,7 @@ Call `write_range` to add narrative text cells below or alongside the tables. Us
 
 ## Integration with Other Skills
 
-- **`/summarize_model`**: Orient to the model before pulling data
-- **`/variance_analysis`**: Feeds the variance commentary sections
-- **`/margin_analysis`**: Feeds the margin analysis sections
-- **`/interrogate_model`**: If user asks follow-up questions about the report
+- **`/summarize-model`**: Orient to the model before pulling data
+- **`/variance-analysis`**: Feeds the variance commentary sections
+- **`/margin-analysis`**: Feeds the margin analysis sections
+- **`/interrogate-model`**: If user asks follow-up questions about the report

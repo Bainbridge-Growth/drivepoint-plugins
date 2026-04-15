@@ -48,7 +48,7 @@ Call `read_smartmodel_registries` on the channel sheets relevant to the analysis
 
 ## Phase 2 — Gather Data
 
-**If a prior skill ran this session** (e.g., `/summarize_model`, `/variance_analysis`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
+**If a prior skill ran this session** (e.g., `/summarize-model`, `/variance-analysis`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
 
 **Step 2.1 — Read the consolidation sheet first (one call)**
 Call `read_smartmodel_data_section` on **M - Monthly** → get blended revenue, COGS, gross profit, and EBITDA. This gives you the blended margin picture before drilling into channels.
@@ -188,7 +188,7 @@ Call `create_sheet` with blue tab, `write_range` for the margin summary and brid
 
 ## Integration with Other Skills
 
-- **`/variance_analysis`**: Margin variance is a subset — this skill goes deeper
-- **`/sku_rationalization`**: Uses margin data to identify SKUs to keep, grow, or cut
-- **`/product_cost_analysis`**: Goes deeper on the COGS side specifically
-- **`/build_report`**: Package margin analysis into a formatted deliverable
+- **`/variance-analysis`**: Margin variance is a subset — this skill goes deeper
+- **`/sku-rationalization`**: Uses margin data to identify SKUs to keep, grow, or cut
+- **`/product-cost-analysis`**: Goes deeper on the COGS side specifically
+- **`/build-report`**: Package margin analysis into a formatted deliverable

@@ -6,7 +6,7 @@ description: Optimize a SmartModel for performance, file size, and formula effic
 # Optimize Model
 
 **Purpose**: Diagnose and resolve SmartModel performance issues — slow calculation, large file size, oversized used ranges, and inefficient formula patterns — while preserving all business logic and data.
-**Prerequisite**: The `smartmodel-protocol` skill must be loaded. Run `/clean_model` first — many performance issues are caused by structural cruft that cleaning resolves.
+**Prerequisite**: The `smartmodel-protocol` skill must be loaded. Run `/clean-model` first — many performance issues are caused by structural cruft that cleaning resolves.
 
 ---
 
@@ -22,7 +22,7 @@ description: Optimize a SmartModel for performance, file size, and formula effic
 
 ## Phase 1 — Diagnose
 
-**If `/audit_model` or `/clean_model` ran this session**, reuse settings, index, sheet inventory, and error findings already gathered. Do not re-read sheets that were already read.
+**If `/audit-model` or `/clean-model` ran this session**, reuse settings, index, sheet inventory, and error findings already gathered. Do not re-read sheets that were already read.
 
 **Step 1.1 — Use model context from the protocol**
 Settings and index are already loaded by the protocol's auto-orient. From the model context, count templates, sheets, and data volume. Large workbooks with 10+ templates and 48+ months of data are candidates for formula optimization.
@@ -40,7 +40,7 @@ Call `read_range` on a sample of formula cells across each sheet. Flag if any ce
 - `RAND()` or `RANDBETWEEN()` — recalculates constantly
 
 **Step 1.4 — Check calculation mode**
-Call `read_smartmodel_settings` → check if `settings.calculation_mode` is set. If not set or set to Automatic, note this as an optimization opportunity for large models.
+Calculation mode is not exposed via `read_smartmodel_settings`. For large models (>8 templates or >36 months), flag calculation mode as an optimization opportunity to discuss with the user in Phase 2.
 
 ---
 
@@ -150,6 +150,6 @@ Estimated impact: [file size reduction estimate, formula volatility eliminated]
 
 ## Integration with Other Skills
 
-- **`/clean_model`**: Always run clean before optimize — cleaning resolves phantom range issues that most affect performance
-- **`/audit_model`**: Audit identifies structural issues that can cause calculation overhead
-- **`/summarize_model`**: Re-run after optimization to confirm model state is unchanged
+- **`/clean-model`**: Always run clean before optimize — cleaning resolves phantom range issues that most affect performance
+- **`/audit-model`**: Audit identifies structural issues that can cause calculation overhead
+- **`/summarize-model`**: Re-run after optimization to confirm model state is unchanged

@@ -29,7 +29,7 @@ Call `get_sheet_names` → get all actual sheets and compare to Index manifest f
 
 ## Phase 2 — Run Audit Checklist
 
-**If `/summarize_model` ran this session**, reuse settings, index, date spine, sheet inventory, and health check results already gathered. Do not re-read data that was already read.
+**If `/summarize-model` ran this session**, reuse settings, index, date spine, sheet inventory, and health check results already gathered. Do not re-read data that was already read.
 
 Run checks in order. For each: record Pass, Warning, or Fail with location and detail.
 
@@ -142,8 +142,8 @@ Call `read_smartmodel_registries` on sheets with dimension/measure registries:
 1. [Most critical fix first]
 2. [Second fix]
 ...
-Reference `/clean_model` to fix structural and formatting issues.
-Reference `/optimize_model` for performance improvements.
+Reference `/clean-model` to fix structural and formatting issues.
+Reference `/optimize-model` for performance improvements.
 ```
 
 ---
@@ -168,7 +168,7 @@ Reference `/optimize_model` for performance improvements.
 
 ## Integration with Other Skills
 
-- **`/summarize_model`**: Run first for a lighter orientation; audit for deeper integrity
-- **`/clean_model`**: Fix the FAIL and WARNING issues found by this audit
-- **`/optimize_model`**: After cleaning, optimize for performance
-- **`/investor_readiness_analysis`**: Investor readiness requires a clean audit first
+- **`/summarize-model`**: Run first for a lighter orientation; audit for deeper integrity
+- **`/clean-model`**: Fix the FAIL and WARNING issues found by this audit
+- **`/optimize-model`**: After cleaning, optimize for performance
+- **`/investor-readiness-analysis`**: Investor readiness requires a clean audit first

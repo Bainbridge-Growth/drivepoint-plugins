@@ -154,7 +154,7 @@ Present in this format:
 ## Guardrails
 
 - This skill reads only — it never writes to the workbook
-- If the workbook is not a SmartModel (no Settings tab or `settings.smartmodelSpec` missing), note this and offer to run `/convert_to_smartmodel` or provide a limited analysis based on available structure
+- If the workbook is not a SmartModel (no Settings tab or `settings.smartmodelSpec` missing), note this and offer to run `/convert-to-smartmodel` or provide a limited analysis based on available structure
 
 ---
 
@@ -170,6 +170,6 @@ Present in this format:
 ## Integration with Other Skills
 
 - This skill is a **prerequisite** for almost every other skill — run it first
-- **`/audit_model`**: Deeper structural integrity check
-- **`/variance_analysis`**, **`/margin_analysis`**: Need the orientation from this summary to know which sheets to read
-- **`/interrogate_model`**: Answers specific follow-up questions using the map built here
+- **`/audit-model`**: Deeper structural integrity check
+- **`/variance-analysis`**, **`/margin-analysis`**: Need the orientation from this summary to know which sheets to read
+- **`/interrogate-model`**: Answers specific follow-up questions using the map built here

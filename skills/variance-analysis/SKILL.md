@@ -48,7 +48,7 @@ Rules:
 
 ## Phase 2 — Gather Data
 
-**If a prior skill ran this session** (e.g., `/summarize_model`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
+**If a prior skill ran this session** (e.g., `/summarize-model`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
 
 **Step 2.1 — Read the consolidation sheet (one call)**
 Call `read_smartmodel_data_section` on **M - Monthly** (the consolidation sheet). This single call returns the full P&L for the comparison period: total revenue, COGS, gross profit, opex, EBITDA/net income. Extract everything you need from this one response.
@@ -224,7 +224,7 @@ See **Output Formatting Standards** in the protocol. Additionally for variance o
 
 ## Integration with Other Skills
 
-- **`/summarize_model`**: Run first if not yet oriented to the model
-- **`/margin_analysis`**: Go deeper on gross margin variances
-- **`/build_report`**: Package the variance analysis into a formatted report
-- **`/interrogate_model`**: If the user asks follow-up questions about specific variances
+- **`/summarize-model`**: Run first if not yet oriented to the model
+- **`/margin-analysis`**: Go deeper on gross margin variances
+- **`/build-report`**: Package the variance analysis into a formatted report
+- **`/interrogate-model`**: If the user asks follow-up questions about specific variances
