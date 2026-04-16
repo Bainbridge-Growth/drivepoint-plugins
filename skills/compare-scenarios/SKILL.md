@@ -1,6 +1,6 @@
 ---
 name: compare-scenarios
-description: Compare two or more scenarios or plans side by side, highlighting key financial differences and trade-offs. Use when a user asks to "compare scenarios", "which scenario is better?", "show me the options side by side", "what's the difference between plan A and B?", or after creating scenarios with /create-scenario. Also triggers on "scenario comparison", "option analysis", "plan comparison", "decision matrix", or "compare plans".
+description: Compare two or more scenarios or plans side by side, highlighting key financial differences and trade-offs. Use when a user asks to "compare scenarios", "which scenario is better?", "show me the options side by side", "what's the difference between plan A and B?", or after creating scenarios with /create-scenario. Also triggers on "plan comparison", "compare plans", "budget vs latest forecast", or "plan A vs plan B".
 ---
 
 # Compare Scenarios
