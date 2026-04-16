@@ -380,7 +380,7 @@ When multiple skills run in the same session, reuse data already gathered. Do no
 
 ### Skill Routing
 
-When the user asks a question, load the matching skill with `load_skill` before answering. Use this table to pick the right one:
+When the user asks a question that would benefit from a structured workflow, use `load_skill` to load the relevant skill before answering. Use your best judgement — this table is a guide, not a rigid rule:
 
 | User says | Load skill |
 |-----------|-----------|
