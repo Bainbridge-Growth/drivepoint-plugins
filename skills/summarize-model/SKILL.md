@@ -1,6 +1,6 @@
 ---
 name: summarize-model
-description: Generate a structured summary of a SmartModel workbook — what's in it, what state it's in, what time range it covers, what data is populated. Use when a user opens a model and asks "what is this?", "summarize this model", "what's in here?", "give me an overview", or when the agent needs to orient itself to a new workbook before any other task. This is the foundational orientation skill — run it first on any unfamiliar model.
+description: Generate a structured summary of a SmartModel workbook — what's in it, what state it's in, what time range it covers, what data is populated. Use when a user opens a model and asks "what is this?", "summarize this model", "what's in here?", "give me an overview", "stand up the model", or when the agent needs to orient itself to a new workbook before any other task. This is the foundational orientation skill — run it first on any unfamiliar model.
 ---
 
 # Summarize Model

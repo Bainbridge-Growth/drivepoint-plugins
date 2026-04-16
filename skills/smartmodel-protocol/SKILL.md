@@ -378,6 +378,33 @@ All skills that depend on the SmartModel Protocol inherit these rules. Skill-spe
 
 When multiple skills run in the same session, reuse data already gathered. Do not re-read settings, index, date spine, or data sections that a prior skill already loaded. Each skill should check whether upstream context exists before making tool calls.
 
+### Skill Routing
+
+When the user asks a question that would benefit from a structured workflow, use `load_skill` to load the relevant skill before answering. Use your best judgement — this table is a guide, not a rigid rule:
+
+| User says | Load skill |
+|-----------|-----------|
+| "why did we miss", "vs plan", "pacing", "variance", "pre-roll", "are we on track" | variance-analysis |
+| "margins", "channel profitability", "Amazon vs DTC", "why am I below benchmark" | margin-analysis |
+| "what does it cost to make", "COGS breakdown", "landed cost", "unit economics" | product-cost-analysis |
+| "which SKUs", "what should we cut", "product mix", "too many SKUs" | sku-rationalization |
+| "LTV", "retention", "cohort", "do customers come back", "CAC payback", "repurchase rate" | cohort-analysis |
+| "CAC", "ROAS", "marketing efficient", "ad spend", "spending too much on ads" | marketing-efficiency-analysis |
+| "inventory", "weeks of supply", "stockout", "reorder", "sell through rate" | inventory-analysis |
+| "trade spend", "promos working", "deduction rate", "retailer profitability", "wholesale P&L" | trade-spend-analysis |
+| "what if", "scenario", "tariffs", "raise prices", "extend runway", "miss Q2" | create-scenario |
+| "compare scenarios", "plan A vs B", "which scenario is better", "budget vs forecast" | compare-scenarios |
+| "board deck", "board report", "investor update", "monthly close", "package this up" | build-report |
+| "build a schedule", "revenue build", "COGS schedule", "headcount plan", "payroll tab" | build-schedule |
+| "what is this", "overview", "stand up the model", "orient" | summarize-model |
+| "where does that number come from", "trace", "what's driving that line" | interrogate-model |
+| "audit", "something looks off", "validate", "sanity check", "numbers don't look right" | audit-model |
+| "clean up", "fix the model", "#REF errors", "broken formulas" | clean-model |
+| "slow", "lagging", "file is huge", "speed up", "reduce file size" | optimize-model |
+| "investor-ready", "due diligence", "DD prep", "Series A", "data room", "share with VCs" | investor-readiness-analysis |
+
+If the question doesn't clearly match one skill, answer directly from the model data. If the user explicitly asks for an analysis by name (e.g., "run a variance analysis"), always load that skill.
+
 ---
 
 ## Multi-Template Workbooks

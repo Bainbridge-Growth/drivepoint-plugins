@@ -1,6 +1,6 @@
 ---
 name: inventory-analysis
-description: Analyze inventory health — weeks of supply, stockout risk, dead stock, and reorder timing. Use when a user asks about inventory levels, "how much inventory do we have?", "are we at risk of stocking out?", "what's our weeks of supply?", "dead stock", "overstock", or "inventory management". Also triggers on "WOS", "inventory turn", "days of inventory", "stockout risk", or "safety stock".
+description: Analyze inventory health — weeks of supply, stockout risk, dead stock, and reorder timing. Use when a user asks about inventory levels, "how much inventory do we have?", "are we at risk of stocking out?", "what's our weeks of supply?", "dead stock", "overstock", or "inventory management". Also triggers on "WOS", "inventory turn", "days of inventory", "stockout risk", "safety stock", "weeks on hand", "reorder soon", or "sell through rate".
 ---
 
 # Inventory Analysis
