@@ -2,12 +2,12 @@
 name: smartmodel-protocol
 description: Loads the SmartModel Protocol v6.0 grammar. Use when working with any Drivepoint SmartModel Excel workbook — reading structure, populating data, navigating sheets, rolling forward, or answering questions about financial model content.
 user-invocable: false
-allowed-tools: Read, Grep, Glob
+allowed-tools: Read Grep Glob
 ---
 
 # SmartModel Protocol Skill — v6.0
 **Issuer**: Drivepoint (drivepoint.io)
-**Hosted at**: `https://raw.githubusercontent.com/Bainbridge-Growth/drivepoint-smartmodel-plugin/main/protocol/v6.0/smartmodel-spec.md`
+**Hosted at**: `https://raw.githubusercontent.com/Bainbridge-Growth/drivepoint-smartmodel-plugin/main/skills/smartmodel-protocol/SKILL.md`
 **Loaded by**: Drivepoint Excel add-in on workbook open
 **Purpose**: Teach any AI agent the SmartModel grammar so it can read, navigate, assist with, and populate Drivepoint SmartModel workbooks
 
@@ -284,20 +284,99 @@ The agent receives import declarations as part of the skill context provided by 
 
 ---
 
-## Agent Operating Principles
+## Operating Principles
 
-When operating on a SmartModel, the agent should:
+### Core Rules
 
-1. **Read Settings first**: Establish model identity (name, version, company, date range) before doing anything else
-2. **Check import status**: Look at the Index tab and R- sheets to understand what data is populated vs. missing
-3. **Navigate by marker type**: Use column A markers to distinguish inputs (Key Driver) from calculated outputs (Key Result)
-4. **Never hardcode results**: Key Result cells must always use Excel formulas. If populating a Key Driver cell with data, write the value; if computing a Key Result, write the formula.
-5. **Respect column B identifiers**: Use these to address specific data rows unambiguously, especially when the user asks about a specific metric
-6. **Follow the time axis**: Row 2 is the authoritative date spine. Use it to locate the correct column for any given period
-7. **Read the template skill**: This protocol skill teaches universal grammar. Template-specific skills are loaded by the add-in from the server and passed to the agent as context. They teach the semantics of each specific template — what each section means, how to roll it forward, common tasks, error handling
-8. **Read the Index tab manifest**: The Index tab contains the template registry — a structured table listing every template ID, version, owned sheets, skill file, and imports file. This is the agent's map of the workbook. Read it before navigating schedule sheets.
-9. **Be multi-template aware**: A working model typically contains 5–8 templates stitched together. The agent receives all relevant template skills and a sheet map showing which sheet belongs to which template.
-10. **Do not infer connections between templates**: Formula wiring between sheets is discovered by reading Excel formulas at runtime, not declared in any configuration file
+1. **Identify the model.** When a conversation opens or the user asks "what model is this?", call `read_smartmodel_settings` to retrieve the model name, company, protocol version, and date range. This is your source of truth for model identity.
+
+2. **Read the Index tab first.** Before answering any question or making any edit, call `read_smartmodel_index` to obtain the full list of templates and their owned sheets. This is your map of the workbook.
+
+3. **Identify the period type before writing.** Each column in a schedule is either an Actual (historical, locked) or a Forecast (editable) period. Read the date spine with `read_smartmodel_date_spine` before writing any value. Never write to an Actual-period column.
+
+4. **Respect the Key Driver / Key Result distinction.** Only cells whose column A marker is `key_driver` (bullet + zap symbol) may be written. Cells marked `key_result` are formula outputs — never overwrite them.
+
+5. **Use durable identifiers, not row numbers.** Address cells by their `durable_id` (column B), not by row number. Row positions can shift when templates are added or removed.
+
+6. **Confirm bulk writes.** When a bulk write operation affects more than 10 cells, present a summary to the user and require explicit confirmation before executing.
+
+7. **Read before writing.** Always call a read tool on the target sheet before writing drivers. Verify that the target row has the `key_driver` marker and that the target column is a Forecast period.
+
+8. **Scope changes to the correct template.** Use `read_smartmodel_sheet_metadata` to confirm which template owns a sheet before editing it. Do not mix data across templates.
+
+9. **Report import status before answering data questions.** Use `read_r_sheet` to check whether import sheets (R- prefix) are populated. If an import sheet is empty, tell the user before attempting to answer questions that depend on that data.
+
+10. **Summarise what you read.** After reading any structural data (index, settings, metadata), give the user a brief confirmation of what you found — sheet names, template versions, date range, Actual/Forecast boundary.
+
+11. **Never expose internal identifiers to the user.** Translate `durable_id` values, column letters, and row numbers into friendly names and Excel-notation ranges before presenting information.
+
+### Auto-Orient
+
+When this skill loads, **immediately** make these 3 tool calls before the user's first request. Hold the results as **model context** for the entire session — every subsequent skill uses this context instead of re-reading.
+
+1. **`read_smartmodel_settings`** → capture model identity (`settings.companyName`, `settings.currency`, `settings.modelName`, `settings.modelVersion`, `settings.smartmodelSpec`, `settings.modelStartDate`, `settings.historicalStartDate`)
+2. **`read_smartmodel_index`** → capture the full template registry (template IDs, owned sheets, skill references, import references)
+3. **`read_smartmodel_date_spine`** on the consolidation sheet (M - Monthly, or the first available schedule sheet) → capture the time range, Actual/Forecast boundary, and most recently closed Actual month
+
+After these 3 calls, the agent knows: what company this is, what currency to use, what sheets exist, what templates are configured, and what time period is current. No other skill should repeat these calls — they reference the model context instead.
+
+If any of these calls fail, follow the Error Handling rules below.
+
+### Quick vs. Full Mode
+
+Before running a skill's full phased workflow, assess whether the user's question actually requires it.
+
+**Quick mode** — If the user's question can be answered with a single data read and a direct response, answer it directly. Do not run a multi-phase analysis for a lookup question.
+- "What was March revenue?" → Read the consolidation sheet, return the number with brief context.
+- "What's our gross margin?" → Read the relevant row, return the %, note the trend if visible.
+- "How many SKUs do we have?" → Read the dimension registry, return the count.
+- "When do actuals end?" → Answer from the model context (already loaded).
+
+**Full mode** — Run the complete phased workflow when the user asks for analysis, explanation, comparison, a report, or uses trigger phrases like "why", "what's driving", "compare", "build", "analyze".
+- "Why did we miss on revenue?" → Full variance analysis
+- "Build me a board report" → Full build-report workflow
+- "What's driving our margin decline?" → Full margin analysis
+
+**When in doubt**: Answer the direct question first (quick mode), then offer: "Would you like me to run the full [skill name] analysis?"
+
+### Output Formatting Standards
+
+All skills inherit these formatting rules. Do not restate them in individual skills.
+
+**Number formatting:**
+- Use currency from `settings.currency` in the model context (default USD)
+- Round to thousands (e.g., $1,245K) for companies with >$10M annual revenue; round to dollars for smaller companies
+- Always show both $ and % when presenting variances, margins, or deltas
+- Percentages: one decimal place (e.g., 31.6%), except basis point changes which show as integers (e.g., +400bps or +4.0pp)
+
+**Narrative rules:**
+- Never present raw data without interpretation — every number needs a "so what"
+- Lead with the headline finding, then support with data
+- Quantify everything — never say "revenue increased significantly"; say "revenue increased $95K (8%)"
+- Be specific about direction: "up", "down", "flat" — not "changed"
+
+**Excel output (when user requests a workbook tab):**
+- Report tabs get blue tab color
+- Use `write_range` for labels and data, `insert_formula` for computed cells
+- Apply `format_range` once per format type (currency, percentage, bold), not per cell
+- Call `resize_columns` to fit column widths after writing
+- Call `activate_sheet` at the end to bring the new tab into focus
+
+### Error Handling
+
+All skills that depend on the SmartModel Protocol inherit these rules. Skill-specific fallbacks supplement but do not replace them.
+
+**Tool call fails:** Stop and report the error. State what tool was called, the error returned, and whether the analysis can continue without it. Do not guess what the data would have been.
+
+**Required data is missing or empty:** If the data is central to the analysis (e.g., no revenue data for variance analysis), stop and tell the user what is missing and how to populate it. If the data is peripheral, note the gap and continue.
+
+**Write fails mid-construction:** Stop writing. Report what was successfully written and what was not. Do not attempt to undo partial work. Ask the user whether to retry or clean up manually.
+
+**Required sheet doesn't exist:** Check if the data is available on an alternative sheet. If an alternative exists, use it and note the substitution. If not, stop and tell the user which sheet is missing.
+
+### Prior Context Reuse
+
+When multiple skills run in the same session, reuse data already gathered. Do not re-read settings, index, date spine, or data sections that a prior skill already loaded. Each skill should check whether upstream context exists before making tool calls.
 
 ---
 
@@ -377,3 +456,41 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 8. **Data sections** → What does column A say? If `•⚡ Key Driver`, it's user input. If `  ⚡ Key Result`, it's calculated.
 9. **Column B** → What is the machine identifier for this specific row?
 10. **R- sheets** → What real data is imported and feeding this model?
+
+---
+
+## Related Skills
+
+### Builders
+| Skill | Path | Purpose |
+|-------|------|---------|
+| Build Schedule | `../build-schedule/SKILL.md` | Construct a new schedule sheet from scratch — data-first flow, any model version |
+| Build Report | `../build-report/SKILL.md` | Create a blue report tab — board reports, monthly close, investor updates |
+| Create Scenario | `../create-scenario/SKILL.md` | Build a named what-if scenario by adjusting Key Driver assumptions |
+
+### Analysis
+| Skill | Path | Purpose |
+|-------|------|---------|
+| Variance Analysis | `../variance-analysis/SKILL.md` | Actuals vs. plan/forecast with driver decomposition and mid-month pacing |
+| Margin Analysis | `../margin-analysis/SKILL.md` | Channel-aware gross and contribution margin decomposition |
+| SKU Rationalization | `../sku-rationalization/SKILL.md` | Rank product portfolio by contribution; flag SKUs to invest, maintain, or cut |
+| Cohort Analysis | `../cohort-analysis/SKILL.md` | Retention curves + LTV in one consolidated pass |
+| Investor Readiness | `../investor-readiness-analysis/SKILL.md` | Audit model for fundraise and due diligence gaps |
+| Product Cost Analysis | `../product-cost-analysis/SKILL.md` | COGS decomposition and per-unit economics by SKU |
+| Marketing Efficiency | `../marketing-efficiency-analysis/SKILL.md` | CAC, ROAS, blended vs. channel-level spend efficiency |
+| Inventory Analysis | `../inventory-analysis/SKILL.md` | Weeks of supply, stockout risk, dead stock, reorder timing |
+| Trade Spend Analysis | `../trade-spend-analysis/SKILL.md` | Promotional ROI, deduction rates, retailer-level P&L |
+
+### Model Ops
+| Skill | Path | Purpose |
+|-------|------|---------|
+| Summarize Model | `../summarize-model/SKILL.md` | Full workbook orientation — templates, data state, time range, health check |
+| Interrogate Model | `../interrogate-model/SKILL.md` | Trace any number back through its formula and driver chain |
+| Audit Model | `../audit-model/SKILL.md` | Structural integrity, formula errors, protocol compliance checklist |
+| Clean Model | `../clean-model/SKILL.md` | Fix errors, restore protocol structure, standardize formatting |
+| Optimize Model | `../optimize-model/SKILL.md` | Resolve slow calculation, phantom range bloat, volatile formulas |
+
+### Scenarios
+| Skill | Path | Purpose |
+|-------|------|---------|
+| Compare Scenarios | `../compare-scenarios/SKILL.md` | Side-by-side delta analysis across two or more scenarios or plans |
