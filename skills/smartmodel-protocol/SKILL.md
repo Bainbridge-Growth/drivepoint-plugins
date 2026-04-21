@@ -8,6 +8,7 @@ allowed-tools: Read Grep Glob
 # SmartModel Protocol Skill — v6.0
 **Issuer**: Drivepoint (drivepoint.io)
 **Hosted at**: `https://raw.githubusercontent.com/Bainbridge-Growth/drivepoint-smartmodel-plugin/main/skills/smartmodel-protocol/SKILL.md`
+**Structured schema**: [`../../protocol/v6.yaml`](../../protocol/v6.yaml) — machine-readable form used by validators and CI. When this prose and the YAML conflict, the YAML is authoritative.
 **Loaded by**: Drivepoint Excel add-in on workbook open
 **Purpose**: Teach any AI agent the SmartModel grammar so it can read, navigate, assist with, and populate Drivepoint SmartModel workbooks
 

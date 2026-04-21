@@ -1,0 +1,325 @@
+# SmartModel Protocol v6.0 — structured schema
+#
+# This is the canonical, machine-readable form of the SmartModel grammar.
+# The human-readable prose lives in ../skills/smartmodel-protocol/SKILL.md.
+#
+# Consumers:
+#   - drivepoint-smartmodel-service → validate_v6_model.py, post_validate.py
+#   - drivepoint-smartmodel-templates → CI conformance tests
+#   - Agents loading the plugin → skill context alongside SKILL.md
+#
+# Conformance levels:
+#   MUST   — non-negotiable. A workbook failing a MUST check is not a v6 SmartModel.
+#   SHOULD — strongly recommended. Failing indicates drift; validators SHOULD warn.
+#   MAY    — optional. Permitted variation; validators MUST NOT flag.
+
+version: "6.0"
+detection:
+  # Presence of this setting with this value indicates a v6 SmartModel
+  gate:
+    sheet: Settings
+    id: settings.smartmodelSpec
+    value: "6.0"
+
+# ---------------------------------------------------------------------------
+# Tab colors (stored as 6-char RGB, openpyxl prefixes alpha → strip to last 6)
+# ---------------------------------------------------------------------------
+tab_colors:
+  index:        { rgb: FFFFFF, level: MUST }
+  settings:     { rgb: "404040", level: MUST }
+  schedule:     { rgb: FFC000, level: MUST }   # yellow — primary financial sheets
+  report:       { rgb: 64B1FF, level: SHOULD } # blue — derived outputs
+  consolidation: { rgb: "000000", level: SHOULD } # M - Monthly
+  r_sheets:     { rgb: null, level: MAY }      # R- prefix sheets, no color required
+
+# ---------------------------------------------------------------------------
+# Settings tab layout
+# ---------------------------------------------------------------------------
+settings_tab:
+  tab_color_rgb: "404040"
+  columns:
+    A: { role: reserved, width: 3.33, level: MUST }
+    B: { role: id,          header: id,          font: { name: Menlo, size: 10 }, level: MUST }
+    C: { role: setting,     header: setting,     level: MUST }
+    D: { role: value,       header: value,       level: MUST }
+    E: { role: description, header: description, level: SHOULD }
+  header_row:
+    row: 1
+    background_rgb: "2D2D2D"
+    font: { name: Menlo, size: 10, bold: true, color: FFFFFF }
+    level: MUST
+  data_rows:
+    start_row: 2
+    alternating_fill:
+      level: SHOULD
+      even_row_rgb: F2F2F2
+      odd_row_rgb:  "000000"   # transparent in openpyxl; alpha 00 in normalized form
+
+  required_ids:
+    # Core identity — MUST be present on both templates and composite models
+    - { id: settings.smartmodelSpec,       setting: Protocol Version,      level: MUST,  type: string, expected: "6.0" }
+    - { id: settings.modelVersion,         setting: Model Version,         level: MUST,  type: semver }
+    - { id: settings.modelName,            setting: Model Name,            level: MUST,  type: string }
+    - { id: settings.modelType,            setting: Model Type,            level: MUST,  type: enum,   one_of: [template, model] }
+    - { id: settings.modelStartDate,       setting: ProForma Start Date,   level: MUST,  type: date }
+    - { id: settings.historicalStartDate,  setting: Historical Start Date, level: MUST,  type: date }
+    - { id: settings.companyId,            setting: Company ID,            level: MUST,  type: string }
+    - { id: settings.companyName,          setting: Company Name,          level: MUST,  type: string }
+    - { id: settings.currency,             setting: Currency,              level: MUST,  type: string, default: USD }
+    - { id: settings.author,               setting: Author,                level: MUST,  type: string }
+    - { id: settings.authorId,             setting: Author ID,             level: MUST,  type: string }
+
+  recommended_ids:
+    # Present in composite and many templates, but not strictly required
+    - { id: settings.stores,               setting: Stores,                level: SHOULD, type: string }
+    - { id: settings.lastDateActuals,      setting: Last Date Actuals,     level: SHOULD, type: date }
+
+  id_naming:
+    prefix: "settings."
+    case: camelCase
+    level: MUST
+    # v5 legacy PascalCase (e.g. settings.ModelStartDate) MUST be normalized on upgrade
+
+  section_headers:
+    # Rows that visually divide assumption groups. No id; bold 14pt label in col C.
+    level: MAY
+    examples: [Revenue, Discounts, "Returns & Shipping Income"]
+
+# ---------------------------------------------------------------------------
+# Index tab layout — manifest of templates in the workbook
+# ---------------------------------------------------------------------------
+index_tab:
+  tab_color_rgb: FFFFFF
+  manifest_table:
+    start_row: 2                  # row 1 is table header
+    columns:
+      A: { header: "Template ID",  level: MUST }
+      B: { header: Version,        level: MUST }
+      C: { header: Sheets,         level: MUST }
+      D: { header: "Skill File",   level: SHOULD }
+      E: { header: "Imports File", level: SHOULD }
+
+# ---------------------------------------------------------------------------
+# Schedule sheet grammar
+# ---------------------------------------------------------------------------
+schedule_sheet:
+  tab_color_rgb: FFC000
+  frozen_panes: K5
+  gridlines: off
+
+  header_block:
+    # Rows 1-8 are structural chrome. Strict grammar.
+    row_1:
+      label: "Title bar"
+      background_rgb: 64B1FF
+      font_color: FFFFFF
+      a1_value: "≡"             # U+2261 section marker
+      c1_formula: "=D9"          # displays template name
+      level: MUST
+
+    row_2:
+      label: "Date spine"
+      c_label: "End of Period"
+      date_spine_start_col: K    # monthly dates from col K onward
+      fy_view_cols:              # FY View extension (NEW IN v6.0 CANONICAL)
+        enabled: optional
+        cols: [F, G, H]          # FY1, FY2, FY3 end dates
+        level: MAY
+      level: MUST
+
+    row_3:
+      label: "Period type"
+      c_label: "Period Type"
+      background_rgb: "808080"
+      period_type_start_col: K
+      values: [Actual, Forecast]
+      fy_view_cols:
+        # If FY View cols are populated in row 2, same cols in row 3 MUST have Actual/Forecast
+        level: CONDITIONAL
+        cols: [F, G, H]
+      formula_pattern: '=IF({col}2<Settings!$D$6,"Actual","Forecast")'
+      level: MUST
+
+    row_4:
+      label: "Status bar"
+      a4_value: "•"
+      c4_type: string            # typical: "No Errors" or status message
+      level: SHOULD
+
+    row_5_6:
+      label: "Blank spacing"
+      content: empty
+      borders: none              # stray thick borders here are a known authoring bug
+      level: MUST
+
+    row_7:
+      label: "Template title"
+      c7_formula: "=D9"
+      font: { size: 14, bold: true }
+      border: { bottom: { style: thick, color: 63AEFF } }
+      border_extends_to: timeseries_end
+      level: MUST
+
+    row_8:
+      label: "Template description"
+      c8_type: string
+      font: { italic: true, color: "808080" }
+      level: SHOULD
+
+  metadata_block:
+    # Rows 9-15 typical. Column B has metadata___ identifiers (triple underscore, monospace).
+    start_row: 9
+    required_fields:
+      - { row: 9,  id: metadata___name,             label: Name,             level: MUST }
+      - { row: 10, id: metadata___template_id,      label: "Template ID",    level: MUST }
+      - { row: 11, id: metadata___template_version, label: "Template Version", level: MUST }
+      - { row: 12, id: metadata___description,      label: Description,      level: SHOULD }
+      - { row: 13, id: metadata___type,             label: Type,             level: SHOULD }
+    optional_fields:
+      - { id: metadata___grain,      label: Grain }
+      - { id: metadata___framework,  label: Framework }
+      - { id: metadata___docsLink,   label: Documentation }
+      - { id: metadata___created,    label: Created }
+
+  settings_block:
+    # Sheet-level settings. Rows 17-21 typical. Column B has settings___ identifiers.
+    # Ids are ALWAYS PLURAL (e.g. settings___fy1_end_date, not setting___...).
+    common_ids:
+      - { id: settings___fy1_end_date, label: "FY to View 1" }
+      - { id: settings___fy2_end_date, label: "FY to View 2" }
+      - { id: settings___fy3_end_date, label: "FY to View 3" }
+      - { id: settings___identifier_structure, label: "Identifier Structure" }
+    level: MAY
+
+  data_row:
+    # Column A — storage marker
+    column_a:
+      values:
+        - { marker: "•",             type: bullet,     stored: false, label: "Visual only" }
+        - { marker: "•⚡ Key Driver", type: key_driver, stored: true,  writable_by_agent: true, label: "User input row" }
+        - { marker: "  ⚡ Key Result",type: key_result, stored: true,  writable_by_agent: false, label: "Calculated row" }
+      level: MUST
+    column_b:
+      role: identifier
+      font: { name: Menlo, size: 10, color: "000000" }
+      level: MUST
+    column_c:
+      role: label
+      level: SHOULD
+    timeseries:
+      start_col: K
+      input_cell_formatting:     # key_driver forecast cells: light gray bg, blue-ish text
+        background_rgb: EAEAEA
+        font_color: accent1      # theme color
+        level: SHOULD
+
+# ---------------------------------------------------------------------------
+# Report sheet grammar (blue tab)
+# ---------------------------------------------------------------------------
+report_sheet:
+  tab_color_rgb: 64B1FF
+  # Reports inherit the header block grammar from schedule_sheet but may omit
+  # the metadata_block. Date spine and period type rows are SHOULD, not MUST.
+  level: SHOULD
+
+# ---------------------------------------------------------------------------
+# R- sheet grammar (data import layer)
+# ---------------------------------------------------------------------------
+r_sheet:
+  name_prefix: "R - "
+  tab_color_rgb: null            # default color
+  purpose: "Data import layer. One R- sheet per import declaration."
+  level: MAY
+
+# ---------------------------------------------------------------------------
+# Formula rules — cross-reference patterns
+# ---------------------------------------------------------------------------
+formula_rules:
+  settings_references:
+    # MUST reference the value column (D), not the label (C) or description (E)
+    value_col: D
+    level: MUST
+    forbidden_patterns:
+      - pattern: 'Settings!\$C\$\d+'
+        reason: "Points at label/setting column, not value. Use $D$ instead."
+      - pattern: 'Settings!\$E\$\d+'
+        reason: "Points at description column. Use $D$ for the value."
+
+  error_handling:
+    # Formulas reaching into import/aggregation layers SHOULD be IFERROR-wrapped
+    xlookup: { wrap: 'IFERROR(..., "")',  level: SHOULD }
+    sumifs:  { wrap: "IFERROR(..., 0)",   level: SHOULD }
+    division: { wrap: 'IFERROR(..., "-")', level: SHOULD }
+
+  d9_anchor:
+    # D9 is the template name. MUST be a string value, never a formula.
+    level: MUST
+  c1_c7_mirror:
+    # C1 and C7 MUST display the template name via =D9
+    level: MUST
+
+# ---------------------------------------------------------------------------
+# Identifier naming conventions
+# ---------------------------------------------------------------------------
+identifiers:
+  settings_dot:
+    regex: '^settings\.[a-z][a-zA-Z0-9]*$'
+    example: settings.smartmodelSpec
+    scope: Settings tab
+    level: MUST
+  metadata_triple:
+    regex: '^metadata___[a-z_]+$'
+    example: metadata___template_id
+    scope: "Schedule sheet rows 9-15"
+    level: MUST
+  settings_triple:
+    regex: '^settings___[a-z0-9_]+$'      # always plural "settings" prefix
+    example: settings___fy1_end_date
+    scope: "Schedule sheet settings block"
+    level: MUST
+  dim_prefix:
+    regex: '^dim_[a-z0-9_]+$'
+    example: dim_sku_1
+    level: MUST
+  measure_prefix:
+    regex: '^measure_[a-z0-9_]+$'
+    example: measure_orders
+    level: MUST
+
+# ---------------------------------------------------------------------------
+# Workbook-level properties
+# ---------------------------------------------------------------------------
+workbook:
+  calculation_mode:
+    value: auto
+    level: MUST
+  gridlines:
+    all_sheets: off
+    level: SHOULD
+  xlsx_components_preserved_on_save:
+    # openpyxl strips these; any tool that reads+writes the xlsx MUST restore them
+    # via zip-merge. See drivepoint-smartmodel-service/smartmodel_utils for reference.
+    level: MUST
+    paths:
+      - xl/sharedStrings.xml
+      - xl/calcChain.xml
+      - xl/metadata.xml
+      - xl/richData/
+      - xl/media/
+      - xl/printerSettings/
+      - xl/threadedComments/
+      - customXml/
+
+# ---------------------------------------------------------------------------
+# Chrome zone hygiene
+# ---------------------------------------------------------------------------
+# Common authoring bugs in rows 1-30 that validators SHOULD catch.
+chrome_hygiene:
+  stray_thick_borders:
+    scope: "rows 1-30 on schedule/report sheets"
+    rule: "thick bottom border is legitimate only on heading rows (col C bold, size >= 14pt)"
+    level: SHOULD
+  empty_spacing_rows:
+    rows: [5, 6, 21, 22]
+    rule: "no value, no heading-style borders"
+    level: SHOULD
