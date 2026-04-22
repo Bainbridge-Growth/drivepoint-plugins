@@ -21,6 +21,20 @@ Teaches any Claude session the SmartModel Protocol v6.0 grammar — the AI-reada
 ## Usage
 Once installed, the `smartmodel-protocol` skill loads automatically when working with a SmartModel workbook. Can also invoke explicitly: `/skill smartmodel-protocol`
 
+## SmartModel Tools
+
+The `smartmodel-tools` skill exposes five utility tools for working with SmartModel workbooks via the Raptor service API:
+
+| Tool | Description |
+|------|-------------|
+| `generate_smartmodel` | Create a new SmartModel workbook from a template configuration |
+| `validate_smartmodel` | Run v6 protocol compliance checks on an existing workbook |
+| `upgrade_smartmodel` | Upgrade a v5 workbook to v6 protocol format |
+| `convert_to_smartmodel` | Convert a plain xlsx file into SmartModel format |
+| `list_smartmodel_templates` | List available templates in the catalog |
+
+Invoke with `/skill smartmodel-tools` or use tools directly in a Claude session.
+
 ## Plugin Structure
 ```
 drivepoint-smartmodel-plugin/
@@ -29,6 +43,7 @@ drivepoint-smartmodel-plugin/
     marketplace.json                 ← marketplace registry entry
   skills/
     smartmodel-protocol/SKILL.md    ← canonical protocol specification (plugin entry point)
+    smartmodel-tools/SKILL.md       ← SmartModel utility tools
     build-schedule/SKILL.md         ← Builders
     build-report/SKILL.md
     create-scenario/SKILL.md

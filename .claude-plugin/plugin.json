@@ -1,8 +1,18 @@
 {
   "name": "smartmodel-protocol",
-  "version": "1.0.0",
-  "description": "SmartModel Protocol v6.0 — teaches any AI agent how to read, navigate, and populate Drivepoint SmartModel Excel workbooks.",
+  "version": "1.1.0",
+  "description": "SmartModel Protocol v6.0 — teaches any AI agent how to read, navigate, and populate Drivepoint SmartModel Excel workbooks. Includes utility tools for generating, validating, upgrading, and converting SmartModel workbooks.",
   "author": { "name": "Drivepoint", "url": "https://drivepoint.io" },
   "repository": "https://github.com/Bainbridge-Growth/drivepoint-smartmodel-plugin",
-  "keywords": ["excel", "financial-models", "smartmodel", "drivepoint"]
+  "keywords": ["excel", "financial-models", "smartmodel", "drivepoint"],
+  "skills": [
+    {
+      "name": "smartmodel-protocol",
+      "path": "skills/smartmodel-protocol/SKILL.md"
+    },
+    {
+      "name": "smartmodel-tools",
+      "path": "skills/smartmodel-tools/SKILL.md"
+    }
+  ]
 }
