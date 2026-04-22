@@ -14,7 +14,6 @@ The output is **markdown content returned in-chat**. A separate build-report ski
 1. **Confirm the reporting month and customer.** Customer name is readable from `settings.companyName`. Reporting month defaults to the most recently closed Actual period — infer it from the date spine on the consolidation sheet. Only ask the user if genuinely ambiguous.
 2. **Read the Index tab** to discover which templates (and therefore which channels) are present. This determines the shape of the report — a two-channel customer gets a different table of contents than a five-channel customer.
 3. **Read the monthly consolidation sheet** (typically `M - Monthly` — check Index) for headline numbers. Read channel-specific schedule sheets for channel-level commentary.
-4. **Confirm the forecast baseline** for the variance section. Ask the user which forecast version to compare against ("vs H2 FCST," "vs 2025 Budget," "vs board forecast") if it's not obvious from the model. Getting this wrong is the #1 way the report embarrasses us.
 
 If the workbook uses SmartModel v6 protocol, the `smartmodel-protocol` skill should already be loaded. Use it.
 
@@ -43,9 +42,6 @@ Prepared by Drivepoint for [Customer]
 
 ## Variance Analysis
   - Run /variance-analysis and incorporate the output here
-
-## YTD Variance
-  - Same structure as monthly variance, rolled up YTD
 
 ## Customer Retention Cohorts
   - One section per segment (subscription / non-subscription / by channel)
@@ -125,7 +121,7 @@ Therefore, EBITDA declined to -$XK or -X% of Net Revenue from -$XK or X% the pri
 
 ## Balance Sheet & Cash Flow
 
-Short section. One lead sentence with ending cash and MoM change, then a nested bullet list of the three cash flow categories. Always annotate each line with `(use of cash)` or `(source of cash)`.
+Short section. Read the balance sheet and cash flow rows from the consolidation sheet (`M - Monthly`). One lead sentence with ending cash and MoM change, then a nested bullet list of the three cash flow categories. Always annotate each line with `(use of cash)` or `(source of cash)`.
 
 ```
 Cash at the end of [Month] of $X.XM decreased/increased by $XK MoM
@@ -143,10 +139,6 @@ Cash at the end of [Month] of $X.XM decreased/increased by $XK MoM
 ## Variance Analysis
 
 Run `/variance-analysis`. That skill handles comparison basis selection, data gathering, driver decomposition, and output formatting. Incorporate its output directly into this section. The section headline must name the forecast baseline exactly — include a clarifying parenthetical if there's any ambiguity about which plan version is being compared against.
-
-## YTD Variance
-
-Reuse the data already gathered by `/variance-analysis` — request the YTD rollup if not already computed. Same P&L shape as the monthly variance, rolled to year-to-date. 1–2 paragraphs on the biggest YTD misses. Don't rewrite the full prose variance — the monthly section already did that.
 
 ## Customer Retention Cohorts
 
@@ -175,4 +167,4 @@ Factual, direct, slightly terse. Short sentences. Lead with the number, then the
 
 ## Handoff
 
-Return the markdown in-chat. After drafting, flag any sections where you made a judgment call (e.g., which forecast baseline you used) and any data gaps. Keep this brief — the user will pass the markdown straight into the build step.
+Return the markdown in-chat. After drafting, flag any sections where you made a judgment call and any data gaps — keep this brief. Then invoke `/build-report` to render and deliver the final output.
