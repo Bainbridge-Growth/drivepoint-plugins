@@ -33,7 +33,7 @@ Prepared by Drivepoint for [Customer]
   - Net Revenue Margin
   - Gross Margin
   - Contribution Margin
-  - Contribution Margin After Marketing (CMAM / CPAM)
+  - Contribution Margin After Marketing (CMAM)
   - Fixed Opex
   - EBITDA
 
@@ -106,12 +106,12 @@ Contribution Margin contracted to X% from X%, mostly on [driver] coupled with [s
   ○ Merchant Fees: X% of Net Revenue, flat MoM
 Due to the above, Contribution Profit of $XK decreased by -$XK or -X% MoM
 
-Contribution Profit After Marketing (CPAM) declined to X% from X%
+Contribution Margin After Marketing (CMAM) declined to X% from X% the prior month
 ● Total marketing expenses of $XK decreased by -$XK or -X% MoM
   ○ Direct ad spend of $XK (-$XK MoM)
   ○ Other marketing of $XK decreased from $XK MoM
   ○ Agency costs of $XK increased from $XK MoM
-As a result, CPAM of $XK decreased by -$XK or -X% MoM
+As a result, CMAM of X% declined from X% the prior month
 
 Fixed expenses totaled $XK, increased by +$XK or +X% MoM
 
@@ -142,7 +142,7 @@ Load the `/variance-analysis` skill and follow its workflow for this section. Th
 
 ## Customer Retention Cohorts
 
-Load the `/cohort-analysis` skill and follow its workflow to produce the retention curves and LTV data for this customer. That skill handles data discovery, retention curve computation, and LTV buildup. Incorporate its retention curve output directly into this section — one table per segment (DTC Subscription, DTC Non-Subscription, Amazon Subscription, Amazon Non-Subscription where present).
+Load the `/cohort-analysis` skill and follow its workflow to produce the retention curves and LTV data for this customer. That skill handles data discovery, retention curve computation, and LTV buildup. Incorporate its retention curve output directly into this section — one table per segment surfaced by `/cohort-analysis`. Segments vary by customer (common ones include DTC subscription/non-subscription, Amazon subscription/non-subscription, TikTok Shop non-subscription) — don't assume a fixed set. Use whatever the model and `/cohort-analysis` produce for this customer.
 
 Under each table: 1–2 bullets on which cohorts are outperforming and which direction the trend is moving. No more.
 
