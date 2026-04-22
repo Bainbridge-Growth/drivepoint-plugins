@@ -40,8 +40,8 @@ Prepared by Drivepoint for [Customer]
 ## Balance Sheet & Cash Flow
   - Cash change MoM with drivers (operating / investing / financing)
 
-## Variance Analysis
-  - Run /variance-analysis and incorporate the output here
+## Variance Analysis vs [Forecast name]
+  - Variance by P&L line, with driver decomposition
 
 ## Customer Retention Cohorts
   - One section per segment (subscription / non-subscription / by channel)
