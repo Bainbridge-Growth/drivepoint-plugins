@@ -11,7 +11,7 @@ The output is **markdown content returned in-chat**. A separate build-report ski
 
 ## Before you start
 
-1. **Confirm the reporting month and customer** from the user's prompt or from `settings.modelName` / `settings.companyName` in the Settings tab. If either is ambiguous, ask.
+1. **Confirm the reporting month and customer.** Customer name is readable from `settings.companyName`. Reporting month defaults to the most recently closed Actual period — infer it from the date spine on the consolidation sheet. Only ask the user if genuinely ambiguous.
 2. **Read the Index tab** to discover which templates (and therefore which channels) are present. This determines the shape of the report — a two-channel customer gets a different table of contents than a five-channel customer.
 3. **Read the monthly consolidation sheet** (typically `M - Monthly` — check Index) for headline numbers. Read channel-specific schedule sheets for channel-level commentary.
 4. **Confirm the forecast baseline** for the variance section. Ask the user which forecast version to compare against ("vs H2 FCST," "vs 2025 Budget," "vs board forecast") if it's not obvious from the model. Getting this wrong is the #1 way the report embarrasses us.
@@ -142,25 +142,21 @@ Cash at the end of [Month] of $X.XM decreased/increased by $XK MoM
 
 ## Variance Analysis
 
-Run `/variance-analysis` and incorporate the output into this section. The variance section headline must name the forecast baseline exactly — include a clarifying parenthetical if there's any ambiguity about which plan version is being compared against.
+Run `/variance-analysis`. That skill handles comparison basis selection, data gathering, driver decomposition, and output formatting. Incorporate its output directly into this section. The section headline must name the forecast baseline exactly — include a clarifying parenthetical if there's any ambiguity about which plan version is being compared against.
 
 ## YTD Variance
 
-Same P&L shape as the monthly variance, rolled to year-to-date. Usually a single table followed by 1–2 paragraphs on the biggest YTD misses. Don't rewrite the full prose variance — the monthly section already did that.
+Reuse the data already gathered by `/variance-analysis` — request the YTD rollup if not already computed. Same P&L shape as the monthly variance, rolled to year-to-date. 1–2 paragraphs on the biggest YTD misses. Don't rewrite the full prose variance — the monthly section already did that.
 
 ## Customer Retention Cohorts
 
-One cohort table per segment. Each table shows Cohort Month × Month 0–12 retention %. A Cohort Size column precedes the retention months.
-
-Typical segmentations: DTC Subscription, DTC Non-Subscription, Amazon Subscription, Amazon Non-Subscription. Some customers with complex product structures (e.g., machine vs no-machine) have additional crossover segments — check the schedule sheet structure.
+Run `/cohort-analysis`. That skill handles data discovery, retention curve computation, and LTV buildup. Incorporate its retention curve output directly into this section — one table per segment (DTC Subscription, DTC Non-Subscription, Amazon Subscription, Amazon Non-Subscription where present).
 
 Under each table: 1–2 bullets on which cohorts are outperforming and which direction the trend is moving. No more.
 
 ## LTV - Per Customer
 
-Three tables per segment: Net Sales, Contribution Profit, Contribution Profit Less CAC. Same cohort layout as retention but with dollar values per customer.
-
-If the customer has a cross-channel business, add a Cross Channel LTV section after the single-channel LTV tables, with the same three tables.
+Reuse the output already produced by `/cohort-analysis`. Include the per-segment LTV tables: Net Sales, Contribution Profit, and Contribution Profit Less CAC. If the customer has a cross-channel business, include the Cross Channel LTV tables after the single-channel tables.
 
 ## Numbers and formatting conventions
 
