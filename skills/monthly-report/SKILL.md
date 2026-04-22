@@ -7,7 +7,7 @@ description: Produces the Drivepoint-style monthly summary report for a CPG cust
 
 The Drivepoint monthly report is a written deliverable sent to CPG customers summarizing the prior month's P&L, operating metrics, and variance vs forecast. This skill captures the house format, the canonical section order, and the analytical patterns the team uses so any instance of Claude can produce one that reads like the team wrote it.
 
-The output is **markdown content returned in-chat**. A separate build-report skill handles rendering and delivery. Draft the markdown, hand it off — don't try to create files or render final output.
+The output is **markdown content returned in-chat**. Do not create files or modify the workbook. If the user wants an Excel version of the report, offer to run `/build-report` afterward — but that's a separate, optional step.
 
 ## Before you start
 
@@ -138,17 +138,17 @@ Cash at the end of [Month] of $X.XM decreased/increased by $XK MoM
 
 ## Variance Analysis
 
-Run `/variance-analysis`. That skill handles comparison basis selection, data gathering, driver decomposition, and output formatting. Incorporate its output directly into this section. The section headline must name the forecast baseline exactly — include a clarifying parenthetical if there's any ambiguity about which plan version is being compared against.
+Load the `/variance-analysis` skill and follow its workflow for this section. That skill handles comparison basis selection, data gathering, driver decomposition, and output formatting. Incorporate its output directly here. The section headline must name the forecast baseline exactly — include a clarifying parenthetical if there's any ambiguity about which plan version is being compared against.
 
 ## Customer Retention Cohorts
 
-Run `/cohort-analysis`. That skill handles data discovery, retention curve computation, and LTV buildup. Incorporate its retention curve output directly into this section — one table per segment (DTC Subscription, DTC Non-Subscription, Amazon Subscription, Amazon Non-Subscription where present).
+Load the `/cohort-analysis` skill and follow its workflow to produce the retention curves and LTV data for this customer. That skill handles data discovery, retention curve computation, and LTV buildup. Incorporate its retention curve output directly into this section — one table per segment (DTC Subscription, DTC Non-Subscription, Amazon Subscription, Amazon Non-Subscription where present).
 
 Under each table: 1–2 bullets on which cohorts are outperforming and which direction the trend is moving. No more.
 
 ## LTV - Per Customer
 
-Reuse the output already produced by `/cohort-analysis`. Include the per-segment LTV tables: Net Sales, Contribution Profit, and Contribution Profit Less CAC. If the customer has a cross-channel business, include the Cross Channel LTV tables after the single-channel tables.
+Reuse the LTV output already produced by `/cohort-analysis` above — no need to reload the skill. Include the per-segment LTV tables: Net Sales, Contribution Profit, and Contribution Profit Less CAC. If the customer has a cross-channel business, include the Cross Channel LTV tables after the single-channel tables.
 
 ## Numbers and formatting conventions
 
@@ -167,4 +167,6 @@ Factual, direct, slightly terse. Short sentences. Lead with the number, then the
 
 ## Handoff
 
-Return the markdown in-chat. After drafting, flag any sections where you made a judgment call and any data gaps — keep this brief. Then invoke `/build-report` to render and deliver the final output.
+Return the markdown in-chat. After drafting, flag any sections where you made a judgment call and any data gaps — keep this brief.
+
+Then offer the user an Excel version: "If you'd like this as a rendered report tab in the workbook, I can run `/build-report` to create a formula-driven Excel version." Wait for the user to confirm before invoking it — some customers want markdown only.
