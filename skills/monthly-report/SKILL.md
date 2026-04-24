@@ -59,6 +59,11 @@ Two subsections: YoY and MoM. Both follow the same shape — a headline sentence
 
 Indentation depth matches business importance. Channels with acquisition mechanics (DTC, Amazon) get the most sub-bullets. Channels where the story is simpler (Wholesale, Retail) get one line each.
 
+**Length guardrails** — Summary Highlights is a scan-able top-of-report, not a full teardown. Detail belongs in Variance.
+- **Per acquisition channel (DTC, Amazon):** at most 3 sub-bullets (○). Reserve ■ sub-sub-bullets for a single channel where new-vs-returning customer mix is the story, max 2–3 of them.
+- **Per simpler channel (Wholesale, Retail, Online Retail, Direct Mail):** one line each, no sub-bullets.
+- **Total budget:** aim for ~10–15 bullets in YoY and ~5–10 in MoM. If a subsection exceeds 20 bullets, the detail belongs in Variance Analysis — pull it out.
+
 **Sentence patterns:**
 - `"[metric] was relatively flat MoM"` — for deltas under ~2%
 - `"contracted by"` / `"expanded by"` — for margin metrics
@@ -79,7 +84,7 @@ Indentation depth matches business importance. Channels with acquisition mechani
 ● [Channel 3] Net Revenue of $XK increased by +$XK YoY
 ```
 
-Mirror the same structure for MoM, adding commentary that YoY won't surface — e.g., first-time vs returning customer mix shifts, AOV movements within the month.
+MoM surfaces **only drivers that moved differently than YoY** — first-time vs returning customer mix shifts, AOV movements within the month, anomalies the YoY view would miss. If a channel's MoM story is the same as its YoY story, collapse it to a single line. Do not re-state YoY drivers.
 
 ## Margins
 
@@ -138,17 +143,17 @@ Cash at the end of [Month] of $X.XM decreased/increased by $XK MoM
 
 ## Variance Analysis
 
-Load the `/variance-analysis` skill and follow its workflow for this section. That skill handles comparison basis selection, data gathering, driver decomposition, and output formatting. Incorporate its output directly here. The section headline must name the forecast baseline exactly — include a clarifying parenthetical if there's any ambiguity about which plan version is being compared against.
+Use `load_skill` to load the `variance-analysis` skill and follow its workflow for this section. That skill handles comparison basis selection, data gathering, driver decomposition, and output formatting. Incorporate its output directly here. The section headline must name the forecast baseline exactly — include a clarifying parenthetical if there's any ambiguity about which plan version is being compared against.
 
 ## Customer Retention Cohorts
 
-Load the `/cohort-analysis` skill and follow its workflow to produce the retention curves and LTV data for this customer. That skill handles data discovery, retention curve computation, and LTV buildup. Incorporate its retention curve output directly into this section — one table per segment surfaced by `/cohort-analysis`. Segments vary by customer (common ones include DTC subscription/non-subscription, Amazon subscription/non-subscription, TikTok Shop non-subscription) — don't assume a fixed set. Use whatever the model and `/cohort-analysis` produce for this customer.
+Use `load_skill` to load the `cohort-analysis` skill and follow its workflow to produce the retention curves and LTV data for this customer. That skill handles data discovery, retention curve computation, and LTV buildup. Incorporate its retention curve output directly into this section — one table per segment surfaced by `cohort-analysis`. Segments vary by customer (common ones include DTC subscription/non-subscription, Amazon subscription/non-subscription, TikTok Shop non-subscription) — don't assume a fixed set. Use whatever the model and `cohort-analysis` produce for this customer.
 
 Under each table: 1–2 bullets on which cohorts are outperforming and which direction the trend is moving. No more.
 
 ## LTV - Per Customer
 
-Reuse the LTV output already produced by `/cohort-analysis` above — no need to reload the skill. Include the per-segment LTV tables: Net Sales, Contribution Profit, and Contribution Profit Less CAC. If the customer has a cross-channel business, include the Cross Channel LTV tables after the single-channel tables.
+Reuse the LTV output already produced by `cohort-analysis` above — no need to reload the skill. Include the per-segment LTV tables: Net Sales, Contribution Profit, and Contribution Profit Less CAC. If the customer has a cross-channel business, include the Cross Channel LTV tables after the single-channel tables.
 
 ## Numbers and formatting conventions
 
