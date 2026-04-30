@@ -59,7 +59,7 @@ Two subsections: YoY and MoM. Both follow the same shape — a headline sentence
 
 Indentation depth matches business importance. Channels with acquisition mechanics (DTC, Amazon) get the most sub-bullets. Channels where the story is simpler (Wholesale, Retail) get one line each.
 
-**Length guardrails** — Summary Highlights is a scan-able top-of-report, not a full teardown. Detail belongs in Variance.
+**Length guardrails** — Summary Highlights is a scannable top-of-report, not a full teardown. Detail belongs in Variance.
 - **Per acquisition channel (DTC, Amazon):** at most 3 sub-bullets (○). Reserve ■ sub-sub-bullets for a single channel where new-vs-returning customer mix is the story, max 2–3 of them.
 - **Per simpler channel (Wholesale, Retail, Online Retail, Direct Mail):** one line each, no sub-bullets.
 - **Total budget:** aim for ~10–15 bullets in YoY and ~5–10 in MoM. If a subsection exceeds 20 bullets, the detail belongs in Variance Analysis — pull it out.
@@ -141,7 +141,7 @@ Cash at the end of [Month] of $X.XM decreased/increased by $XK MoM
 ● $XK cash used by investing activities (use of cash)
 ```
 
-## Variance Analysis
+## Variance Analysis vs [Forecast name]
 
 Use `load_skill` to load the `variance-analysis` skill and follow its workflow for this section. That skill handles comparison basis selection, data gathering, driver decomposition, and output formatting. Incorporate its output directly here. The section headline must name the forecast baseline exactly — include a clarifying parenthetical if there's any ambiguity about which plan version is being compared against.
 

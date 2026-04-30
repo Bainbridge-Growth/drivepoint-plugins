@@ -394,7 +394,7 @@ When the user asks a question that would benefit from a structured workflow, use
 | "trade spend", "promos working", "deduction rate", "retailer profitability", "wholesale P&L" | trade-spend-analysis |
 | "what if", "scenario", "tariffs", "raise prices", "extend runway", "miss Q2" | create-scenario |
 | "compare scenarios", "plan A vs B", "which scenario is better", "budget vs forecast" | compare-scenarios |
-| "monthly report", "monthly summary", "monthly recap", "monthly writeup", "do the [month] numbers", "[customer]'s [month] writeup" | monthly-report |
+| "monthly report", "monthly summary", "monthly recap", "monthly writeup", "monthly close", "do the [month] numbers", "[customer]'s [month] writeup" | monthly-report |
 | "board deck", "board report", "investor update", "package this up" | build-report |
 | "build a schedule", "revenue build", "COGS schedule", "headcount plan", "payroll tab" | build-schedule |
 | "what is this", "overview", "stand up the model", "orient" | summarize-model |
