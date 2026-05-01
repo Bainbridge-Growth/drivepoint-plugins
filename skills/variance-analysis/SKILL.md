@@ -36,7 +36,14 @@ Two dimensions to lock in before proceeding:
 - **Quarterly** when the user mentions "Q1" / "Q2" / "Q3" / "Q4", "quarterly", "this quarter", "QoQ", or asks for a YoY-quarter comparison.
 - **YTD** when the user mentions "YTD", "year to date", or "through [month]".
 
-For quarterly, derive the quarter from the fiscal year defined in `settings___fy1_end_date`. If the model uses a calendar fiscal year, Q1 = Jan+Feb+Mar, Q2 = Apr+May+Jun, etc. If a quarter is in progress (not all 3 months are closed Actuals), label it explicitly as "Q[n]-to-date" and tell the user which months are included before computing variance.
+For quarterly, derive the fiscal quarter from `settings___fy1_end_date`. The first month of the fiscal year is the month **after** the FY-end month. Q1 covers months 1–3 of the fiscal year, Q2 covers months 4–6, Q3 covers months 7–9, Q4 covers months 10–12.
+
+Examples:
+- `settings___fy1_end_date = 2026-12-31` (calendar FY) → FY starts Jan → Q1 = Jan/Feb/Mar, Q2 = Apr/May/Jun, Q3 = Jul/Aug/Sep, Q4 = Oct/Nov/Dec.
+- `settings___fy1_end_date = 2027-01-31` (FY ends Jan 31) → FY starts Feb → Q1 = Feb/Mar/Apr, Q2 = May/Jun/Jul, Q3 = Aug/Sep/Oct, Q4 = Nov/Dec/Jan.
+- `settings___fy1_end_date = 2026-06-30` (FY ends Jun 30) → FY starts Jul → Q1 = Jul/Aug/Sep, Q2 = Oct/Nov/Dec, Q3 = Jan/Feb/Mar, Q4 = Apr/May/Jun.
+
+If a quarter is in progress (not all 3 months are closed Actuals), label it explicitly as "Q[n]-to-date" and tell the user which months are included before computing variance.
 
 **Step 1.3 — State the comparison basis explicitly**
 Before proceeding to Phase 2, output this line:
@@ -67,10 +74,19 @@ Rules:
 
 **If a prior skill ran this session** (e.g., `/summarize-model`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
 
-**Step 2.1 — Read the consolidation sheet (one call)**
-Call `read_smartmodel_data_section` on **M - Monthly** (the consolidation sheet). This single call returns the full P&L across the date spine: total revenue, COGS, gross profit, opex, EBITDA/net income. Extract everything you need from this one response.
+**Step 2.1 — Read the consolidation sheet (one scoped call)**
+Call `read_smartmodel_data_section` on **M - Monthly** (the consolidation sheet). **Scope the read to only the months needed for the selected comparison granularity** — do not pull the full date spine when only a handful of months are required. Large models can have 48+ months of columns, and pulling everything risks the payload-size and latency issues that have caused timeouts in the past.
 
-**For quarterly or YTD comparisons:** the consolidation sheet stores monthly columns — sum across them in memory rather than making additional reads. Q1 = Jan + Feb + Mar columns for both Actuals and Plan/Forecast. YTD sums all closed Actual columns in the fiscal year, plus the matching Plan columns. For YoY quarterly, the prior-year quarter lives in earlier columns of the same response since the date spine spans multiple years — no additional read is needed. Do not re-aggregate at the channel sheet level for quarterly totals; the consolidation sheet has canonical monthly totals already.
+Scope by comparison type:
+
+| Comparison | Months to include in the read |
+|------------|-------------------------------|
+| Monthly | Comparison month (Actual + Plan/Forecast) + trailing 12 Actuals for the Phase 2.5 reasonableness scan |
+| Quarterly vs. Plan | The 3 months of the quarter (Actual + Plan) + trailing 12 Actuals |
+| Quarterly YoY | The 3 months of the current quarter + the 3 months of the prior-year quarter + trailing 12 Actuals |
+| YTD vs. Plan | All closed Actual months in the fiscal year + matching Plan columns + trailing 12 Actuals |
+
+One scoped call returns total revenue, COGS, gross profit, opex, EBITDA/net income for the requested columns — extract everything from that response, do not make additional reads. For YoY quarterly, the current and prior-year columns sit in the same date spine at different positions; include both in the single column range rather than making two calls. Do not re-aggregate at the channel sheet level for quarterly totals; the consolidation sheet has canonical monthly totals.
 
 **Step 2.2 — Read channel sheets only for driver decomposition**
 Only if the consolidation reveals a material revenue or COGS variance that requires channel-level decomposition, call `read_smartmodel_data_section` on the specific channel sheet(s) involved. Do not read every channel sheet upfront.
