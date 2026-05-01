@@ -398,6 +398,7 @@ When the user asks a question that would benefit from a structured workflow, use
 | "build a schedule", "revenue build", "COGS schedule", "headcount plan", "payroll tab" | build-schedule |
 | "what is this", "overview", "stand up the model", "orient" | summarize-model |
 | "where does that number come from", "trace", "what's driving that line" | interrogate-model |
+| "QA the financials", "QA the GL", "QA R-GL", "QA the import", "tie out the GL", "reconcile GL", "check NetSuite import", "verify the import for [month]" | qa-financials |
 | "audit", "something looks off", "validate", "sanity check", "numbers don't look right" | audit-model |
 | "clean up", "fix the model", "#REF errors", "broken formulas" | clean-model |
 | "slow", "lagging", "file is huge", "speed up", "reduce file size" | optimize-model |
@@ -514,6 +515,7 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 | Summarize Model | `../summarize-model/SKILL.md` | Full workbook orientation — templates, data state, time range, health check |
 | Interrogate Model | `../interrogate-model/SKILL.md` | Trace any number back through its formula and driver chain |
 | Audit Model | `../audit-model/SKILL.md` | Structural integrity, formula errors, protocol compliance checklist |
+| QA Financials | `../qa-financials/SKILL.md` | Tie out a customer's raw GL export against R-GL line-by-line for a given period |
 | Clean Model | `../clean-model/SKILL.md` | Fix errors, restore protocol structure, standardize formatting |
 | Optimize Model | `../optimize-model/SKILL.md` | Resolve slow calculation, phantom range bloat, volatile formulas |
 
