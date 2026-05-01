@@ -15,7 +15,7 @@ description: Tie out a customer's raw GL export against the R-GL tab in their Sm
 - User asks to QA, tie out, reconcile, or verify the GL / financials / import for a given month
 - User pastes a financial export and asks Claude to check it against the model
 - User says "QA RGL tab [month]" or "[Customer] sent me their export"
-- Run before `/monthly-report` so the underlying numbers are trusted
+- Run before drafting the monthly report so the underlying numbers are trusted
 
 This skill compares **external source** to **imported model data**. It is not the same as `/audit-model`, which checks structural and protocol integrity of the workbook itself. The two are complementary.
 
@@ -93,7 +93,9 @@ Tie out the major totals before touching line-level detail. If totals don't tie,
 
 **Tie to the consolidation sheet, not to a re-summed R-GL.** The model already aggregates R-GL accounts into consolidated P&L lines via the `Drivepoint Account Category` mapping; that aggregation lives on `M - Monthly` (or whichever consolidation sheet the Index identifies). Reinventing the rollup math here risks bucketing accounts differently than the model does, which produces phantom mismatches.
 
-Call `read_smartmodel_data_section` on the consolidation sheet for the target period column and compare:
+Call `read_smartmodel_data_section` on the consolidation sheet for the target period column.
+
+**For an Income Statement export**, compare:
 
 | Source line (from export) | Model line (on consolidation sheet) |
 |---------------------------|-------------------------------------|
@@ -103,9 +105,18 @@ Call `read_smartmodel_data_section` on the consolidation sheet for the target pe
 | `Net Ordinary Income` | Operating Income / EBITDA, per the model |
 | `Net Income` | Net Income |
 
-The model's exact line names vary by customer — match by position in the P&L waterfall, not by exact string. If the consolidation sheet doesn't carry one of these lines, note it and skip that row rather than fabricating a comparison.
+**For a Balance Sheet export**, compare:
 
-**If a major roll-up is off by more than tolerance**: flag as FAIL in Critical Issues, surface the specific line that broke, and continue to the line-level step only to help diagnose where the gap originated. Make clear in the report that line-level findings are diagnostic until the roll-up is fixed.
+| Source line (from export) | Model line (on consolidation sheet) |
+|---------------------------|-------------------------------------|
+| `Total Assets` | Total Assets |
+| `Total Liabilities & Equity` | Total Liabilities & Equity |
+
+Also verify the source's own internal balance: `Total Assets` should equal `Total Liabilities & Equity` for the period. If not, that's a source-side data integrity issue (NetSuite shouldn't export an unbalanced BS) — flag as FAIL and surface before the model comparison.
+
+The model's exact line names vary by customer — match by position in the statement structure, not by exact string. If the consolidation sheet doesn't carry one of these lines, note it and skip that row rather than fabricating a comparison.
+
+**If a major roll-up is off by more than tolerance**: flag as FAIL in Critical Issues, surface the specific line that broke. For IS, continue to the line-level step (4.2) to help diagnose where the gap originated; for BS, stop here — line-level BS tie-out is out of scope for this skill.
 
 ### 4.2 — Account-level tie-out
 
@@ -124,7 +135,7 @@ Capture unmatched accounts on either side:
 - Account names containing `(deleted)`, `(DON'T USE)`, `DO NOT USE` → WARNING with note "stale account showing activity; investigate"
 - `Uncategorized Income`, `Uncategorized Expense`, `Reconciliation Discrepancies` → WARNING with note "NetSuite catch-all account; should be cleared before close"
 
-**Worked example** — one tie-out line, end-to-end:
+**Worked example (Income Statement)** — one tie-out line, end-to-end:
 - Source row `Total - 41010 - Discounts` for Mar-26 = `($45,231.20)` → parsed value `-45,231.20`
 - R-GL row matched on `Financial Account Number = 41010` for Mar-26 = `-45,180.00`
 - delta = `-45,231.20 − (-45,180.00) = -51.20`
@@ -133,7 +144,10 @@ Capture unmatched accounts on either side:
 
 ### 4.3 — Tolerance and severity
 
-For each line: tolerance = `max($100, 0.1% × source Total - Income for the period)`.
+Tolerance differs by report type:
+
+- **Income Statement** (per line, used in 4.1 roll-up and 4.2 line-level): `max($100, 0.1% × source Total - Income for the period)`
+- **Balance Sheet** (roll-up only, used in 4.1): `max($100, 0.05% × source Total Assets for the period)` — tighter rate because BS roll-up sits at the top of the structure; if Total Assets disagrees by more than ~5bp, something material is off
 
 | Condition | Severity |
 |-----------|----------|
@@ -141,11 +155,12 @@ For each line: tolerance = `max($100, 0.1% × source Total - Income for the peri
 | tolerance < \|delta\| ≤ 5× tolerance | WARNING |
 | \|delta\| > 5× tolerance OR sign flip | FAIL |
 | Material roll-up mismatch in 4.1 | FAIL |
+| Source BS internal imbalance (Total Assets ≠ Total Liabilities & Equity) | FAIL |
 | Unmatched account on either side (with non-zero value) | WARNING |
 | `(deleted)` / `Uncategorized` / `Reconciliation` account with activity | WARNING |
 | Within-tolerance noise on expected-zero accounts | INFO |
 
-The constants ($100 floor, 0.1% rate, 5× warning band) are deliberate and tunable — adjust if Franzi calibrates them differently after real test runs.
+The constants ($100 floor, 0.1% / 0.05% rates, 5× warning band) are deliberate and tunable — adjust if Franzi calibrates them differently after real test runs.
 
 ---
 
@@ -157,18 +172,27 @@ Markdown output, severity-ordered. Match `audit-model`'s format:
 # GL Tie-Out — [Customer] [Month Year]
 **Source**: [Drivepoint Income Statement / Balance Sheet / paste / file path]
 **Target sheet**: R - GL ([sheet name from Index])
-**Tolerance**: $X (max of $100, 0.1% of Total Income)
+**Tolerance**: $X ([IS: max of $100, 0.1% of Total Income] [BS: max of $100, 0.05% of Total Assets])
 
 ## Summary
 [X] Fails | [Y] Warnings | [Z] Info | Overall: [PASS / NEEDS REVIEW / FAIL]
 
 ## Roll-Up Sanity
-| Line | Source | R-GL | Delta | Status |
-|------|--------|------|-------|--------|
+
+[For Income Statement:]
+| Line | Source | Model | Delta | Status |
+|------|--------|-------|-------|--------|
 | Total Income | $X | $Y | $Z | PASS / FAIL |
 | Total COGS | … | … | … | … |
 | Gross Profit | … | … | … | … |
 | Net Income | … | … | … | … |
+
+[For Balance Sheet:]
+| Line | Source | Model | Delta | Status |
+|------|--------|-------|-------|--------|
+| Total Assets | $X | $Y | $Z | PASS / FAIL |
+| Total Liabilities & Equity | $X | $Y | $Z | PASS / FAIL |
+| Source internal balance (Total Assets − Total L&E) | $X | — | $Z | PASS / FAIL |
 
 ## Critical Issues (FAIL)
 - [Account number] [Account name] — Source $X, R-GL $Y, delta $Z — [sign flip / material variance / unmatched]
@@ -178,7 +202,8 @@ Markdown output, severity-ordered. Match `audit-model`'s format:
 - [Account] — [Description and recommended check]
 
 ## What's Matching
-- [N] accounts tied within tolerance, totaling $X across the Income Statement
+- [If IS] [N] accounts tied within tolerance, totaling $X across the Income Statement
+- [If BS] Roll-up tied at the major-totals level; line-level skipped by design
 
 ## Assumptions and Notes
 - [If BS export was provided] Line-level BS tie-out skipped — Drivepoint BS export is "Activity Only" while R-GL stores closing balances. Roll-up sanity only.
