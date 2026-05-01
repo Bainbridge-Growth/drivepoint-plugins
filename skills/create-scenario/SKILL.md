@@ -23,7 +23,7 @@ description: Create a named what-if scenario by adjusting Key Driver assumptions
 
 | Scenario | Key Drivers to adjust | Sheets affected |
 |----------|----------------------|----------------|
-| Price increase | ASP / AOV inputs | Channel revenue sheets |
+| Price increase / decrease (SKU-level) | ASP / AOV inputs | Channel revenue sheets — **use `/price-change-analysis` instead**; it handles sales-mix-weighted AOV math and COGS pass-through |
 | New product launch | Add dimension, set revenue + COGS assumptions | Product, channel sheets |
 | New retail partner | Add dimension to wholesale sheet, set volume + pricing | Wholesale sheet |
 | Marketing spend change | Marketing budget inputs | Opex sheet |
@@ -184,6 +184,7 @@ Periods affected: [list]
 
 ## Integration with Other Skills
 
+- **`/price-change-analysis`**: For SKU-level price changes, use the price-change skill instead — it handles sales-mix-weighted AOV updates and COGS-as-%-of-revenue pass-through that this general skill does not
 - **`/compare-scenarios`**: After creating multiple scenarios, compare them side by side
 - **`/summarize-model`**: Orient to model structure before creating scenarios
 - **`/build-report`**: Package scenario analysis into a board-ready presentation
