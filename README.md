@@ -21,7 +21,9 @@ Teaches any Claude session the SmartModel Protocol v6.0 grammar — the AI-reada
 /plugin install smartmodel@drivepoint
 ```
 
-Replace `<org>` with your GitHub org (for example `Bainbridge-Growth`). The marketplace registry name is **`drivepoint`** (set in this repo’s `.claude-plugin/marketplace.json`). The GitHub repo is **`Bainbridge-Growth/drivepoint-plugins`** (GitHub redirects the old `drivepoint-smartmodel-plugin` name until you update remotes).
+Replace `<org>` with your GitHub org (for example `Bainbridge-Growth`). The marketplace registry name is **`drivepoint`** (set in this repo’s `.claude-plugin/marketplace.json`). The GitHub repo is **`Bainbridge-Growth/drivepoint-plugins`**.
+
+**Private repo + Claude org / Desktop:** The `smartmodel` entry uses a **relative** plugin source (`"./"`) so the catalog resolves inside this same GitHub repo after clone — the same pattern as `drivepoint-internal-plugins`. A nested `"source": { "github", "repo": "…/drivepoint-plugins" }` forces a second unauthenticated GitHub lookup and fails validation for private repos (“repository not found … make sure the repository is public”).
 
 ### PRIVATE
 

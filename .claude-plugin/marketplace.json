@@ -10,10 +10,7 @@
   "plugins": [
     {
       "name": "smartmodel",
-      "source": {
-        "source": "github",
-        "repo": "Bainbridge-Growth/drivepoint-plugins"
-      },
+      "source": "./",
       "description": "SmartModel Protocol v6.0 — AI grammar for Excel financial models",
       "version": "1.0.0"
     }
