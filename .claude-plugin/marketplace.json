@@ -1,18 +1,18 @@
 {
-  "name": "drivepoint-smartmodel",
+  "name": "drivepoint",
   "owner": {
     "name": "Drivepoint",
     "url": "https://drivepoint.io"
   },
   "metadata": {
-    "description": "SmartModel Protocol v6.0 — AI grammar for Drivepoint Excel financial models"
+    "description": "Official Drivepoint Claude plugins (SmartModel Protocol and related tools)"
   },
   "plugins": [
     {
-      "name": "smartmodel-protocol",
+      "name": "smartmodel",
       "source": {
         "source": "github",
-        "repo": "Bainbridge-Growth/drivepoint-smartmodel-plugin"
+        "repo": "Bainbridge-Growth/drivepoint-plugins"
       },
       "description": "SmartModel Protocol v6.0 — AI grammar for Excel financial models",
       "version": "1.0.0"

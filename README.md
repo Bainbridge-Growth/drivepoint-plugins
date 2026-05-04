@@ -13,17 +13,33 @@ Teaches any Claude session the SmartModel Protocol v6.0 grammar — the AI-reada
 - Consult the imports system to know what external data the model needs
 
 ## Install
+
+### PUBLIC
+
 ```bash
-/plugin marketplace add Bainbridge-Growth/drivepoint-smartmodel-plugin
-/plugin install smartmodel-protocol@drivepoint-smartmodel
+/plugin marketplace add <org>/drivepoint-plugins
+/plugin install smartmodel@drivepoint
 ```
 
+Replace `<org>` with your GitHub org (for example `Bainbridge-Growth`). The marketplace registry name is **`drivepoint`** (set in this repo’s `.claude-plugin/marketplace.json`). The GitHub repo is **`Bainbridge-Growth/drivepoint-plugins`** (GitHub redirects the old `drivepoint-smartmodel-plugin` name until you update remotes).
+
+### PRIVATE
+
+```bash
+/plugin marketplace add <org>/drivepoint-internal-plugins
+/plugin install dp-design@drivepoint-internal
+```
+
+The internal marketplace registry name is **`drivepoint-internal`**. Plugin ids (for example `dp-design`) come from each plugin’s `.claude-plugin/plugin.json` in the internal repo.
+
+**Migrating from older installs:** If you used the `@drivepoint-smartmodel` marketplace suffix, remove that marketplace entry and re-add with `<org>/drivepoint-plugins`, then `smartmodel@drivepoint`. After GitHub renames the repo, run `git remote set-url origin https://github.com/<org>/drivepoint-plugins.git` in your local clone (rename the worktree folder to `drivepoint-plugins` when convenient). The Claude **plugin** id is `smartmodel`; the main **skill** for the protocol spec remains `smartmodel-protocol` (invoke with `/skill smartmodel-protocol`).
+
 ## Usage
-Once installed, the `smartmodel-protocol` skill loads automatically when working with a SmartModel workbook. Can also invoke explicitly: `/skill smartmodel-protocol`
+Install the `smartmodel` plugin once. When working with a SmartModel workbook, the `smartmodel-protocol` skill is the canonical protocol entry point. Invoke it explicitly with `/skill smartmodel-protocol` when needed.
 
 ## Plugin Structure
 ```
-drivepoint-smartmodel-plugin/
+drivepoint-plugins/
   .claude-plugin/
     plugin.json                      ← plugin manifest
     marketplace.json                 ← marketplace registry entry
