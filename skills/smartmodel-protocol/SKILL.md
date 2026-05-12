@@ -228,13 +228,50 @@ The separator border uses `'thin'` style, not `'thick'`.
 
 ---
 
-## Input Cell Formatting
+## Cell Role Styling
 
-Forecast-period cells in Key Driver rows have distinct visual formatting to signal "this is editable":
-- Light gray background
-- Blue-ish text (theme color)
+Every cell on a schedule sheet carries a visual cue that signals its **role** — whether it's an assumption marker, a user input, an imported value, an actual financial value extracted from the source of truth, or a calculated output. The role catalog is identical across every SmartModel template.
 
-Actual-period cells and all Key Result cells remain white background, black text. This visual distinction is consistent across all SmartModel templates.
+| Role | Where it appears | Visual cue | Semantic |
+|------|------------------|-----------|----------|
+| `assumption_marker` | Column A on assumption rows | Blue bullet `•` (`#4472C4`), no fill | Indicates the row contains an assumption the user may edit. Visual only — not stored. |
+| `assumption_above_marker` | Column A below assumption blocks | Blue arrow `↑` (`#4472C4`), no fill | Indicates assumption rows above may be collapsed for display. |
+| `actual` | Actual-period time-series cells | Orange text (`#ED7D31`), no fill | Value extracted from the customer's accounting source of truth. Read-only — never overwrite. |
+| `input` | Forecast-period cells on Key Driver rows | Blue text (`#4472C4`) on light grey fill (`#F2F2F2`) | User input. Editable. |
+| `imported_input` | Forecast cells where a value has been backfilled from an import | Green text (`#548235`) on light grey fill (`#F2F2F2`) | Input that has been "actualized" — still editable but sourced from an import. |
+| `imported_value` | Cells whose formula references another sheet | Green text (`#548235`), no fill | Reference to another schedule or tab. Avoid overwriting unless intentional. |
+| `calculated` | Formula outputs on Key Result rows | Black text (`#000000`), no fill | Calculated value. Should rarely be overwritten with direct input. |
+
+**Reading roles**: Identify a cell's role by its font color and fill. Treat `actual` and `imported_value` as read-only when reporting state to the user; treat `input` and `imported_input` as user-editable.
+
+**Writing roles**: When writing a value, the cell's existing role must match what you're writing. Never repaint a cell to a different role — the role encodes data lineage, not display preference. Writing a forecast value into an `actual` cell is a structural error.
+
+### Source of truth — the style donor
+
+The role catalog is materialized in [`drivepoint-smartmodel-templates/shared/style-donor/`](https://github.com/Bainbridge-Growth/drivepoint-smartmodel-templates/tree/main/shared/style-donor):
+
+- `roles.json` — manifest mapping each role name to a donor cell, with description and applicability notes
+- `smartmodel_styles_v1.xlsx` — hand-built donor workbook with one cell per role at a fixed address (`Roles!B2`–`B8`)
+
+The donor is the byte-faithful expression of every role's font, fill, and border. It is the **only** place a role's exact styling is defined. To add or change a role, edit `roles.json` and regenerate the donor via `scripts/build_style_donor.py`.
+
+### For build-time generators
+
+Tools that produce or modify SmartModel xlsx files **must not** stamp role styles by reconstructing `Font` / `PatternFill` / `Border` objects in Python. openpyxl's style write path drops alpha-channel prefixes inconsistently, rewrites theme refs, and fragments shared style objects — producing visually identical but byte-different style records across templates and over time. The result is fragmented styles tables that defeat conformance verification.
+
+Instead, start from the donor and use the zip-merge stamp utility at [`scripts/style_donor.py`](https://github.com/Bainbridge-Growth/drivepoint-smartmodel-templates/blob/main/scripts/style_donor.py):
+
+```python
+from scripts.style_donor import stamp
+stamp("templates/opex/opex.xlsx", [
+    ("Opex", "K10", "input"),
+    ("Opex", "K11", "calculated"),
+])
+```
+
+The utility reads the donor's XF records from `xl/styles.xml`, appends them verbatim to the target workbook's styles table, and points each target cell at the new XF index via the `s=` attribute. Published templates never carry the donor sheet — only the resolved style records.
+
+The verifier at [`scripts/style_verifier.py`](https://github.com/Bainbridge-Growth/drivepoint-smartmodel-templates/blob/main/scripts/style_verifier.py) audits whether every stamped cell resolves to a known role and surfaces fragmentation (alpha-prefix drift, solid fills with missing colors, duplicate font/fill records). Wire it into CI to catch regression.
 
 ---
 
