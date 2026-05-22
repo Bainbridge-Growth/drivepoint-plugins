@@ -395,7 +395,8 @@ When the user asks a question that would benefit from a structured workflow, use
 | "raise the price of [product]", "price increase on [SKU]", "drop price on [product]", "price change scenario", "what would a [X]% price increase do" | price-change-analysis |
 | "what if", "scenario", "tariffs", "raise prices" (portfolio-wide), "extend runway", "miss Q2" | create-scenario |
 | "compare scenarios", "plan A vs B", "which scenario is better", "budget vs forecast" | compare-scenarios |
-| "board deck", "board report", "investor update", "monthly close", "package this up" | build-report |
+| "monthly report", "monthly summary", "monthly recap", "monthly writeup", "monthly close", "do the [month] numbers", "[customer]'s [month] writeup" | monthly-report |
+| "board deck", "board report", "investor update", "package this up" | build-report |
 | "build a schedule", "revenue build", "COGS schedule", "headcount plan", "payroll tab" | build-schedule |
 | "what is this", "overview", "stand up the model", "orient" | summarize-model |
 | "where does that number come from", "trace", "what's driving that line" | interrogate-model |
@@ -494,7 +495,8 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 | Skill | Path | Purpose |
 |-------|------|---------|
 | Build Schedule | `../build-schedule/SKILL.md` | Construct a new schedule sheet from scratch — data-first flow, any model version |
-| Build Report | `../build-report/SKILL.md` | Create a blue report tab — board reports, monthly close, investor updates |
+| Monthly Report | `../monthly-report/SKILL.md` | Produce the Drivepoint-style monthly summary & variance report for a CPG customer |
+| Build Report | `../build-report/SKILL.md` | Create a blue report tab — board reports, monthly close reports, investor updates |
 | Create Scenario | `../create-scenario/SKILL.md` | Build a named what-if scenario by adjusting Key Driver assumptions |
 
 ### Analysis
