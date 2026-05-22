@@ -47,7 +47,7 @@ Call `read_smartmodel_registries` on the marketing/opex sheet and each channel r
 1. **Per-channel CAC Key Result rows** — typically one per acquisition channel (DTC, Amazon, etc.), located on the channel sheet or in a channel section of the opex/marketing sheet. Common patterns: `cac_dtc`, `cac_amzn`, `cac_<channel>`.
 2. **Blended / aggregate CAC Key Result row** — typically on the consolidation or marketing sheet. Common patterns: `cac_blended`, `blended_cac`, `cac_total`.
 
-The skill **never synthesizes CAC from `marketing_spend ÷ new_customers` when the model exposes a CAC row**. Pull the CAC value the model has computed; the formula is the modeler's responsibility, not the agent's. The modeler's row may exclude or include spend categories the agent doesn't know about — recomputing risks drift between the agent's report and the model's own numbers.
+The skill **never synthesizes a CAC metric from `marketing_spend ÷ new_customers` when the model exposes the corresponding CAC row**. Pull the CAC value the model has computed; the formula is the modeler's responsibility, not the agent's. The modeler's row may exclude or include spend categories the agent doesn't know about — recomputing risks drift between the agent's report and the model's own numbers. If the model exposes per-channel CAC but no blended CAC row, a blended CAC fallback is allowed only if it is clearly labeled as a fallback.
 
 State the discovered CAC rows before proceeding. If no CAC rows exist, the skill falls back to component-level computation (documented in Phase 3) and surfaces the gap to the user explicitly.
 
@@ -80,7 +80,7 @@ If R- sheets are populated with advertising platform data (Meta, Google, Amazon)
 
 ### CAC (Customer Acquisition Cost)
 
-**Always pull CAC from the model — never compute it agent-side from `marketing_spend ÷ new_customers` when the model exposes a CAC row.** Models typically expose CAC as Key Result rows on channel sheets (per-channel CAC) and/or the marketing/opex or consolidation sheet (blended CAC). The modeler's formula is the source of truth.
+**Always pull CAC from the model — never compute a CAC metric agent-side from `marketing_spend ÷ new_customers` when the model exposes the corresponding CAC row.** Models typically expose CAC as Key Result rows on channel sheets (per-channel CAC) and/or the marketing/opex or consolidation sheet (blended CAC). The modeler's formula is the source of truth.
 
 Use the discovery from Step 1.4:
 
@@ -90,17 +90,17 @@ Use the discovery from Step 1.4:
 | Per-channel CAC only (no blended row) | Read each channel's CAC. State: *"This model exposes per-channel CAC but no aggregate blended-CAC row. Showing per-channel CAC; the blended figure is computed as a fallback from total marketing spend ÷ total new customers and flagged."* |
 | No CAC rows at all | Surface the gap and fall back to component-level computation. State: *"This model doesn't expose a CAC Key Result row. Computing CAC from marketing spend ÷ new customers as a fallback — recommend adding a CAC row to the model for cleaner reporting."* |
 
-**Hard rule**: when the model exposes a CAC row, read it. Do not recompute and report a different number — the modeler's row may exclude or include spend categories the agent doesn't know about, and a recomputed value drifts from the model.
+**Hard rule**: when the model exposes a CAC row for the metric you need, read it. Do not recompute and report a different number for that same metric — the modeler's row may exclude or include spend categories the agent doesn't know about, and a recomputed value drifts from the model. If only the blended CAC row is missing, compute only the blended fallback; keep per-channel CAC tied to the model's rows.
 
-Reference formula (documents what the model computes; used by the agent only as a flagged fallback when no CAC row exists):
+Reference formula (documents what the model computes; used by the agent only as a flagged fallback when the corresponding CAC row is missing):
 
 ```
 (reference, fallback only) CAC = Marketing Spend (period) / New Customers Acquired (period)
 ```
 
-When falling back, compute and label both:
-- **Blended CAC (fallback)**: All marketing spend / all new customers
-- **Channel-level CAC (fallback)**: Channel marketing spend / new customers from that channel
+When falling back, compute and label only the missing metric:
+- **Blended CAC (fallback)**: All marketing spend / all new customers, only when no blended CAC row exists
+- **Channel-level CAC (fallback)**: Channel marketing spend / new customers from that channel, only for channels without a model CAC row
 
 ### First-order AOV (the right denominator for CAC)
 
@@ -234,7 +234,7 @@ Call `create_sheet` with blue tab. Call `write_range` for the efficiency table. 
 5. Don't optimize for ROAS alone — maximizing ROAS often means underinvesting in growth; optimize for profitable scale, not just efficiency
 6. **Don't synthesize a blended AOV from per-segment values via weighted average.** Pull AOV from the model — Key Drivers are the user's inputs and Key Results are the modeler's deliberate aggregations. If the model has multiple per-segment first-order AOVs but no blended Key Result row, show CAC:AOV against each segment side by side and surface the gap (or steer to `/cohort-analysis`). Inventing a blend the modeler didn't author risks misweighting (orders vs. customers, period definitions) and lands a number the user can't tie back to the model.
 7. **Don't anchor the headline ratio on a single segment when the model has multiple first-order segments without a blended row.** Sub first-order AOV is typically lower than OTP — OTP-only AOV inflates the apparent CAC efficiency. The right move is to show every per-segment ratio and surface the missing aggregate, not to pick one and call it the headline.
-8. **Don't recompute CAC when the model exposes a CAC Key Result row.** The modeler's formula may exclude or include spend categories the agent doesn't know about (e.g., capitalized influencer fees, non-marketing-coded ad spend, agency retainers). Recomputing from raw `marketing_spend / new_customers` produces a number that drifts from the model and creates inconsistency between the agent's report and the model's own dashboard. Pull CAC from the model; recompute only as a flagged fallback when no CAC row exists.
+8. **Don't recompute a CAC metric when the model exposes the corresponding CAC Key Result row.** The modeler's formula may exclude or include spend categories the agent doesn't know about (e.g., capitalized influencer fees, non-marketing-coded ad spend, agency retainers). Recomputing from raw `marketing_spend / new_customers` produces a number that drifts from the model and creates inconsistency between the agent's report and the model's own dashboard. Pull CAC from the model; recompute only the missing blended or channel metric as a clearly labeled fallback.
 9. **Don't mix one channel's AOV with another channel's CAC.** DTC AOV ≠ Amazon AOV ≠ Wholesale AOV. Pair each channel's CAC with that channel's own AOV row from the model. The "Blended" row in the channel efficiency table is filled only when the model exposes a model-level blended AOV row and a model-level blended CAC row — never synthesize either agent-side.
 
 ---
