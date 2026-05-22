@@ -494,7 +494,7 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 |-------|------|---------|
 | Build Schedule | `../build-schedule/SKILL.md` | Construct a new schedule sheet from scratch — data-first flow, any model version |
 | Monthly Report | `../monthly-report/SKILL.md` | Produce the Drivepoint-style monthly summary & variance report for a CPG customer |
-| Build Report | `../build-report/SKILL.md` | Create a blue report tab — board reports, investor updates |
+| Build Report | `../build-report/SKILL.md` | Create a blue report tab — board reports, monthly close reports, investor updates |
 | Create Scenario | `../create-scenario/SKILL.md` | Build a named what-if scenario by adjusting Key Driver assumptions |
 
 ### Analysis
