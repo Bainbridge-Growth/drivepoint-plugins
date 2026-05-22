@@ -42,6 +42,7 @@ drivepoint-smartmodel-plugin/
     inventory-analysis/SKILL.md
     trade-spend-analysis/SKILL.md
     monthly-report/SKILL.md         ← Monthly Report
+    price-change-analysis/SKILL.md
     summarize-model/SKILL.md        ← Model Ops
     interrogate-model/SKILL.md
     audit-model/SKILL.md

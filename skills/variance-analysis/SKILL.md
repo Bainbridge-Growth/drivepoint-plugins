@@ -1,11 +1,11 @@
 ---
 name: variance-analysis
-description: Analyze performance vs. plan, forecast, or prior period — decomposing variances by driver (price, volume, mix, timing) and flagging material deviations. Use when a user asks to explain variances, compare actuals to plan/forecast, understand what's driving a miss or beat, check mid-month pacing, or asks "why did we miss?" / "what changed?" / "how are we tracking?" Also triggers on "budget vs. actual", "plan vs. actual", "pacing", "mid-month", "variance report", "pre-roll", "are we on track?", or "month-end review".
+description: Analyze performance vs. plan, forecast, or prior period — decomposing variances by driver (price, volume, mix, timing) and flagging material deviations. Works at monthly, quarterly, or YTD granularity. Use when a user asks to explain variances, compare actuals to plan/forecast, understand what's driving a miss or beat, check mid-month pacing, or asks "why did we miss?" / "what changed?" / "how are we tracking?" Also triggers on "budget vs. actual", "plan vs. actual", "pacing", "mid-month", "variance report", "pre-roll", "are we on track?", "month-end review", "quarterly variance", "Q1/Q2/Q3/Q4 vs plan", "QoQ", or "YoY quarter".
 ---
 
 # Variance Analysis
 
-**Purpose**: Structured, driver-based variance analysis — full-period (actuals vs. plan/forecast) and mid-month pacing. Covers revenue, COGS, gross margin, and opex.
+**Purpose**: Structured, driver-based variance analysis — full-period (actuals vs. plan/forecast), quarterly (incl. QoQ and YoY quarter), YTD, and mid-month pacing. Covers revenue, COGS, gross margin, and opex.
 **Prerequisite**: The `smartmodel-protocol` skill must be loaded.
 
 ---
@@ -16,6 +16,7 @@ description: Analyze performance vs. plan, forecast, or prior period — decompo
 - User asks "why did we miss/beat?"
 - User asks "how are we pacing?" or "where are we mid-month?"
 - User asks for a variance report or bridge analysis
+- User asks for a quarterly variance ("Q1 vs plan", "Q1'26 vs Q1'25", "QoQ", "YoY quarter")
 - User opens a SmartModel and asks about performance
 
 ---
@@ -25,21 +26,44 @@ description: Analyze performance vs. plan, forecast, or prior period — decompo
 **Step 1.1 — Use model context from the protocol**
 Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, note: `companyName`, `currency`, which columns are Actual vs. Forecast, the most recently closed Actual month, and the consolidation sheet name.
 
-**Step 1.2 — Identify comparison basis**
-Infer from the user's request: Plan (original budget), Forecast (latest reforecast), Prior Year, or Prior Month.
-Default to **Actuals vs. Forecast** for the most recently closed month if not specified.
+**Step 1.2 — Identify comparison basis and period granularity**
+
+Two dimensions to lock in before proceeding:
+
+*Comparison basis*: Plan (original budget), Forecast (latest reforecast), Prior Year, or Prior Period. Default to **Actuals vs. Forecast** if not specified.
+
+*Period granularity*: Monthly, Quarterly, or YTD. Default to **monthly** (most recently closed month). Switch to:
+- **Quarterly** when the user mentions "Q1" / "Q2" / "Q3" / "Q4", "quarterly", "this quarter", "QoQ", or asks for a YoY-quarter comparison.
+- **YTD** when the user mentions "YTD", "year to date", or "through [month]".
+
+For quarterly, derive the fiscal quarter from `settings___fy1_end_date`. The first month of the fiscal year is the month **after** the FY-end month. Q1 covers months 1–3 of the fiscal year, Q2 covers months 4–6, Q3 covers months 7–9, Q4 covers months 10–12.
+
+Examples:
+- `settings___fy1_end_date = 2026-12-31` (calendar FY) → FY starts Jan → Q1 = Jan/Feb/Mar, Q2 = Apr/May/Jun, Q3 = Jul/Aug/Sep, Q4 = Oct/Nov/Dec.
+- `settings___fy1_end_date = 2027-01-31` (FY ends Jan 31) → FY starts Feb → Q1 = Feb/Mar/Apr, Q2 = May/Jun/Jul, Q3 = Aug/Sep/Oct, Q4 = Nov/Dec/Jan.
+- `settings___fy1_end_date = 2026-06-30` (FY ends Jun 30) → FY starts Jul → Q1 = Jul/Aug/Sep, Q2 = Oct/Nov/Dec, Q3 = Jan/Feb/Mar, Q4 = Apr/May/Jun.
+
+If a quarter is in progress (not all 3 months are closed Actuals), label it explicitly as "Q[n]-to-date" and tell the user which months are included before computing variance.
 
 **Step 1.3 — State the comparison basis explicitly**
 Before proceeding to Phase 2, output this line:
 
 ```
-Comparison: [Month] Actuals vs. [Month] [Plan / Forecast / Prior Month / Prior Year]
+Comparison: [Period] Actuals vs. [Period] [Plan / Forecast / Prior Period / Prior Year]
 ```
+
+Period takes the granularity from Step 1.2. Examples:
+- Monthly vs. forecast: `Comparison: Mar'26 Actuals vs. Mar'26 Forecast`
+- Quarterly vs. plan: `Comparison: Q1'26 Actuals vs. Q1'26 Plan`
+- Quarterly YoY: `Comparison: Q1'26 Actuals vs. Q1'25 Actuals`
+- YTD: `Comparison: YTD'26 (Jan–Mar) Actuals vs. YTD'26 Plan`
+- Quarter in progress: `Comparison: Q2'26-to-date (Apr only) Actuals vs. Q2'26 Plan (Apr only)`
 
 Rules:
 - If the user specifies the basis ("vs. plan", "vs. last year"), use what they asked for.
-- If not specified, default to: Actuals for the most recently closed month vs. Forecast/Plan for that same month.
-- If the model has no retained plan/forecast column for the closed period (i.e., forecast was overwritten when actuals landed), default to **prior month** or **prior year** — whichever gives a more meaningful baseline — and state the choice: "This model doesn't retain a separate plan for closed months, so I'm comparing [month] actuals to [prior month / prior year] actuals."
+- If not specified, default to: Actuals for the most recently closed period vs. Forecast/Plan for that same period.
+- If the model has no retained plan/forecast column for the closed period (i.e., forecast was overwritten when actuals landed), default to **prior period** or **prior year** — whichever gives a more meaningful baseline — and state the choice: "This model doesn't retain a separate plan for closed periods, so I'm comparing [period] actuals to [prior period / prior year] actuals."
+- For YoY quarterly comparisons against a partial current quarter, compare the same partial slice of the prior year (e.g., Q2'26-to-date with only April actuals → compare to April'25 actuals, not full Q2'25). State this clearly.
 - Do not ask the user to choose. Pick the most useful basis, state it, and proceed. The user can redirect if they want something different.
 
 **Hard rule: never start Phase 2 without having stated the comparison basis in plain English.**
@@ -50,8 +74,19 @@ Rules:
 
 **If a prior skill ran this session** (e.g., `/summarize-model`), reuse settings, index, date spine, and any data already gathered. Do not re-read sheets that were already read.
 
-**Step 2.1 — Read the consolidation sheet (one call)**
-Call `read_smartmodel_data_section` on **M - Monthly** (the consolidation sheet). This single call returns the full P&L for the comparison period: total revenue, COGS, gross profit, opex, EBITDA/net income. Extract everything you need from this one response.
+**Step 2.1 — Read the consolidation sheet (one scoped call)**
+Call `read_smartmodel_data_section` on **M - Monthly** (the consolidation sheet). **Scope the read to only the months needed for the selected comparison granularity** — do not pull the full date spine when only a handful of months are required. Large models can have 48+ months of columns, and pulling everything risks the payload-size and latency issues that have caused timeouts in the past.
+
+Scope by comparison type:
+
+| Comparison | Months to include in the read |
+|------------|-------------------------------|
+| Monthly | Comparison month (Actual + Plan/Forecast) + trailing 12 Actuals for the Phase 2.5 reasonableness scan |
+| Quarterly vs. Plan | The 3 months of the quarter (Actual + Plan) + trailing 12 Actuals |
+| Quarterly YoY | The 3 months of the current quarter + the 3 months of the prior-year quarter + trailing 12 Actuals |
+| YTD vs. Plan | All closed Actual months in the fiscal year + matching Plan columns + trailing 12 Actuals |
+
+One scoped call returns total revenue, COGS, gross profit, opex, EBITDA/net income for the requested columns — extract everything from that response, do not make additional reads. For YoY quarterly, the current and prior-year columns sit in the same date spine at different positions; include both in the single column range rather than making two calls. Do not re-aggregate at the channel sheet level for quarterly totals; the consolidation sheet has canonical monthly totals.
 
 **Step 2.2 — Read channel sheets only for driver decomposition**
 Only if the consolidation reveals a material revenue or COGS variance that requires channel-level decomposition, call `read_smartmodel_data_section` on the specific channel sheet(s) involved. Do not read every channel sheet upfront.

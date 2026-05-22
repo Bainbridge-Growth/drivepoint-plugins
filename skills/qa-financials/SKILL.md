@@ -246,7 +246,7 @@ Markdown output, severity-ordered. Match `audit-model`'s format:
 
 ## Integration with Other Skills
 
-- **`/monthly-report`**: Run this skill BEFORE drafting the monthly report so the underlying GL is trusted
+- **Monthly reporting**: Run this skill BEFORE drafting the monthly report so the underlying GL is trusted
 - **`/audit-model`**: Complementary — that skill checks structural integrity (formulas, sheet structure, protocol compliance); this one checks external tie-out
 - **`/variance-analysis`**: If tie-out passes but variance vs. forecast is large, that's a real variance — point at `/variance-analysis` for explanation, not data error
 - **`/clean-model`**: Remediation skill if FAIL items need fixing in the workbook

@@ -392,7 +392,8 @@ When the user asks a question that would benefit from a structured workflow, use
 | "CAC", "ROAS", "marketing efficient", "ad spend", "spending too much on ads" | marketing-efficiency-analysis |
 | "inventory", "weeks of supply", "stockout", "reorder", "sell through rate" | inventory-analysis |
 | "trade spend", "promos working", "deduction rate", "retailer profitability", "wholesale P&L" | trade-spend-analysis |
-| "what if", "scenario", "tariffs", "raise prices", "extend runway", "miss Q2" | create-scenario |
+| "raise the price of [product]", "price increase on [SKU]", "drop price on [product]", "price change scenario", "what would a [X]% price increase do" | price-change-analysis |
+| "what if", "scenario", "tariffs", "raise prices" (portfolio-wide), "extend runway", "miss Q2" | create-scenario |
 | "compare scenarios", "plan A vs B", "which scenario is better", "budget vs forecast" | compare-scenarios |
 | "monthly report", "monthly summary", "monthly recap", "monthly writeup", "monthly close", "do the [month] numbers", "[customer]'s [month] writeup" | monthly-report |
 | "board deck", "board report", "investor update", "package this up" | build-report |
@@ -510,6 +511,7 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 | Marketing Efficiency | `../marketing-efficiency-analysis/SKILL.md` | CAC, ROAS, blended vs. channel-level spend efficiency |
 | Inventory Analysis | `../inventory-analysis/SKILL.md` | Weeks of supply, stockout risk, dead stock, reorder timing |
 | Trade Spend Analysis | `../trade-spend-analysis/SKILL.md` | Promotional ROI, deduction rates, retailer-level P&L |
+| Price Change Analysis | `../price-change-analysis/SKILL.md` | Sales-mix-weighted AOV updates and COGS pass-through for SKU-level price changes |
 
 ### Model Ops
 | Skill | Path | Purpose |
