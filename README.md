@@ -47,6 +47,7 @@ drivepoint-smartmodel-plugin/
     audit-model/SKILL.md
     clean-model/SKILL.md
     optimize-model/SKILL.md
+    qa-financials/SKILL.md          ← Finance QA
     compare-scenarios/SKILL.md      ← Scenarios
   .mcp.json                          ← MCP stub (ready for future server integration)
   README.md
