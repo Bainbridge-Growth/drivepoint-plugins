@@ -12,7 +12,7 @@
       "name": "smartmodel",
       "source": "./",
       "description": "SmartModel Protocol v6.0 — AI grammar for Excel financial models",
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   ]
 }

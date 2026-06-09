@@ -1,6 +1,6 @@
 ---
 name: price-change-analysis
-description: Model the financial impact of a price change on one or more SKUs — including sales-mix-weighted AOV adjustments, COGS-as-%-of-revenue pass-through, and per-channel handling. Use when a user asks to "raise the price of [product]", "increase price on [SKU] by X%", "model a price increase", "price change scenario", "drop price on [SKU]", or "what would a [X]% price increase do to margin?" Also triggers on "price cut", "price drop", "discount strategy", "ASP increase", "list price change", or "what if we raised prices on [product]".
+description: Model the financial impact of a price change on one or more SKUs — including sales-mix-weighted AOV adjustments, COGS-as-%-of-revenue pass-through, and per-channel handling. Use when a user asks to "raise the price of [product]", "increase prices on [SKU] by X%", "increase SKU prices", "model a price increase", "price change scenario", "drop price on [SKU]", or "what would a [X]% price increase do to margin?" Also triggers on "price cut", "price drop", "discount strategy", "ASP increase", "list price change", "pricing scenario", or "what if we raised prices on [product]".
 ---
 
 # Price Change Analysis
@@ -12,12 +12,13 @@ description: Model the financial impact of a price change on one or more SKUs �
 
 ## When This Skill Activates
 
-- User asks to raise or lower the price of a specific SKU or product
+- User asks to raise or lower the price of a specific SKU, product, product family, or SKU set
+- User asks to increase SKU prices, increase prices on a named product, or test a price increase/decrease
 - User asks "what if we increased / decreased price on [product] by X%"
 - User asks to model a price-change scenario
 - User wants to understand the margin and revenue impact of a pricing decision before committing to it
 
-This skill is more specific than `/create-scenario` for pricing — load this when the user names a product or SKU. Fall back to `/create-scenario` only when the price change applies uniformly across the entire portfolio (rare).
+This skill is more specific than `/create-scenario` for pricing. Load this for any SKU, product, product-family, ASP, AOV, discount, price increase, or price decrease prompt. Fall back to `/create-scenario` only when the user explicitly asks for a broad portfolio scenario with no SKU/product pricing work.
 
 ---
 
