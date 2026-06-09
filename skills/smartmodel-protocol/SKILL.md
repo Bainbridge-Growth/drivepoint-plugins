@@ -402,8 +402,8 @@ When the user asks a question that would benefit from a structured workflow, use
 | "CAC", "ROAS", "marketing efficient", "ad spend", "spending too much on ads" | marketing-efficiency-analysis |
 | "inventory", "weeks of supply", "stockout", "reorder", "sell through rate" | inventory-analysis |
 | "trade spend", "promos working", "deduction rate", "retailer profitability", "wholesale P&L" | trade-spend-analysis |
-| "raise the price of [product]", "price increase on [SKU]", "drop price on [product]", "price change scenario", "what would a [X]% price increase do" | price-change-analysis |
-| "what if", "scenario", "tariffs", "raise prices" (portfolio-wide), "extend runway", "miss Q2" | create-scenario |
+| "raise the price of [product]", "increase prices on [SKU]", "increase SKU prices", "price increase on [SKU]", "drop price on [product]", "price change scenario", "pricing scenario", "what would a [X]% price increase do" | price-change-analysis |
+| "what if", "scenario", "tariffs", "extend runway", "miss Q2" | create-scenario |
 | "compare scenarios", "plan A vs B", "which scenario is better", "budget vs forecast" | compare-scenarios |
 | "monthly report", "monthly summary", "monthly recap", "monthly writeup", "monthly close", "do the [month] numbers", "[customer]'s [month] writeup" | monthly-report |
 | "board deck", "board report", "investor update", "package this up" | build-report |
@@ -416,7 +416,7 @@ When the user asks a question that would benefit from a structured workflow, use
 | "slow", "lagging", "file is huge", "speed up", "reduce file size" | optimize-model |
 | "investor-ready", "due diligence", "DD prep", "Series A", "data room", "share with VCs" | investor-readiness-analysis |
 
-If the question doesn't clearly match one skill, answer directly from the model data. If the user explicitly asks for an analysis by name (e.g., "run a variance analysis"), always load that skill.
+If the question doesn't clearly match one skill, answer directly from the model data. If the user explicitly asks for an analysis by name (e.g., "run a variance analysis"), always load that skill. For pricing prompts, prefer `price-change-analysis` over `create-scenario` whenever the user mentions a SKU, product, product family, ASP, AOV, discount, price increase, or price decrease.
 
 ---
 
