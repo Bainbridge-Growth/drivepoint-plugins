@@ -59,11 +59,14 @@ drivepoint-plugins/
     marketing-efficiency-analysis/SKILL.md
     inventory-analysis/SKILL.md
     trade-spend-analysis/SKILL.md
+    monthly-report/SKILL.md         ← Monthly Report
+    price-change-analysis/SKILL.md
     summarize-model/SKILL.md        ← Model Ops
     interrogate-model/SKILL.md
     audit-model/SKILL.md
     clean-model/SKILL.md
     optimize-model/SKILL.md
+    qa-financials/SKILL.md          ← Finance QA
     compare-scenarios/SKILL.md      ← Scenarios
   .mcp.json                          ← MCP stub (ready for future server integration)
   README.md

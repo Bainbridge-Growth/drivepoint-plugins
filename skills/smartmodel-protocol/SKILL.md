@@ -402,12 +402,15 @@ When the user asks a question that would benefit from a structured workflow, use
 | "CAC", "ROAS", "marketing efficient", "ad spend", "spending too much on ads" | marketing-efficiency-analysis |
 | "inventory", "weeks of supply", "stockout", "reorder", "sell through rate" | inventory-analysis |
 | "trade spend", "promos working", "deduction rate", "retailer profitability", "wholesale P&L" | trade-spend-analysis |
-| "what if", "scenario", "tariffs", "raise prices", "extend runway", "miss Q2" | create-scenario |
+| "raise the price of [product]", "price increase on [SKU]", "drop price on [product]", "price change scenario", "what would a [X]% price increase do" | price-change-analysis |
+| "what if", "scenario", "tariffs", "raise prices" (portfolio-wide), "extend runway", "miss Q2" | create-scenario |
 | "compare scenarios", "plan A vs B", "which scenario is better", "budget vs forecast" | compare-scenarios |
-| "board deck", "board report", "investor update", "monthly close", "package this up" | build-report |
+| "monthly report", "monthly summary", "monthly recap", "monthly writeup", "monthly close", "do the [month] numbers", "[customer]'s [month] writeup" | monthly-report |
+| "board deck", "board report", "investor update", "package this up" | build-report |
 | "build a schedule", "revenue build", "COGS schedule", "headcount plan", "payroll tab" | build-schedule |
 | "what is this", "overview", "stand up the model", "orient" | summarize-model |
 | "where does that number come from", "trace", "what's driving that line" | interrogate-model |
+| "QA the financials", "QA the GL", "QA R-GL", "QA RGL", "QA the import", "tie out the GL", "reconcile GL", "check NetSuite import", "verify the import for [month]" | qa-financials |
 | "audit", "something looks off", "validate", "sanity check", "numbers don't look right" | audit-model |
 | "clean up", "fix the model", "#REF errors", "broken formulas" | clean-model |
 | "slow", "lagging", "file is huge", "speed up", "reduce file size" | optimize-model |
@@ -502,7 +505,8 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 | Skill | Path | Purpose |
 |-------|------|---------|
 | Build Schedule | `../build-schedule/SKILL.md` | Construct a new schedule sheet from scratch — data-first flow, any model version |
-| Build Report | `../build-report/SKILL.md` | Create a blue report tab — board reports, monthly close, investor updates |
+| Monthly Report | `../monthly-report/SKILL.md` | Produce the Drivepoint-style monthly summary & variance report for a CPG customer |
+| Build Report | `../build-report/SKILL.md` | Create a blue report tab — board reports, monthly close reports, investor updates |
 | Create Scenario | `../create-scenario/SKILL.md` | Build a named what-if scenario by adjusting Key Driver assumptions |
 
 ### Analysis
@@ -517,6 +521,7 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 | Marketing Efficiency | `../marketing-efficiency-analysis/SKILL.md` | CAC, ROAS, blended vs. channel-level spend efficiency |
 | Inventory Analysis | `../inventory-analysis/SKILL.md` | Weeks of supply, stockout risk, dead stock, reorder timing |
 | Trade Spend Analysis | `../trade-spend-analysis/SKILL.md` | Promotional ROI, deduction rates, retailer-level P&L |
+| Price Change Analysis | `../price-change-analysis/SKILL.md` | Sales-mix-weighted AOV updates and COGS pass-through for SKU-level price changes |
 
 ### Model Ops
 | Skill | Path | Purpose |
@@ -524,6 +529,7 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 | Summarize Model | `../summarize-model/SKILL.md` | Full workbook orientation — templates, data state, time range, health check |
 | Interrogate Model | `../interrogate-model/SKILL.md` | Trace any number back through its formula and driver chain |
 | Audit Model | `../audit-model/SKILL.md` | Structural integrity, formula errors, protocol compliance checklist |
+| QA Financials | `../qa-financials/SKILL.md` | Tie out a customer's raw GL export against R-GL line-by-line for a given period |
 | Clean Model | `../clean-model/SKILL.md` | Fix errors, restore protocol structure, standardize formatting |
 | Optimize Model | `../optimize-model/SKILL.md` | Resolve slow calculation, phantom range bloat, volatile formulas |
 
