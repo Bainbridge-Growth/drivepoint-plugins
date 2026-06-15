@@ -68,11 +68,33 @@ drivepoint-plugins/
     optimize-model/SKILL.md
     qa-financials/SKILL.md          ← Finance QA
     compare-scenarios/SKILL.md      ← Scenarios
+  trial/
+    welcome.md                       ← guided trial experience for prospects
   .mcp.json                          ← MCP stub (ready for future server integration)
   README.md
 ```
 
 Each skill is a `<name>/SKILL.md` directory following the Claude plugin spec. The logical groupings (Builders, Analysis, Model Ops, Scenarios) are documented above but the actual directory structure is flat — all skills are direct children of `skills/`.
+
+## Try Drivepoint (Trial Experience)
+
+Share one of these links with prospects to launch a guided Drivepoint trial inside Claude:
+
+**Claude Desktop / mobile (deep link):**
+```
+claude://claude.ai/new?q=Read%20https%3A%2F%2Fraw.githubusercontent.com%2FBainbridge-Growth%2Fdrivepoint-plugins%2Fmain%2Ftrial%2Fwelcome.md%20and%20follow%20the%20instructions%20inside%20it%20exactly
+```
+
+**Browser (claude.ai):**
+```
+https://claude.ai/new?q=Read%20https%3A%2F%2Fraw.githubusercontent.com%2FBainbridge-Growth%2Fdrivepoint-plugins%2Fmain%2Ftrial%2Fwelcome.md%20and%20follow%20the%20instructions%20inside%20it%20exactly
+```
+
+The link opens a new Claude conversation pre-filled with a prompt that loads `trial/welcome.md`. Claude reads the file, then runs a guided trial experience using a sample CPG brand (Oatwave). The prospect picks from five analysis paths (variance, cohort/margins, inventory/demand planning, investor readiness, SKU rationalization) and sees Drivepoint-quality output on sample data, with a CTA to connect their real data.
+
+No install required. Works in any Claude surface: browser, Desktop app, or mobile.
+
+**To update the trial experience**, edit `trial/welcome.md` and push to main. The link never changes.
 
 ## The Protocol
 The canonical SmartModel Protocol v6.0 specification lives at `skills/smartmodel-protocol/SKILL.md` — this is both the protocol spec and the Claude plugin entry point.
