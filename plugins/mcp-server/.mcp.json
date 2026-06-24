@@ -2,7 +2,7 @@
   "mcpServers": {
     "drivepoint": {
       "type": "http",
-      "url": "https://YOUR-DRIVEPOINT-MCP-ENDPOINT"
+      "url": "https://mcp.drivepoint.ai/mcp"
     }
   }
 }
