@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "drivepoint": {
+      "type": "http",
+      "url": "https://YOUR-DRIVEPOINT-MCP-ENDPOINT"
+    }
+  }
+}

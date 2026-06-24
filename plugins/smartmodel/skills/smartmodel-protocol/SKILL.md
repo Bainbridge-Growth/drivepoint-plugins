@@ -7,7 +7,7 @@ allowed-tools: Read Grep Glob
 
 # SmartModel Protocol Skill — v6.0
 **Issuer**: Drivepoint (drivepoint.io)
-**Hosted at**: `https://raw.githubusercontent.com/Bainbridge-Growth/drivepoint-plugins/main/skills/smartmodel-protocol/SKILL.md`
+**Hosted at**: `https://raw.githubusercontent.com/Bainbridge-Growth/drivepoint-plugins/main/plugins/smartmodel/skills/smartmodel-protocol/SKILL.md`
 **Loaded by**: Drivepoint Excel add-in on workbook open
 **Purpose**: Teach any AI agent the SmartModel grammar so it can read, navigate, assist with, and populate Drivepoint SmartModel workbooks
 
