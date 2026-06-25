@@ -69,24 +69,151 @@ Wait for them to choose.
 
 ## Phase 2: Build the Analysis Artifact
 
-When the user picks a question, build an **artifact** (an interactive HTML page) that presents the analysis visually. This is the centerpiece of the trial: a polished, tangible deliverable they can see, scroll through, and imagine getting on their own data.
-
-### Artifact design
-
-- **Title bar**: "Drivepoint" top left, the question they asked as the page title
-- **Brand**: Clean, professional. White background, dark text. Use a blue accent (#2563EB) for highlights, green (#16A34A) for positive, red (#DC2626) for negative.
-- **Headline card**: A large callout at the top with the single most important finding, e.g. "Gross margin compressed 400bps vs. plan. Raw material costs drove 40% of the miss."
-- **One primary visualization**: A styled HTML table with the key data. Use background color to highlight the important cells (red for problems, green for healthy, yellow for watch).
-- **Driver section**: 2-3 sentences explaining what's causing it and why it matters.
-- **Recommended action**: A clear, specific next step in a highlighted box.
-- **Footer**: "Built with Drivepoint. This analysis used sample data. Connect your data to get this on your real numbers." with a link to drivepoint.io/signup.
-- **No external dependencies.** All CSS inline. No CDN links, no external fonts, no JavaScript libraries. Self-contained HTML.
+When the user picks a question, build an **artifact** using the HTML template below. The CSS and structure are fixed. You only fill in the dynamic content marked with `{{PLACEHOLDERS}}`.
 
 ### In the chat message
 
 Keep the chat message brief. Something like: "Here's what that looks like:" followed by the artifact. Then a 1-2 sentence teaser of what stood out. Then proceed directly to **Phase 3 (CTA)**.
 
 Do NOT dump the full analysis as chat text AND an artifact. The artifact is the deliverable. The chat is just the wrapper.
+
+### Artifact HTML Template
+
+Copy this template exactly. Replace only the `{{PLACEHOLDERS}}` with content from the sample data. Do not modify the CSS or HTML structure.
+
+```html
+<title>{{PAGE_TITLE}} - Drivepoint</title>
+<style>
+@font-face { font-family: 'Display'; src: local('SF Pro Display'), local('Inter'), local('Segoe UI'); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --ground: #F8F9FB; --surface: #FFFFFF; --text: #1A1A2E; --text-secondary: #525B6B;
+  --accent: #2563EB; --accent-light: #EFF6FF; --positive: #16A34A; --positive-bg: #F0FDF4;
+  --warning: #D97706; --warning-bg: #FFFBEB; --critical: #DC2626; --critical-bg: #FEF2F2;
+  --border: #E2E5EA; --muted: #94A3B8;
+}
+body { font-family: 'Display', system-ui, -apple-system, sans-serif; background: var(--ground); color: var(--text); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+.page { max-width: 720px; margin: 0 auto; padding: 32px 20px 48px; }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.header-brand { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.header-meta { font-size: 12px; color: var(--muted); }
+.headline { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--critical); border-radius: 8px; padding: 24px 28px; margin-bottom: 28px; }
+.headline-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.headline-text { font-size: 20px; font-weight: 600; line-height: 1.35; color: var(--text); text-wrap: balance; }
+.headline-text strong { color: var(--critical); font-weight: 700; }
+.section { margin-bottom: 28px; }
+.section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+thead { background: #F1F3F6; }
+th { text-align: left; font-weight: 600; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); padding: 10px 14px; white-space: nowrap; border-bottom: 1px solid var(--border); }
+th:first-child { border-radius: 8px 0 0 0; }
+th:last-child { border-radius: 0 8px 0 0; }
+td { padding: 11px 14px; border-bottom: 1px solid #F1F3F6; white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+.num { font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace; font-size: 12px; }
+.pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 99px; letter-spacing: 0.02em; }
+.pill-green { background: var(--positive-bg); color: var(--positive); }
+.pill-gray { background: #F1F3F6; color: var(--text-secondary); }
+.pill-yellow { background: var(--warning-bg); color: var(--warning); }
+.pill-red { background: var(--critical-bg); color: var(--critical); }
+.row-highlight { background: #FEF8F8; }
+.val-positive { color: var(--positive); font-weight: 600; }
+.val-warning { color: var(--warning); }
+.val-critical { color: var(--critical); }
+.driver { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; }
+.driver p { font-size: 14px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 10px; }
+.driver p:last-child { margin-bottom: 0; }
+.driver strong { color: var(--text); }
+.action { background: var(--accent-light); border: 1px solid #BFDBFE; border-radius: 8px; padding: 20px 24px; }
+.action-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.action-items { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.action-items li { font-size: 14px; line-height: 1.5; color: var(--text); padding-left: 18px; position: relative; }
+.action-items li::before { content: ''; position: absolute; left: 0; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; }
+.footer p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.footer a:hover { text-decoration: underline; }
+</style>
+
+<div class="page">
+  <div class="header">
+    <div class="header-brand">Drivepoint</div>
+    <div class="header-meta">Oatwave (sample) &middot; March 2026</div>
+  </div>
+
+  <div class="headline">
+    <div class="headline-label">{{HEADLINE_LABEL}}</div>
+    <div class="headline-text">{{HEADLINE_TEXT}}</div>
+    <!-- Use <strong> inside headline-text to highlight key numbers in red -->
+  </div>
+
+  <div class="section">
+    <div class="section-title">{{TABLE_TITLE}}</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            {{TABLE_HEADERS}}
+            <!-- e.g. <th>Product</th><th>Revenue</th><th>Margin</th><th>Action</th> -->
+          </tr>
+        </thead>
+        <tbody>
+          {{TABLE_ROWS}}
+          <!--
+            Available cell styles:
+            - <td class="num">48.2%</td>                         plain number
+            - <td class="num val-positive">51.3%</td>            green number
+            - <td class="num val-warning">22</td>                amber number
+            - <td class="num val-critical">35.2%</td>            red number
+            - <td><span class="pill pill-green">Healthy</span></td>   green pill
+            - <td><span class="pill pill-gray">Hold</span></td>       gray pill
+            - <td><span class="pill pill-yellow">Watch</span></td>    yellow pill
+            - <td><span class="pill pill-red">Cut</span></td>         red pill
+            - <tr class="row-highlight">...</tr>                  highlight a problem row
+          -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">What's driving this</div>
+    <div class="driver">
+      {{DRIVER_PARAGRAPHS}}
+      <!-- 2-3 <p> tags. Use <strong> for the lead-in of each paragraph. -->
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Recommended actions</div>
+    <div class="action">
+      <ul class="action-items">
+        {{ACTION_ITEMS}}
+        <!-- 2-4 <li> tags. Use <strong> for the action verb. -->
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Built with Drivepoint &middot; Sample data (Oatwave)</p>
+    <p>Connect your data to get this on your real numbers. <a href="https://drivepoint.io/signup">Get started</a></p>
+  </div>
+</div>
+```
+
+### Placeholder reference
+
+| Placeholder | What to fill in | Example |
+|---|---|---|
+| `{{PAGE_TITLE}}` | The question they asked, short form | "Which products should we kill?" |
+| `{{HEADLINE_LABEL}}` | Category label, uppercase | "Portfolio Analysis" |
+| `{{HEADLINE_TEXT}}` | The single most important finding. Wrap key numbers in `<strong>` for red emphasis. | "3 SKUs drive 73% of revenue. Your bottom 3 contribute 5% but tie up <strong>$198K in working capital</strong>." |
+| `{{TABLE_TITLE}}` | What the table shows | "SKU Portfolio, ranked by revenue contribution" |
+| `{{TABLE_HEADERS}}` | `<th>` elements for each column | `<th>Product</th><th>Revenue</th>` |
+| `{{TABLE_ROWS}}` | `<tr>` elements using the cell styles from the template comments | See cell style reference in template |
+| `{{DRIVER_PARAGRAPHS}}` | 2-3 `<p>` tags explaining the "so what" | `<p><strong>Pumpkin Spice is dead weight.</strong> 48 weeks of supply...</p>` |
+| `{{ACTION_ITEMS}}` | 2-4 `<li>` tags with specific next steps | `<li><strong>Kill Pumpkin Spice.</strong> Liquidate remaining units.</li>` |
 
 ---
 
