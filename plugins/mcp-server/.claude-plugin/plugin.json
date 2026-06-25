@@ -1,0 +1,8 @@
+{
+  "name": "mcp-server",
+  "version": "0.1.0",
+  "description": "Drivepoint MCP server — connects Claude to a Drivepoint brand's analytics data (read-only, BigQuery-backed marts, skills, and plans).",
+  "author": { "name": "Drivepoint", "url": "https://drivepoint.io" },
+  "repository": "https://github.com/Bainbridge-Growth/drivepoint-plugins",
+  "keywords": ["mcp", "drivepoint", "bigquery", "analytics", "cpg"]
+}
