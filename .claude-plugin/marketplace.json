@@ -1,21 +1,24 @@
 {
-  "name": "drivepoint-smartmodel",
+  "name": "drivepoint",
   "owner": {
     "name": "Drivepoint",
     "url": "https://drivepoint.io"
   },
   "metadata": {
-    "description": "SmartModel Protocol v6.0 — AI grammar for Drivepoint Excel financial models"
+    "description": "Official Drivepoint Claude plugins — the SmartModel Protocol and the Drivepoint MCP server"
   },
   "plugins": [
     {
-      "name": "smartmodel-protocol",
-      "source": {
-        "source": "github",
-        "repo": "Bainbridge-Growth/drivepoint-smartmodel-plugin"
-      },
+      "name": "smartmodel",
+      "source": "./plugins/smartmodel",
       "description": "SmartModel Protocol v6.0 — AI grammar for Excel financial models",
-      "version": "1.0.0"
+      "version": "1.1.0"
+    },
+    {
+      "name": "mcp-server",
+      "source": "./plugins/mcp-server",
+      "description": "Drivepoint MCP server — connect Claude to a brand's Drivepoint analytics data",
+      "version": "0.1.0"
     }
   ]
 }

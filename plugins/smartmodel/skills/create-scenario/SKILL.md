@@ -1,6 +1,6 @@
 ---
 name: create-scenario
-description: Create a named what-if scenario by adjusting Key Driver assumptions and computing the resulting financial impact. Use when a user asks to "model a scenario", "what if we...", "create a scenario", "model the impact of...", "what happens if we launch X", "what if we raise prices", or any hypothetical business question. Also triggers on "what-if", "scenario planning", "stress test", "model a new assumption", "what if CAC goes up 10%", "what if tariffs hit", "what levers extend runway", or "what if we miss Q2 by 10%".
+description: Create a named what-if scenario by adjusting Key Driver assumptions and computing the resulting financial impact. Use when a user asks to "model a scenario", "what if we...", "create a scenario", "model the impact of...", "what happens if we launch X", or a broad hypothetical business question. Also triggers on "what-if", "scenario planning", "stress test", "model a new assumption", "what if CAC goes up 10%", "what if tariffs hit", "what levers extend runway", or "what if we miss Q2 by 10%". Do not use for SKU/product price increase or decrease prompts; load `price-change-analysis` instead.
 ---
 
 # Create Scenario
@@ -12,8 +12,8 @@ description: Create a named what-if scenario by adjusting Key Driver assumptions
 
 ## When This Skill Activates
 
-- User asks "what if...?" about any business variable
-- User wants to model a new product launch, price change, new channel, or growth scenario
+- User asks "what if...?" about a broad business variable
+- User wants to model a new product launch, new channel, growth scenario, cost shock, or non-pricing scenario
 - User asks to stress test or sensitivity-test assumptions
 - User wants to see the financial impact of a specific decision before committing to it
 
@@ -23,7 +23,7 @@ description: Create a named what-if scenario by adjusting Key Driver assumptions
 
 | Scenario | Key Drivers to adjust | Sheets affected |
 |----------|----------------------|----------------|
-| Price increase / decrease (SKU-level) | ASP / AOV inputs | Channel revenue sheets — **use `/price-change-analysis` instead**; it handles sales-mix-weighted AOV math and COGS pass-through |
+| Price increase / decrease (SKU/product-level) | ASP / AOV inputs | Channel revenue sheets — **do not handle here; load `/price-change-analysis` instead**; it handles sales-mix-weighted AOV math and COGS pass-through |
 | New product launch | Add dimension, set revenue + COGS assumptions | Product, channel sheets |
 | New retail partner | Add dimension to wholesale sheet, set volume + pricing | Wholesale sheet |
 | Marketing spend change | Marketing budget inputs | Opex sheet |
