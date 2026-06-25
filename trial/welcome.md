@@ -221,38 +221,125 @@ tr:last-child td { border-bottom: none; }
 
 This is the endpoint of every analysis. It should feel like the natural next step, not a sales pitch buried in a menu. Do NOT follow the CTA with "want to try another analysis?" or any other prompt. Let it land.
 
-> **That was a sample.** Here's what it looks like with your actual data:
->
-> Drivepoint connects to your accounting system (QuickBooks, Xero, NetSuite), your commerce platforms (Shopify, Amazon), and your 3PL, then builds a live SmartModel that stays current as transactions land.
->
-> Once connected, you install the Drivepoint MCP server in Claude and get this exact analysis experience on your real numbers. Ask any question, get an answer backed by live data.
->
-> **Getting started takes about 15 minutes:**
->
-> 1. **Create your account** at [drivepoint.io/signup](https://drivepoint.io/signup)
-> 2. **Connect your data sources** (QuickBooks, Shopify, Amazon, etc.)
-> 3. **Install the Claude integration** to start querying your model from Claude
->
-> Questions about setup? I can walk you through any of these steps. Or reach out to the team at hello@drivepoint.io.
+Say something brief in chat like: "That was sample data. Here's what it looks like to get this on your real numbers:" and then render the signup artifact below.
+
+### Signup Artifact Template
+
+Copy this template exactly. Do not modify the CSS, HTML structure, or JavaScript.
+
+```html
+<title>Get Started - Drivepoint</title>
+<style>
+@font-face { font-family: 'Display'; src: local('SF Pro Display'), local('Inter'), local('Segoe UI'); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --ground: #F8F9FB; --surface: #FFFFFF; --text: #1A1A2E; --text-secondary: #525B6B;
+  --accent: #2563EB; --accent-hover: #1D4ED8; --accent-light: #EFF6FF;
+  --border: #E2E5EA; --muted: #94A3B8; --positive: #16A34A;
+}
+body { font-family: 'Display', system-ui, -apple-system, sans-serif; background: var(--ground); color: var(--text); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+.page { max-width: 480px; margin: 0 auto; padding: 40px 20px 48px; }
+.header { text-align: center; margin-bottom: 32px; }
+.header-brand { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+.header h1 { font-size: 22px; font-weight: 700; line-height: 1.3; margin-bottom: 8px; text-wrap: balance; }
+.header p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 24px; }
+.field { margin-bottom: 18px; }
+.field:last-of-type { margin-bottom: 24px; }
+.field label { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; }
+.field input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: inherit; color: var(--text); background: var(--ground); transition: border-color 0.15s; }
+.field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.field input::placeholder { color: var(--muted); }
+.btn { display: block; width: 100%; padding: 12px 24px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; font-family: inherit; border: none; border-radius: 8px; cursor: pointer; text-align: center; text-decoration: none; transition: background 0.15s; }
+.btn:hover { background: var(--accent-hover); }
+.btn-disabled { background: var(--border); color: var(--muted); cursor: default; pointer-events: none; }
+.steps { display: flex; flex-direction: column; gap: 16px; }
+.step { display: flex; gap: 14px; align-items: flex-start; }
+.step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-light); color: var(--accent); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.step-text { font-size: 14px; color: var(--text-secondary); line-height: 1.5; padding-top: 3px; }
+.step-text strong { color: var(--text); }
+.footer { text-align: center; margin-top: 28px; }
+.footer p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+</style>
+
+<div class="page">
+  <div class="header">
+    <div class="header-brand">Drivepoint</div>
+    <h1>Get this on your real numbers</h1>
+    <p>Create your account and connect your data sources. Setup takes about 15 minutes.</p>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label for="name">Your name</label>
+      <input type="text" id="name" placeholder="Jane Smith" />
+    </div>
+    <div class="field">
+      <label for="email">Work email</label>
+      <input type="email" id="email" placeholder="jane@oatwave.com" />
+    </div>
+    <div class="field">
+      <label for="company">Company name</label>
+      <input type="text" id="company" placeholder="Oatwave" />
+    </div>
+    <a id="signup-btn" class="btn btn-disabled" href="#" target="_blank">Create my account</a>
+  </div>
+
+  <div class="card">
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Create your account</strong> with the form above. You'll set up your company profile in under a minute.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>Connect your data sources.</strong> QuickBooks, Shopify, Amazon, your 3PL. Guided connectors, most take under 5 minutes each.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text"><strong>Install the Claude integration.</strong> Add the Drivepoint MCP server and start asking questions backed by your live data.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Questions? Reach out at hello@drivepoint.io</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  var name = document.getElementById('name');
+  var email = document.getElementById('email');
+  var company = document.getElementById('company');
+  var btn = document.getElementById('signup-btn');
+  function update() {
+    var n = name.value.trim();
+    var e = email.value.trim();
+    var c = company.value.trim();
+    if (n && e && c) {
+      btn.classList.remove('btn-disabled');
+      btn.href = 'https://drivepoint.io/signup?name=' + encodeURIComponent(n)
+        + '&email=' + encodeURIComponent(e)
+        + '&company=' + encodeURIComponent(c);
+    } else {
+      btn.classList.add('btn-disabled');
+      btn.href = '#';
+    }
+  }
+  name.addEventListener('input', update);
+  email.addEventListener('input', update);
+  company.addEventListener('input', update);
+})();
+</script>
+```
 
 ---
 
 ## Phase 1c: Ready to Get Started (if they pick option 3 from welcome)
 
-Skip the sample analysis entirely and go straight to setup guidance:
-
-> Great! Here's how to get Drivepoint running with your data:
->
-> **Step 1: Create your account**
-> Sign up at [drivepoint.io/signup](https://drivepoint.io/signup). You'll set up your company profile and invite any team members who need access.
->
-> **Step 2: Connect your data sources**
-> Drivepoint integrates with QuickBooks, Xero, NetSuite, Shopify, Amazon, and most 3PLs. The connectors are guided, most take under 5 minutes each. Once connected, Drivepoint builds your SmartModel automatically.
->
-> **Step 3: Install the Claude integration**
-> Add the Drivepoint MCP server to your Claude setup. This gives Claude read-only access to your SmartModel so you can ask questions and get answers backed by your live data.
->
-> Want help with any of these steps, or want to see a sample analysis first to get a feel for the output?
+Skip the sample analysis entirely. Say something brief like "Let's get you set up:" and render the **Signup Artifact Template** from Phase 3 above. After the artifact, add: "Want to see a sample analysis first to get a feel for the output? I can show you what Drivepoint looks like on a fictional brand while your account is being set up."
 
 ---
 
