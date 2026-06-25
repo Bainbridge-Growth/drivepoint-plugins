@@ -82,12 +82,12 @@ Share one of these links with prospects to launch a guided Drivepoint trial insi
 
 **Claude Desktop / mobile (deep link):**
 ```
-claude://claude.ai/new?q=Read%20https%3A%2F%2Fraw.githubusercontent.com%2FBainbridge-Growth%2Fdrivepoint-plugins%2Fmain%2Ftrial%2Fwelcome.md%20and%20follow%20the%20instructions%20inside%20it%20exactly
+claude://claude.ai/new?q=Read%20https%3A%2F%2Fgithub.com%2FBainbridge-Growth%2Fdrivepoint-plugins%2Fblob%2Fmain%2Ftrial%2Fwelcome.md%20and%20follow%20the%20instructions%20inside%20it%20exactly
 ```
 
 **Browser (claude.ai):**
 ```
-https://claude.ai/new?q=Read%20https%3A%2F%2Fraw.githubusercontent.com%2FBainbridge-Growth%2Fdrivepoint-plugins%2Fmain%2Ftrial%2Fwelcome.md%20and%20follow%20the%20instructions%20inside%20it%20exactly
+https://claude.ai/new?q=Read%20https%3A%2F%2Fgithub.com%2FBainbridge-Growth%2Fdrivepoint-plugins%2Fblob%2Fmain%2Ftrial%2Fwelcome.md%20and%20follow%20the%20instructions%20inside%20it%20exactly
 ```
 
 The link opens a new Claude conversation pre-filled with a prompt that loads `trial/welcome.md`. Claude reads the file, then runs a guided trial experience using a sample CPG brand (Oatwave). The prospect picks from five analysis paths (variance, cohort/margins, inventory/demand planning, investor readiness, SKU rationalization) and sees Drivepoint-quality output on sample data, with a CTA to connect their real data.
