@@ -35,6 +35,15 @@ Replace `https://YOUR-DRIVEPOINT-MCP-ENDPOINT` with the real Drivepoint MCP
 server URL (production). The server uses Streamable HTTP transport;
 authentication is handled by the MCP host's connector flow.
 
+## Templates
+
+`templates/customer-project-instructions.template.md` is the canonical skeleton for the
+per-customer **project/system instruction** an FDE pastes into a fresh Claude project before a
+customer call (use the MCP for one brand, load guidance, apply that brand's query/segment
+conventions, answer as a branded artifact). Fill every `{{PLACEHOLDER}}` from live MCP discovery
+for the customer — do not paste it as-is. The `drivepoint-customer` skill (in the
+`drivepoint-customers` repo) automates the discovery + render.
+
 ## Skills
 
 `skills/` is reserved for MCP-specific skills (for example query patterns or
