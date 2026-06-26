@@ -12,10 +12,12 @@ saying "that metric isn't in your model" when the model has the same thing under
 different name.
 
 This skill is **concept knowledge**, not data. The live numbers, exact `metric_id`
-inventory, column names, and query idioms are in `data-dictionary` and
-`sample-queries` — always confirm a term against the actual model before quoting a
-number. If anything here conflicts with `data-dictionary` for a specific customer,
-the customer's real model wins; use the discovery queries below to check.
+inventory, column names, and query idioms live in the Drivepoint MCP server's companion
+skills **`data-dictionary`** and **`sample-queries`** — fetch them with the server's
+`get_skill` tool; they are served by the MCP server, not shipped in this plugin. Always
+confirm a term against the actual model before quoting a number. If anything here
+conflicts with `data-dictionary` for a specific customer, the customer's real model
+wins; use the discovery queries below to check.
 
 ---
 
@@ -172,7 +174,7 @@ match with `LOWER(metric_id) LIKE '%dtconline%'`.
 | AP, payables | `balanceSheet.accountsPayable` | — |
 | line of credit, revolver, debt | `balanceSheet.lineOfCredit` | — |
 | total assets / liabilities / equity | `balanceSheet.totalAssets` / `.totalLiabilities` / `.totalEquity` | Equity components: common stock, paid-in capital, retained earnings. |
-| operating / investing / financing cash flow, OCF | `cashFlowStatement.netCashProvidedBy{Operating,Investing,Financing}Activities` | Prefix is **`cashFlowStatement`, not `cashFlow`** — models guess wrong constantly. |
+| operating / investing / financing cash flow, OCF | `cashFlowStatement.netCashProvidedByOperatingActivities` (and the `…ByInvestingActivities` / `…ByFinancingActivities` siblings) | Prefix is **`cashFlowStatement`, not `cashFlow`** — models guess wrong constantly. |
 | CapEx, capital expenditures | `cashFlowStatement.capitalExpenditures` | — |
 | beginning / ending cash, runway | `cashFlowStatement.beginningOfPeriodCash` / `.endOfPeriodCash` | Runway = ending cash ÷ avg monthly burn (derive). |
 | DIO / DSO / DPO | `metrics.daysInventoryOutstanding` / `.daysSalesOutstanding` / `.daysPayableOutstanding` | "Days" metrics — **never sum across months**; use latest or recompute. |
@@ -339,7 +341,9 @@ price, the item won't be carried.
 
 ## Confirming a term exists in THIS model (discovery)
 
-Always confirm before quoting a number — labels and line sets vary by customer.
+Always confirm before quoting a number — labels and line sets vary by customer. The query
+below targets `production_dwh_mart` (the production server's dataset); if a table name errors,
+confirm the dataset/table with the MCP `list_datasets` / `list_tables` tools rather than assuming.
 
 ```sql
 -- Find a metric by friendly-name keyword (run before saying "not found")
@@ -377,10 +381,15 @@ hand over.
 
 ## Related skills
 
+Served by the **Drivepoint MCP server** — fetch with `get_skill` (not shipped in this plugin):
+
 - `data-dictionary` — the authoritative `metric_id` taxonomy, column names, and the
   netSales/netRevenue/fee definitions. This skill maps vocabulary *to* it.
 - `sample-queries` — discovery and metric-pull query templates.
 - `analysis-skills-guide` — denominator discipline, decomposition, sanity checks.
+
+In the **`smartmodel` plugin**:
+
 - `margin-analysis`, `cohort-analysis`, `inventory-analysis`, `variance-analysis` —
   the analyses that compute the derived concepts (LTV, payback, weeks of supply, etc.).
 
