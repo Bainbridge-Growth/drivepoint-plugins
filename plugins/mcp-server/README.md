@@ -37,5 +37,20 @@ authentication is handled by the MCP host's connector flow.
 
 ## Skills
 
-`skills/` is reserved for MCP-specific skills (for example query patterns or
-data-dictionary helpers). None are defined yet.
+MCP-specific skills live in `skills/<name>/SKILL.md`:
+
+- **`cpg-finance-context`** — a CPG finance vocabulary-and-concepts bridge.
+  Maps how a CPG operator talks ("net sales", "top line", "margin", "CAC",
+  "payback") to the SmartModel's actual lines and `metric_id`s, so the
+  assistant never reports a metric as missing when the model carries it under
+  another name. Includes a "never strand the user" behavioral protocol, a
+  ~70-row alias map, and a CPG finance primer (gross-to-net, contribution-margin
+  tiers, trade spend/deductions, channel economics, working capital).
+
+> **Note on delivery surfaces.** This plugin skill reaches sessions that install
+> the marketplace plugin (Claude Code / Desktop). The live Drivepoint MCP server
+> (`mcp.drivepoint.ai`) serves its own skills from
+> `webapp-server/apps/mcp-server/src/skills/` via `list_skills` / `get_skill` —
+> it does **not** read this repo. To make `cpg-finance-context` fire for every
+> MCP-connected session, mirror the same content into that server directory and
+> reference it from the server's `system-prompt` skill.
