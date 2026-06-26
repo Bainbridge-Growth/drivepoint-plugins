@@ -69,7 +69,7 @@ Standing sub-rules:
 - **Watch for duplicate / twin lines — surface both, never pick silently.** One rollup or KPI
   can appear more than once: under different **casing** (`incomeStatement.depreciation` vs
   `.Depreciation`); under a **company-namespace prefix** (`incomeStatement.netRevenue` vs
-  `incomeStatement.mudWtr.netRevenue`), often with **slightly different values** (~1%); under a
+  `incomeStatement.<companySlug>.netRevenue`), often with **slightly different values** (~1%); under a
   **singular-vs-plural namespace** (`metric.grossMarginDTC` alongside the usual `metrics.*` KPIs —
   a `metrics.`-only search misses these); or simply as **two identical rows** for one `metric_id`.
   Discovery returns all of them. The plain `incomeStatement.*` / `metrics.*` namespace is usually the

@@ -47,10 +47,6 @@ MCP-specific skills live in `skills/<name>/SKILL.md`:
   ~70-row alias map, and a CPG finance primer (gross-to-net, contribution-margin
   tiers, trade spend/deductions, channel economics, working capital).
 
-> **Note on delivery surfaces.** This plugin skill reaches sessions that install
-> the marketplace plugin (Claude Code / Desktop). The live Drivepoint MCP server
-> (`mcp.drivepoint.ai`) serves its own skills from
-> `webapp-server/apps/mcp-server/src/skills/` via `list_skills` / `get_skill` —
-> it does **not** read this repo. To make `cpg-finance-context` fire for every
-> MCP-connected session, mirror the same content into that server directory and
-> reference it from the server's `system-prompt` skill.
+> **Delivery.** This is a marketplace **plugin** skill (Claude Code / Desktop).
+> How it loads into other Drivepoint surfaces depends on each surface's skill
+> configuration.
