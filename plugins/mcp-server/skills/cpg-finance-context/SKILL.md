@@ -130,7 +130,7 @@ match with `LOWER(metric_id) LIKE '%dtconline%'`.
 |---|---|---|
 | COGS, cost of goods, product cost, landed cost, cost of sales, "Cox" (misheard) | Cost of Goods Sold → `incomeStatement.costOfGoodsSold` | CPG COGS = product + packaging + inbound freight + duties/tariffs. Excludes outbound shipping & marketing. |
 | gross profit, GP | Gross Profit → `incomeStatement.grossProfit` | = Net Revenue (or Net Sales) − COGS. Same as **CM1** in DTC parlance. |
-| gross margin, GM%, margin (often) | Gross Margin % → `metrics.grossMarginPercent` | **Denominator is customer-configurable** (`netRevenue` vs `netSales`). Verify before recomputing. Never average a % across months. (Across customers seen so far the denominator is consistently `netRevenue` — but still confirm.) |
+| gross margin, GM%, margin (often) | Gross Margin % → `metrics.grossMarginPercent` | **Denominator is customer-configurable** (`netRevenue` vs `netSales`). Verify before recomputing. Never average a % across months. (In practice this denominator is typically `netRevenue` — but still confirm.) |
 | net revenue margin %, "net margin" (sometimes) | Net Revenue ÷ Gross Sales → `metrics.netRevenueMarginPercent` | **Not a profitability margin** — a revenue-*realization* ratio (share of gross sales that survives to net revenue). Sits right next to `grossMarginPercent` in discovery and is easily mistaken for it. Don't confuse with gross or net-income margin. |
 | contribution profit, contribution margin $, CM, "variable margin" | Contribution Profit → `incomeStatement.contributionProfit` | Gross profit − variable costs (fulfillment, shipping, processing, marketplace fees). Roughly **CM2**. Ask *which* variable costs if it matters. |
 | contribution after marketing, CPAM, "contribution less ad spend," true contribution | Contribution Profit After Marketing → `incomeStatement.contributionProfitAfterMarketing` | CM after variable marketing. Roughly **CM3**. The DTC "are we profitable on acquisition" line. |
@@ -201,7 +201,7 @@ discover on `metric_name`, and map the friendly label back to the `metric_id` to
 
 **Budget questions (a recurring trap).** "Budget" / "vs plan" almost never means the live model — it means a
 **forecast `plan_id`**. Customers often have *many* plans (test / scenario / board / revised), and the
-variance swings wildly by which you pick (one customer read −49% vs the original board plan but ~0% vs the
+variance swings wildly by which you pick (the same month can read −49% vs the original board plan but ~0% vs the
 revised one). So: (1) list the plans (`is_from_live_model`, name, coverage); (2) prefer the **most recent
 board/annual or "revised" plan** as the plan-of-record and **name the `plan_id` you used**; (3) if every plan
 is a scratch / "test" / "demo" plan (or one just mirrors actuals → 0 variance), say there is **no clean budget
@@ -370,7 +370,7 @@ from the `metric_id` / name.
 
 **Sanity-check magnitudes before quoting a derived ratio.** Before reporting turns / DIO / weeks-of-supply,
 check inventory ÷ monthly COGS: more than ~6 months of supply for a fast-moving DTC brand is a red flag to
-surface (one model showed ~140 weeks — almost certainly a mis-scaled inventory line), not a clean number to
+surface (a result like ~140 weeks almost certainly signals a mis-scaled inventory line), not a clean number to
 hand over.
 
 ---
