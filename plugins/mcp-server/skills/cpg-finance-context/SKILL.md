@@ -54,7 +54,7 @@ column, do NOT report it missing and stop. Run this procedure:
 5. **Deliver the number with the definitional caveat**, and state which line you used.
    Always say *"interpreting 'X' as the model's 'Y' line"* so the user can correct you.
 
-Two standing sub-rules:
+Standing sub-rules:
 
 - **Denominator ambiguity → compute and show both.** "Margin," "CAC," "LTV," and
   "revenue" are the four words most often silently mis-mapped. Margins can be struck on
@@ -66,14 +66,22 @@ Two standing sub-rules:
   line** in the model. Don't call them missing — say what *is* available (the inputs,
   or the grain that exists) and offer to compute the concept from those inputs, or point
   to the analysis skill that does (`cohort-analysis`, `inventory-analysis`, etc.).
-- **Watch for duplicate lines — surface both, never pick silently.** The same rollup can
-  appear twice: under different **casing** (`incomeStatement.depreciation` vs `.Depreciation`)
-  or under a parallel **company-namespace prefix** (e.g. `incomeStatement.netRevenue` vs
-  `incomeStatement.mudWtr.netRevenue`), often with **slightly different values** (~1%).
-  Discovery returns both. The plain `incomeStatement.*` namespace is usually the one the
-  `metrics.*` KPI rows tie to — confirm by back-solving a margin (gross profit ÷ net revenue
-  should equal `metrics.grossMarginPercent`). Report the verified base value and name the twin
-  rather than averaging or guessing.
+- **Watch for duplicate / twin lines — surface both, never pick silently.** One rollup or KPI
+  can appear more than once: under different **casing** (`incomeStatement.depreciation` vs
+  `.Depreciation`); under a **company-namespace prefix** (`incomeStatement.netRevenue` vs
+  `incomeStatement.mudWtr.netRevenue`), often with **slightly different values** (~1%); under a
+  **singular-vs-plural namespace** (`metric.grossMarginDTC` alongside the usual `metrics.*` KPIs —
+  a `metrics.`-only search misses these); or simply as **two identical rows** for one `metric_id`.
+  Discovery returns all of them. The plain `incomeStatement.*` / `metrics.*` namespace is usually the
+  one the KPI rows tie to — confirm by back-solving a margin (gross profit ÷ net revenue should equal
+  `metrics.grossMarginPercent`). Report the verified base value and name the twin rather than guessing.
+- **A line can exist but be empty, zero, or stale — that's information, not an answer.** A `metric_id`
+  may be present yet read **0 / null / flat across the recent window**. Distinguish two cases and say
+  which: (a) *not-applicable-zero* — the business genuinely doesn't do that activity (a wholesale brand
+  with no paid DTC shows `blendedPaidCAC.dtcOnline` = 0); (b) *feed gap* — the metric should have data
+  but doesn't (`blendedPaidCAC` = 0 for months while `fullyLoadedCAC` is populated). In case (b),
+  redirect to the populated sibling and flag it as a data-quality issue. Never present a structural
+  0/null as the real value.
 
 ### Worked example — "net sales" (the real case)
 
@@ -122,7 +130,8 @@ match with `LOWER(metric_id) LIKE '%dtconline%'`.
 |---|---|---|
 | COGS, cost of goods, product cost, landed cost, cost of sales, "Cox" (misheard) | Cost of Goods Sold → `incomeStatement.costOfGoodsSold` | CPG COGS = product + packaging + inbound freight + duties/tariffs. Excludes outbound shipping & marketing. |
 | gross profit, GP | Gross Profit → `incomeStatement.grossProfit` | = Net Revenue (or Net Sales) − COGS. Same as **CM1** in DTC parlance. |
-| gross margin, GM%, margin (often) | Gross Margin % → `metrics.grossMarginPercent` | **Denominator is customer-configurable** (`netRevenue` vs `netSales`). Verify before recomputing. Never average a % across months. |
+| gross margin, GM%, margin (often) | Gross Margin % → `metrics.grossMarginPercent` | **Denominator is customer-configurable** (`netRevenue` vs `netSales`). Verify before recomputing. Never average a % across months. (Across customers seen so far the denominator is consistently `netRevenue` — but still confirm.) |
+| net revenue margin %, "net margin" (sometimes) | Net Revenue ÷ Gross Sales → `metrics.netRevenueMarginPercent` | **Not a profitability margin** — a revenue-*realization* ratio (share of gross sales that survives to net revenue). Sits right next to `grossMarginPercent` in discovery and is easily mistaken for it. Don't confuse with gross or net-income margin. |
 | contribution profit, contribution margin $, CM, "variable margin" | Contribution Profit → `incomeStatement.contributionProfit` | Gross profit − variable costs (fulfillment, shipping, processing, marketplace fees). Roughly **CM2**. Ask *which* variable costs if it matters. |
 | contribution after marketing, CPAM, "contribution less ad spend," true contribution | Contribution Profit After Marketing → `incomeStatement.contributionProfitAfterMarketing` | CM after variable marketing. Roughly **CM3**. The DTC "are we profitable on acquisition" line. |
 | contribution margin % | Contribution Margin % → `metrics.contributionMarginPercent` | Denominator customer-configurable; verify. |
@@ -180,7 +189,24 @@ match with `LOWER(metric_id) LIKE '%dtconline%'`.
 | TikTok Shop, social commerce, live shopping | Often under marketplace/DTC (varies) | Books retail revenue gross of platform + creator fees. |
 | "P&L", "P&O" (misheard), income statement | `incomeStatement.*` | — |
 | GL, general ledger | R-GL import / `*AssumptionsGl_*` | GL code → friendly name mapping not yet shipped; return raw codes. |
-| budget, plan, forecast, "the plan" | A `plan_id` (not the live model) | Use `plan_id` in SQL; `plan_name` for display. See `data-dictionary`. |
+| budget, plan, forecast, "the plan" | A `plan_id` (not the live model) | Use `plan_id` in SQL; `plan_name` for display. **Picking the right plan is its own trap — see "Budget questions" below.** |
+
+**Channel labels are re-skinned per customer — trust the `metric_id` token, not the friendly name.**
+The display `metric_name` can be relabeled to a customer's industry vocabulary: `*.marketplace` may show
+as "Private Label," `*.wholesale` as "Food Service." KPI channel tokens can also differ from the P&L
+suffixes (channel margins under `metric.grossMarginDTC` / `…AMZN` / `…Wholesale` while the P&L uses
+`.dtcOnline` / `.marketplace` / `.wholesale`). So `LIKE '%dtconline%'` alone can miss a channel — also
+discover on `metric_name`, and map the friendly label back to the `metric_id` token. (Likewise "distributor"
+→ the `*.wholesale` channel; there is usually no separate `distributor` channel.)
+
+**Budget questions (a recurring trap).** "Budget" / "vs plan" almost never means the live model — it means a
+**forecast `plan_id`**. Customers often have *many* plans (test / scenario / board / revised), and the
+variance swings wildly by which you pick (one customer read −49% vs the original board plan but ~0% vs the
+revised one). So: (1) list the plans (`is_from_live_model`, name, coverage); (2) prefer the **most recent
+board/annual or "revised" plan** as the plan-of-record and **name the `plan_id` you used**; (3) if every plan
+is a scratch / "test" / "demo" plan (or one just mirrors actuals → 0 variance), say there is **no clean budget
+of record** rather than reporting a bogus variance; (4) when unsure, show the variance and ask the user to
+confirm the canonical budget.
 
 ---
 
@@ -204,6 +230,12 @@ Gross sales
 Total gross-to-net deductions commonly run **30–40% of gross** for retail CPG, leaving
 net ~60–70%. **Net Sales vs Net Revenue is the load-bearing distinction** for this skill:
 Net Sales is product-only; Net Revenue adds shipping + taxes. Neither is "after fees."
+
+**Caveat — the waterfall can invert.** The "net ~60–70% of gross" figure is a DTC/retail rule of thumb, not
+a law. For wholesale/food-service models, **Net Revenue can exceed Gross Sales** (freight/other income
+billed > discounts + returns, or the "Gross Sales" line captures only one channel while Net Revenue rolls
+all of them). If you see Net Revenue > Gross Sales, don't present "negative deductions" — investigate which
+lines feed each and surface the structure.
 
 ### 2. Profitability ladder (and the CM levels operators use)
 
@@ -324,6 +356,22 @@ Try the concept *and* its aliases: searching `%net%` surfaces both `netSales` an
 a margin's denominator, read one closed month and back-solve (see `analysis-skills-guide`).
 If discovery returns nothing for every alias, *then* tell the user the concept isn't in
 the model — and name the closest thing that is.
+
+**Anchor the period to the metric you're querying, not a table-wide max.** Different metrics have
+different last-booked months. A query anchored to a global `MAX(report_month)` can return **zero rows** for
+a line that simply stops earlier (e.g. COGS booked through May while another metric runs later). If a metric
+returns nothing for the expected window, re-anchor to *that metric's own* `MAX(report_month)` before
+concluding it's missing.
+
+**`metric_format` is a raw Excel format string for most tenants** (e.g. `_(* #,##0_);...`, `0.0%`), not the
+clean `currency` / `percentage` / `number` enum the data-dictionary implies. Don't filter on
+`metric_format = 'currency'` — it silently drops rows. Read the number from `metric_value` and infer type
+from the `metric_id` / name.
+
+**Sanity-check magnitudes before quoting a derived ratio.** Before reporting turns / DIO / weeks-of-supply,
+check inventory ÷ monthly COGS: more than ~6 months of supply for a fast-moving DTC brand is a red flag to
+surface (one model showed ~140 weeks — almost certainly a mis-scaled inventory line), not a clean number to
+hand over.
 
 ---
 
