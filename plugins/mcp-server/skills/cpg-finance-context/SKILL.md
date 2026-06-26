@@ -66,6 +66,14 @@ Two standing sub-rules:
   line** in the model. Don't call them missing — say what *is* available (the inputs,
   or the grain that exists) and offer to compute the concept from those inputs, or point
   to the analysis skill that does (`cohort-analysis`, `inventory-analysis`, etc.).
+- **Watch for duplicate lines — surface both, never pick silently.** The same rollup can
+  appear twice: under different **casing** (`incomeStatement.depreciation` vs `.Depreciation`)
+  or under a parallel **company-namespace prefix** (e.g. `incomeStatement.netRevenue` vs
+  `incomeStatement.mudWtr.netRevenue`), often with **slightly different values** (~1%).
+  Discovery returns both. The plain `incomeStatement.*` namespace is usually the one the
+  `metrics.*` KPI rows tie to — confirm by back-solving a margin (gross profit ÷ net revenue
+  should equal `metrics.grossMarginPercent`). Report the verified base value and name the twin
+  rather than averaging or guessing.
 
 ### Worked example — "net sales" (the real case)
 
@@ -121,7 +129,7 @@ match with `LOWER(metric_id) LIKE '%dtconline%'`.
 | operating income, operating profit, EBIT | Operating Income → `incomeStatement.operatingIncome` / `incomeStatement.EBIT` | After fixed opex, before interest/tax. |
 | EBITDA | EBITDA → `incomeStatement.EBITDA` | Operating earnings before D&A. Valuation basis in CPG M&A. |
 | adjusted EBITDA, normalized EBITDA, "add-backs" | Usually **not a stored line** | Derive: EBITDA + one-time/discretionary add-backs. Say what's in EBITDA and that add-backs aren't modeled unless a line exists. |
-| D&A | `incomeStatement.depreciation`, `incomeStatement.amortization` | Casing duplicates can exist with different values — surface both, never pick silently. |
+| D&A | `incomeStatement.depreciation`, `incomeStatement.amortization` | Casing/namespace duplicates can carry different values — surface both, never pick silently (see the duplicate-lines sub-rule under the cardinal rule). |
 | net income, net profit, bottom line, earnings, PAT | Net Income → `incomeStatement.netIncome` | After everything. |
 | net margin, net income margin | `metrics.netIncomeMarginPercent` | — |
 | COGS %, gross margin's cost side | `metrics.costOfGoodsSoldPercent` | — |
@@ -134,7 +142,7 @@ match with `LOWER(metric_id) LIKE '%dtconline%'`.
 | User says | Model concept → `metric_id` | Notes |
 |---|---|---|
 | AOV, average order value, average basket/ticket | `metrics.averageOrderValue.<channel>` | Channel-suffixed. |
-| CAC, acquisition cost, cost per acquisition | `metrics.blendedPaidCAC.<channel>` (blended-paid) | **Clarify which CAC:** blended (all spend ÷ all new) vs paid vs new-customer (nCAC) vs fully-loaded. The model carries blended-paid; others may need derivation. |
+| CAC, acquisition cost, cost per acquisition, "blended CAC" | `metrics.blendedPaidCAC.<channel>` (blended-paid) | **Clarify which CAC:** blended (all spend ÷ all new) vs paid vs new-customer (nCAC) vs fully-loaded. Also clarify **scope and denominator**: the model's "blended" CAC is usually **channel-scoped** (e.g. `.dtcOnline`, blended across that channel's campaigns — *not* an all-company figure), and often comes per-order *and* per-customer (`.dtcOnline` vs `.dtcOnline.customers`). There may be **no all-channel CAC** — say so rather than implying a company-wide blended CAC exists. A `metrics.fullyLoadedCAC.<channel>` variant may also exist. |
 | payback, CAC payback, months to recover CAC | Computed concept — **not a row** | Derive from nCAC ÷ (CM per order × purchase frequency). Offer to compute; don't call it missing. |
 | LTV, lifetime value, CLV/CLTV | Computed concept — usually **not a row** | Clarify revenue-LTV vs **margin-LTV** (use margin-LTV for any CAC comparison). Point to `cohort-analysis`. |
 | LTV:CAC | Computed ratio | Only meaningful if both margin-based & CAC is nCAC/loaded. Target ~3:1. |
