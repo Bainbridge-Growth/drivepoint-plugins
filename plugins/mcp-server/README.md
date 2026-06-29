@@ -46,5 +46,16 @@ for the customer — do not paste it as-is. The `drivepoint-customer` skill (in 
 
 ## Skills
 
-`skills/` is reserved for MCP-specific skills (for example query patterns or
-data-dictionary helpers). None are defined yet.
+MCP-specific skills live in `skills/<name>/SKILL.md`:
+
+- **`cpg-finance-context`** — a CPG finance vocabulary-and-concepts bridge.
+  Maps how a CPG operator talks ("net sales", "top line", "margin", "CAC",
+  "payback") to the SmartModel's actual lines and `metric_id`s, so the
+  assistant never reports a metric as missing when the model carries it under
+  another name. Includes a "never strand the user" behavioral protocol, a
+  ~70-row alias map, and a CPG finance primer (gross-to-net, contribution-margin
+  tiers, trade spend/deductions, channel economics, working capital).
+
+> **Delivery.** This is a marketplace **plugin** skill (Claude Code / Desktop).
+> How it loads into other Drivepoint surfaces depends on each surface's skill
+> configuration.

@@ -76,7 +76,8 @@ drivepoint-plugins/                          ← marketplace root
     mcp-server/                              ← Drivepoint MCP plugin
       .claude-plugin/plugin.json
       .mcp.json                              ← MCP server declaration (endpoint placeholder)
-      skills/                                ← MCP-specific skills (none yet)
+      skills/
+        cpg-finance-context/SKILL.md         ← CPG finance vocabulary + concepts bridge
       README.md                              ← setup + endpoint configuration
   trial/
     welcome.md                               ← guided trial experience for prospects
