@@ -5,8 +5,8 @@ against a customer's SmartModel plan using the plan-scenario tools. Runs on
 the same Raptor path the Drivepoint webapp's **Preview Scenario** button
 uses; the workbook file is never modified.
 
-Applies to every ask that boils down to *edit some Key Drivers and see what
-happens to Key Results* — cash extensions, margin plays, opex cuts,
+Applies to every ask that boils down to _edit some Key Drivers and see what
+happens to Key Results_ — cash extensions, margin plays, opex cuts,
 working-capital sweeps, ad-spend / CAC reshaping, wholesale door expansion.
 
 For visual style of any charts you produce from the recalculated output,
@@ -47,7 +47,7 @@ Before any tool call, restate the ask to yourself:
 - **Direction & magnitude** (+10%, –$500k, breakeven, ratio).
 - **Sign convention.** If the baseline is negative (overdraft, EBITDA
   loss, negative FCF), "improve by N%" is ambiguous — does the user mean
-  *make the deficit N% smaller* or *cut the monthly burn by N%*? If it
+  _make the deficit N% smaller_ or _cut the monthly burn by N%_? If it
   matters, confirm with the user in one sentence before running.
 - **Time horizon** (which Forecast months matter — pick the tab's date
   spine window: quarter, half, calendar year, plan-end).
@@ -87,13 +87,13 @@ the lever category the user picked. Do not scan every tab.
 
 Typical tab selections:
 
-| Lever category                | Tabs to include                                                                 |
-| ----------------------------- | ------------------------------------------------------------------------------- |
-| Opex cuts                     | `Opex`, `M - Monthly` (for Key Results)                                         |
-| Working capital               | `Control Panel - Master`, `M - Monthly`                                         |
-| DTC ad spend / CAC / AOV      | `Control Panel - Master`, relevant `DTC - *` / `AMZN - *` tabs, `M - Monthly`  |
-| Wholesale expansion           | `Wholesale`, `M - Monthly`                                                      |
-| Margin (pricing, product cost)| `Control Panel - Master`, per-segment tabs, `M - Monthly`                       |
+| Lever category                 | Tabs to include                                                               |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| Opex cuts                      | `Opex`, `M - Monthly` (for Key Results)                                       |
+| Working capital                | `Control Panel - Master`, `M - Monthly`                                       |
+| DTC ad spend / CAC / AOV       | `Control Panel - Master`, relevant `DTC - *` / `AMZN - *` tabs, `M - Monthly` |
+| Wholesale expansion            | `Wholesale`, `M - Monthly`                                                    |
+| Margin (pricing, product cost) | `Control Panel - Master`, per-segment tabs, `M - Monthly`                     |
 
 Then pick the specific `{tab, id}` tuples that could plausibly move the
 goal metric. Do not pass every driver into the next call — narrow first.
@@ -168,29 +168,100 @@ If the scenario misses the target:
 - Only widen the lever category once you've established the current one
   can't reach the target. Say so explicitly.
 
-#### Render as a React artifact, not a text table
+---
 
-The webapp's Preview Scenario UI is a chart. Match that. Every completed
-scenario ships as a React/Recharts artifact
+## Visualization — match the Drivepoint webapp
+
+> **The visualization is not a generic chart. It reproduces the
+> Drivepoint "Scenario Preview / Scenario Details" experience the webapp
+> ships.** The reference design lives in Figma (`DVPT-Experiments`, the
+> "FI feedback on index screens, preview and results" board, node
+> `8019-297`). An AI client building this artifact should reproduce that
+> layout, not invent its own. Below is that layout in enough detail to
+> build it without opening Figma; open the Figma frame only when you need
+> exact pixel/token values.
+
+Every completed scenario ships as a **React/Recharts artifact**
 (`application/vnd.ant.react`) unless the user explicitly asked for text
-only. Follow `artifact-style-guide.md` for tokens, layout, and the
-`ArtifactHeader` lockup.
+only. Follow `artifact-style-guide.md` for tokens; the section below
+overrides it wherever the two disagree, because it is drawn from the
+production design.
 
-Default artifact shape:
+### Which of the two layouts to build
 
-1. **`ArtifactHeader`** — title is `<KeyResult> · Scenario Preview`,
-   subtitle is the plan name, horizon window, currency, and (in one
-   phrase) the levers you moved (e.g. "Opex cuts: 5 lines,
-   Jun–Sep 2026").
-2. **KPI card row** (3 cards across, `sm:grid-cols-3`):
-   - Baseline at horizon end (formatted per `dataType` of the metric)
-   - Scenario at horizon end (same formatting)
-   - Delta — absolute value AND percent, both signed, with `↑`/`↓` and
-     `text-emerald-600` / `text-red-600` per the artifact-style-guide
-     rule ("never color alone"). For negative baselines, use the
-     less-negative-is-better sign convention consistently.
-3. **Two-series LineChart** — the primary trend, `ResponsiveContainer
-   width="100%" height={360}`. One line for baseline, one for scenario,
+The reference board contains **two distinct screens**. Pick based on how
+many scenarios you are presenting:
+
+1. **Single-scenario preview** (one scenario vs. baseline) — build the
+   _compact_ layout: header lockup → KPI card row → two-series line chart
+   → driver-change table → source footer. This is the common case for
+   "what if we cut opex by X?"
+2. **Multi-scenario comparison** (2+ candidate scenarios, e.g. a
+   Drivepoint-Intelligence-style set of proposals) — build the _full_
+   layout: header lockup → proposals summary → comparison chart →
+   **Scenario Details** table with per-scenario rows and controls. This
+   is the case for "give me a few scenarios to hit breakeven."
+
+Do not mix them. If unsure, default to the single-scenario preview.
+
+### Shared chrome (both layouts)
+
+**1. Header lockup (`ArtifactHeader`).**
+
+- Left: a small circular Drivepoint mark, then a two-line title block.
+  Title line is the experiment / scenario name (e.g. "Ad Spend and CAC ·
+  03/15/2025" or "`<KeyResult>` · Scenario Preview"); the subtitle line is
+  the plan name, horizon window, currency, and — in one phrase — the
+  levers you moved ("Opex cuts: 5 lines, Jun–Sep 2026").
+- The subtitle is muted slate (`#64748b`), the title near-black slate
+  (`#0f172a`), sizes per `artifact-style-guide.md`.
+- A "Drivepoint Intelligence" wordmark with a small **BETA** pill
+  (amber/yellow bg, e.g. `#fde68a` fill / `#92400e` text) appears above
+  the proposals block in the multi-scenario layout only.
+
+**2. Source footer.** Literal text:
+`Source: plan '<planName>' · Raptor preview (workbook not modified)`.
+Keep it — it warns the user the change is not persisted.
+
+**3. Formatting.** Every number is formatted per its metric's `dataType`
+(currency in the _plan's_ currency, not hardcoded USD; percent to one
+decimal; days to zero decimals). Color deltas with `text-emerald-600`
+(better) / `text-red-600` (worse) **and** a `↑`/`↓` glyph — never color
+alone. For negative baselines use the less-negative-is-better convention
+consistently.
+
+### Design tokens (read from the production design)
+
+Use these unless `artifact-style-guide.md` specifies otherwise. They match
+the Figma reference so the artifact reads as the same product.
+
+- **Baseline series line:** muted slate `#cbd5e1`, `strokeWidth={2}`,
+  `dot={false}`.
+- **Scenario / primary series line:** Drivepoint blue `#3b6fd6`,
+  `strokeWidth={2}`, `dot={false}`.
+- **Second comparison series (when two scenarios on one small chart):**
+  amber `#e8833a`.
+- **Target / "winning" region highlight** (scatter view): translucent
+  green rectangle, border `#16a34a`, fill `rgba(22,163,74,0.08)`.
+- **Grid:** `#e2e8f0`, `strokeDasharray="3 3"`. **Axis text / ticks:**
+  `#64748b`. **Card border:** `#e2e8f0`, radius `12px`, white fill, subtle
+  shadow. **Page bg behind cards:** `#f8fafc`.
+- **Fonts, spacing, and any component not listed here:** defer to
+  `artifact-style-guide.md`.
+
+### Layout A — single-scenario preview (compact)
+
+In order, top to bottom:
+
+1. **Header lockup** (shared chrome above).
+2. **KPI card row** — 3 cards across (`sm:grid-cols-3`), each a bordered
+   white card:
+   - Baseline at horizon end (formatted per the metric's `dataType`).
+   - Scenario at horizon end (same formatting).
+   - Delta — absolute value **and** percent, both signed, with `↑`/`↓`
+     and the emerald/red rule above.
+3. **Two-series `LineChart`** — the primary trend,
+   `ResponsiveContainer width="100%" height={360}`. Baseline + scenario,
    Forecast periods only, aligned monthly:
 
    ```jsx
@@ -200,42 +271,117 @@ Default artifact shape:
      <YAxis stroke="#64748b" tickFormatter={fmt} />
      <Tooltip formatter={fmt} />
      <Legend />
-     <Line dataKey="baseline" name="Baseline" stroke="#cbd5e1" strokeWidth={2} dot={false} />
-     <Line dataKey="scenario" name="Scenario" stroke="#5b8dd8" strokeWidth={2} dot={false} />
+     <Line
+       dataKey="baseline"
+       name="Baseline"
+       stroke="#cbd5e1"
+       strokeWidth={2}
+       dot={false}
+     />
+     <Line
+       dataKey="scenario"
+       name="Scenario"
+       stroke="#3b6fd6"
+       strokeWidth={2}
+       dot={false}
+     />
    </LineChart>
    ```
 
    `rows` is `[{date: '2026-07', baseline, scenario}, …]` built by
    inner-joining the baseline and scenario `data[tab][metric].values`
-   on `date` where `type === 'Forecast'` and the date falls in the
-   horizon window.
+   on `date` where `type === 'Forecast'` and the date is in the horizon
+   window.
 
 4. **Driver-change table** — the edits that produced the scenario. One
-   row per driver, columns: metric name (`metricFriendlyName`), months
-   edited (compact range like "Jun–Sep 2026"), before / after values
-   (formatted per each driver's own `dataType`), monthly delta.
-5. **Additional Key Results chart** — if the user cares about more than
-   one output (e.g. Cash *and* EBITDA), add one more LineChart per
-   metric. Do NOT stack multiple currencies or dimensionally different
-   metrics on a single axis; use one chart per metric.
-6. **Source footer** — `Source: plan '<planName>' · Raptor preview
-   (workbook not modified)`. Keep this literal — it warns the user the
-   change is not persisted.
+   row per driver; columns: metric name (`metricFriendlyName`), months
+   edited (compact range, "Jun–Sep 2026"), before / after (formatted per
+   _each driver's own_ `dataType`), monthly delta.
+5. **Additional Key Results chart** — only if the user cares about more
+   than one output (e.g. Cash _and_ EBITDA): one more `LineChart` per
+   metric. Never stack different currencies or dimensionally different
+   metrics on one axis — one chart per metric.
+6. **Source footer** (shared chrome).
 
-Choose a different chart type only when the shape argues for it:
+### Layout B — multi-scenario comparison (full)
 
-- **Diverging bar** — per-period variance (scenario − baseline) when the
-  user cares more about "which months moved" than the trajectory.
+Reproduces the "N Scenario Proposals" + "Scenario Details" screens. In
+order:
+
+1. **Header lockup** with the **Drivepoint Intelligence · BETA** wordmark.
+2. **Proposals summary** — a short "`N` Scenario Proposals" heading and a
+   one-line rationale sentence ("I've identified `N` scenarios that best
+   optimize `<lever>` based on the following trends and criteria.").
+   Optionally a responsive grid of small "trend" cards (one per basis:
+   Short-Term Growth, Medium-Term, Seasonality, Benchmarks, …), each a
+   titled mini `LineChart` (blue vs. amber, `dot={false}`, no legend,
+   tiny axes). Only include the trend cards you actually have data for —
+   do not fabricate bases.
+3. **Comparison chart** — one chart comparing the candidate scenarios
+   across the horizon:
+   - Default: a multi-line `LineChart`, one line per scenario, over the
+     Forecast horizon.
+   - When the user cares about the scenario's position in a tradeoff
+     space (e.g. CAC vs. Ad Spend), use a `ScatterChart` with a
+     translucent **green target region** marking the desirable zone
+     (tokens above) and a tooltip showing the scenario's key coordinates.
+4. **Scenario Details table** — the centerpiece. A bordered white card
+   titled "Scenario Details" with the subtitle "Analyze scenario impact
+   month by month on output variable." It has:
+   - **Controls row** (right-aligned): a "Show relative variance" toggle,
+     a **Date Range** picker (reflecting the horizon), and an **Output
+     Variable** selector (the Key Result being compared, e.g. EBITDA).
+     In a static artifact these are real, working React controls:
+     the toggle switches the table between absolute values and
+     variance-vs-baseline; the Output Variable `<select>` re-renders the
+     table against whichever Key Result the user picks (so include every
+     Key Result you pulled in `results`); the Date Range can be a
+     read-only label if you only have one horizon.
+   - **Table**: a leading checkbox + scenario-name column, then one column
+     per month across the horizon (Month 1 … Month N, labeled with the
+     actual `YYYY-MM`). One row per scenario. Values formatted per the
+     output variable's `dataType`.
+   - **Row annotations**: mark the recommended row with a small subtitle
+     under its name — "Drivepoint Intelligence Winner" — and a secondary
+     candidate with "Secondary Pick". Select (checkbox) the winner by
+     default. Do not invent a winner; base it on the delta-vs-target you
+     computed in Phase 5, and say in prose why it won.
+   - **Relative-variance mode**: when the toggle is on, show each cell as
+     the signed delta vs. baseline (emerald/red + arrow), not the raw
+     value.
+5. **Source footer** (shared chrome).
+
+### Choosing a non-default chart type
+
+Only when the shape argues for it:
+
+- **Diverging bar** — per-period variance (scenario − baseline) when
+  "which months moved" matters more than the trajectory.
 - **Grouped bar** — comparing multiple scenarios side by side against
-  baseline for the same horizon month.
-- **`ComposedChart` with two Y axes** — showing driver movement and
-  result movement together (e.g. ad spend line + gross-margin line). Use
+  baseline for a single horizon month.
+- **`ComposedChart` with two Y axes** — driver movement and result
+  movement together (e.g. ad-spend line + gross-margin line). Use
   sparingly; it's dense.
 
-Every number in the artifact is formatted per its metric's `dataType`.
-Currency picks up the plan's currency, not a hardcoded `'USD'`.
+### Interactivity rules for the React artifact
 
-#### Prose that ships with the artifact
+The webapp screens are interactive; the artifact should be too, within
+what static data allows.
+
+- All state is React state (`useState`) — **never** `localStorage` /
+  `sessionStorage` (unsupported in artifacts).
+- Toggles and selectors recompute from the `data` you already have in
+  memory; they must not attempt any tool or network call.
+- Do **not** wire the "SAVE TO CURRENT PLAN" / "RUN EXPERIMENT" buttons to
+  anything. If you render them (optional, for visual fidelity), they are
+  inert and you must keep the source-footer caveat that the workbook is
+  not modified. Committing a scenario requires the Drivepoint webapp — say
+  so if the user asks.
+- Do not call the Anthropic API or any MCP server from inside the artifact
+  for this skill — the scenario data is computed by Raptor before the
+  artifact is built and passed in as static props/data.
+
+### Prose that ships with the artifact
 
 Keep it short — the chart is the answer.
 
@@ -245,10 +391,10 @@ Keep it short — the chart is the answer.
 - **A caveat when it applies.** Cutting sales-broker commissions or
   marketing-contractor lines to zero can starve the revenue driving the
   P&L — flag second-order effects the model can't compute. If cash is
-  deeply negative and only marginally improved, say so — do not package
-  a rounding-error win as a solution. Surface going-concern signals
-  (deep negative cash, sub-quarter runway) as a separate flag above the
-  artifact, not buried under the win.
+  deeply negative and only marginally improved, say so — do not package a
+  rounding-error win as a solution. Surface going-concern signals (deep
+  negative cash, sub-quarter runway) as a **separate flag above the
+  artifact**, not buried under the win.
 
 Do not narrate the tool calls or the phases in the reply. The user sees
 the answer, not the workflow.
@@ -291,20 +437,31 @@ Things that go wrong when the loop is not followed. Do not do these.
 10. **Treating scenario output as final numbers.** The workbook is not
     modified. If the user wants the scenario committed, that requires the
     Drivepoint webapp — say so explicitly.
+11. **Inventing the visualization layout.** The Scenario Preview /
+    Scenario Details design is fixed (Figma `8019-297`). Build Layout A or
+    Layout B as specified above — do not substitute a bare chart or a
+    text table when the artifact is expected.
+12. **Fabricating a "winner" or trend bases.** Only annotate a
+    Drivepoint-Intelligence winner / secondary pick, or render a trend
+    card, for scenarios and bases you actually computed. No placeholder
+    proposals.
+13. **Wiring artifact buttons to actions.** SAVE / RUN buttons are inert;
+    toggles and selectors recompute from in-memory data only. No tool,
+    network, or storage calls from inside the artifact.
 
 ---
 
 ## Tool reference (quick)
 
-| Phase | Tool                                    | Purpose                                                                 |
-| ----- | --------------------------------------- | ----------------------------------------------------------------------- |
-| 0     | (no tool — frame the goal in prose)     | Confirm target metric, horizon, lever, sign convention.                 |
-| 1     | `list_company_plans`                    | Pick `planId`.                                                          |
-| 1     | `get_valid_plan_tabs`                   | Get the roll-forward tab names for the plan.                            |
-| 2     | `list_plan_key_drivers_and_results`     | Metadata for editable drivers and read-only results on chosen tabs.     |
-| 3     | `get_plan_key_driver_values`            | Per-period values for the shortlisted drivers (batched).                |
-| 3     | `preview_plan_scenario` (no-op)         | Baseline `data` for the target Key Results.                             |
-| 4     | `preview_plan_scenario` (scenario)      | Recalculated `data` after your batched changes.                         |
+| Phase | Tool                                | Purpose                                                             |
+| ----- | ----------------------------------- | ------------------------------------------------------------------- |
+| 0     | (no tool — frame the goal in prose) | Confirm target metric, horizon, lever, sign convention.             |
+| 1     | `list_company_plans`                | Pick `planId`.                                                      |
+| 1     | `get_valid_plan_tabs`               | Get the roll-forward tab names for the plan.                        |
+| 2     | `list_plan_key_drivers_and_results` | Metadata for editable drivers and read-only results on chosen tabs. |
+| 3     | `get_plan_key_driver_values`        | Per-period values for the shortlisted drivers (batched).            |
+| 3     | `preview_plan_scenario` (no-op)     | Baseline `data` for the target Key Results.                         |
+| 4     | `preview_plan_scenario` (scenario)  | Recalculated `data` after your batched changes.                     |
 
 All tools are read-only from the plan's perspective — nothing here mutates
 the SmartModel workbook.
