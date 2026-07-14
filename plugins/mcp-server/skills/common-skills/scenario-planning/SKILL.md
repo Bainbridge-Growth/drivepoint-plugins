@@ -15,6 +15,51 @@ governs the analysis loop only.
 
 ---
 
+## How the tool works (read this first)
+
+`preview_plan_scenario` takes **high-level rules, not per-period numbers.**
+You describe each Key Driver change once — a `value`, a `change_type`, and an
+`interval_type` — plus a single `start_date`/`end_date` window. The server
+pulls that driver's current Forecast values, expands your rule across the
+window, recalculates through Raptor, and hands back everything you need:
+
+- **`baseline`** — the current (pre-change) values of the Key Results you
+  asked for. _This is your before-series; you never compute it or run a
+  separate call to get it._
+- **`scenario`** — the recalculated values of those Key Results after your
+  rules. _This is your after-series._
+- **`appliedChanges`** — the exact per-period `before`/`after` the server
+  wrote for each driver. _This is your driver-change table; you never
+  recompute it._
+- **`skipped`** / **`missing`** — rules or metrics that were dropped (no-op,
+  null/NaN, unknown id). _Always read these and surface anything relevant._
+
+You do **not** hand-compute month-by-month values, and you do **not** run a
+no-op baseline. One `preview_plan_scenario` call = one scenario, before and
+after, in a single response.
+
+### Rule anatomy
+
+Each entry in `rules` is `{tab, id, value, change_type, interval_type}`:
+
+- **`interval_type: "percent"`** — `value` is a percentage change. `10` is
+  +10%, `-15` is −15%. Works on any driver regardless of its `dataType`.
+  **This is the common case** ("increase AOV 10%", "cut blended CAC 15%").
+- **`interval_type: "absolute"`** — `value` is added in the driver's native
+  units. Dollars for `currency_*` (`value: 5` → +$5). Decimal points for
+  `percent_*` (`value: 0.05` → +5 percentage points). Days for `days_*`.
+- **`interval_type: "setTo"`** — `value` replaces the cell outright. Native
+  units; decimal for `percent_*` drivers (`0.2` → set to 20%).
+- **`change_type: "fromCurrent"`** — base is each month's own current value.
+  Use this almost always.
+- **`change_type: "fromPrevious"`** — base is the previous month's value; use
+  for compounding ramps ("grow 3% month over month").
+
+So "increase AOV by 10% across the forecast" is **one** rule:
+`{tab, id, value: 10, change_type: "fromCurrent", interval_type: "percent"}`.
+
+---
+
 ## When to use this skill
 
 Any request that combines a **goal metric** (Cash, EBITDA, Net Revenue,
@@ -49,8 +94,8 @@ Before any tool call, restate the ask to yourself:
   loss, negative FCF), "improve by N%" is ambiguous — does the user mean
   _make the deficit N% smaller_ or _cut the monthly burn by N%_? If it
   matters, confirm with the user in one sentence before running.
-- **Time horizon** (which Forecast months matter — pick the tab's date
-  spine window: quarter, half, calendar year, plan-end).
+- **Time horizon** (which Forecast months matter — this becomes your
+  `start_date`/`end_date` window: quarter, half, calendar year, plan-end).
 - **Lever preference.** Cash can be moved by cutting opex, improving
   margins, tightening working capital, or reshaping ad spend / CAC —
   each requires touching a very different driver set. If the user hasn't
@@ -101,56 +146,61 @@ Present the shortlist to the user if the ambiguity is real (e.g. "these
 five opex lines are the biggest movers — should I zero them all or a
 subset?").
 
-### Phase 3 — Pull baseline
+### Phase 3 — Sanity-check the drivers you'll move (no baseline call)
 
-Two things you need before proposing changes:
+Call `get_plan_key_driver_values` for the shortlisted drivers, batched in a
+single call. You need this to:
 
-1. **Current values of the drivers you're considering** — via
-   `get_plan_key_driver_values` with the shortlisted tuples, batched in a
-   single call. Read the Forecast entries; that's what you'll edit.
-   - Skip drivers whose values are `null` or `NaN` (common in dev / copy
-     plans). Note them in your reply so the user knows they're excluded.
-   - Use `dataType` to interpret magnitudes: `percent_*` values are
-     decimals (0.15 = 15%), `currency_*` are dollars, `days_*` are day
-     counts. "Cut by 10%" on a percent driver means subtract 0.10, not 10.
-2. **Baseline of the target Key Result(s)** — via `preview_plan_scenario`
-   with a **no-op change** (edit any one Forecast cell to its existing
-   value from step 1) and the Key Results you're targeting in `results`.
-   The returned `data` for those results is your baseline time series.
+- **Confirm the driver is usable** — skip drivers whose Forecast values are
+  `null` or `NaN` (common in dev / copy plans). Note them in your reply.
+- **Read `dataType` so you pick the right `interval_type`.** A "10%
+  increase" is `interval_type: "percent", value: 10` on _any_ driver. An
+  absolute +5-point bump on a `percent_*` driver is
+  `interval_type: "absolute", value: 0.05`. A "$5 higher AOV" on a
+  `currency_*` driver is `interval_type: "absolute", value: 5`.
+- **Ground your magnitude in reality** — know roughly where the driver sits
+  before proposing a change, and to explain the before/after in prose.
 
-Do not eyeball the baseline. If the user needs before/after numbers, you
-need a baseline preview run.
+You do **not** transcribe these per-period values into the next call, and
+you do **not** run a no-op baseline — `preview_plan_scenario` returns the
+Key-Result `baseline` for you.
 
-### Phase 4 — Design and run the scenario (one call, batched)
+### Phase 4 — Design and run the scenario (one call, batched rules)
 
-`preview_plan_scenario` with **every driver × every period** in a single
-`changes` array. One scenario = one tool call. Splitting a scenario across
-multiple calls compounds cost and makes diffing impossible.
+`preview_plan_scenario` with **one rule per driver** and a single
+`start_date`/`end_date` window. One scenario = one tool call. Splitting a
+scenario across multiple calls compounds cost and makes diffing impossible.
 
-Rules for `changes`:
+Rules for `rules`:
 
-- One entry per driver. Its `values` array holds every period you edit
-  for that driver.
-- `date` is YYYY-MM and must exactly match a Forecast period on that
-  tab's date spine. Copy dates from the Forecast entries you saw in
-  `get_plan_key_driver_values` — dates that don't match are silently
-  ignored by Raptor.
-- `value` is a literal cell value. Percent drivers take decimals.
+- One entry per driver: `{tab, id, value, change_type, interval_type}`. See
+  **Rule anatomy** above.
+- Do **not** send per-period values — the server expands your rule across
+  every Forecast month in `[start_date, end_date]`.
+- `start_date` / `end_date` are `YYYY-MM` and should sit inside the Forecast
+  horizon. Actuals that fall in the window are ignored (only Forecast is
+  editable).
+- For a "% change", use `interval_type: "percent"` with the **whole-number
+  percent** (`10`, not `0.10`). Reserve decimals for `absolute` / `setTo`
+  on percent-typed drivers.
 - Never invent ids. Every `{tab, id}` must come verbatim from Phase 2.
-- Only edit `Forecast` periods. Actuals are booked and locked.
 
 Rules for `results`:
 
 - Include every Key Result you plan to chart or reference in prose (Cash,
   EBITDA, Net Revenue, Gross Margin components, whatever the target is).
-- Optionally include the edited drivers so you can confirm Raptor applied
-  the change (their values in `data` should reflect your edits).
-- Keep the list tight — every metric adds a Raptor lookup.
+- Keep the list tight — every metric adds a Raptor lookup, and every metric
+  you list gets both a `baseline` and a `scenario` series back.
+
+After the call, **read `skipped` and `missing`.** If a driver you meant to
+move shows up there, your rule was a no-op (percent/absolute value 0), the
+current values were null/NaN, or the `{tab, id}` was wrong — fix it and
+rerun. Do not claim a change that landed in `skipped`/`missing`.
 
 ### Phase 5 — Compare, iterate, render as a chart artifact
 
-Compare the scenario `data` against the baseline `data` from Phase 3,
-Forecast periods only. Compute:
+Compare the returned `scenario` against `baseline` (both come from the same
+call), Forecast periods only. Compute:
 
 - **Absolute delta** at the horizon end month (the user's "by when").
 - **Percent delta** at the horizon end month — using the correct sign
@@ -158,13 +208,16 @@ Forecast periods only. Compute:
 - **Trajectory** across the horizon window if the metric is a stock
   (Cash, Inventory) — the shape matters, not just the endpoint.
 
+The driver-change table comes straight from `appliedChanges` — no
+recomputation.
+
 If the scenario misses the target:
 
-- Iterate on **magnitude** (deeper cuts, larger changes) before switching
+- Iterate on **magnitude** (raise the rule's `value`) before switching
   lever categories.
-- Iterate on **timing** (cash is cumulative — cutting earlier compounds
-  further). Extending an opex cut back one month often does more than a
-  bigger cut in the horizon month alone.
+- Iterate on **timing** (cash is cumulative — extending the window earlier
+  compounds further). Widening `start_date` back a month often does more
+  than a bigger `value` in the horizon month alone.
 - Only widen the lever category once you've established the current one
   can't reach the target. Say so explicitly.
 
@@ -200,7 +253,9 @@ many scenarios you are presenting:
    Drivepoint-Intelligence-style set of proposals) — build the _full_
    layout: header lockup → proposals summary → comparison chart →
    **Scenario Details** table with per-scenario rows and controls. This
-   is the case for "give me a few scenarios to hit breakeven."
+   is the case for "give me a few scenarios to hit breakeven." Run one
+   `preview_plan_scenario` call per candidate scenario (each with its own
+   `rules`), then compare their `scenario` series.
 
 Do not mix them. If unsure, default to the single-scenario preview.
 
@@ -288,19 +343,41 @@ In order, top to bottom:
    </LineChart>
    ```
 
-   `rows` is `[{date: '2026-07', baseline, scenario}, …]` built by
-   inner-joining the baseline and scenario `data[tab][metric].values`
-   on `date` where `type === 'Forecast'` and the date is in the horizon
-   window.
+   Build `rows` by inner-joining the tool's `baseline` and `scenario`
+   result series on `date`, over the Forecast periods in your horizon
+   window (both live in the single `preview_plan_scenario` response):
 
-4. **Driver-change table** — the edits that produced the scenario. One
-   row per driver; columns: metric name (`metricFriendlyName`), months
-   edited (compact range, "Jun–Sep 2026"), before / after (formatted per
-   _each driver's own_ `dataType`), monthly delta.
+   ```jsx
+   // result = the preview_plan_scenario response
+   const baseVals = result.baseline[tab].find((m) => m.id === metricId).values;
+   const scenVals = result.scenario[tab].find((m) => m.id === metricId).values;
+
+   const byDate = {};
+   for (const v of baseVals) {
+     if (v.type === "Forecast")
+       byDate[v.date] = { date: v.date, baseline: v.value };
+   }
+   for (const v of scenVals) {
+     if (v.type === "Forecast")
+       (byDate[v.date] ??= { date: v.date }).scenario = v.value;
+   }
+   const rows = Object.values(byDate)
+     .filter((r) => r.date >= startDate && r.date <= endDate)
+     .sort((a, b) => a.date.localeCompare(b.date));
+   ```
+
+4. **Driver-change table** — the edits that produced the scenario, built
+   directly from `appliedChanges`. One row per driver; columns: metric name
+   (`metricFriendlyName`), months edited (compact range from the entry's
+   `values` dates, "Jun–Sep 2026"), before / after (from each entry's
+   `values`, formatted per that driver's own `dataType`), monthly delta.
+   Do not recompute these — they are the exact values the server sent to
+   Raptor.
 5. **Additional Key Results chart** — only if the user cares about more
    than one output (e.g. Cash _and_ EBITDA): one more `LineChart` per
-   metric. Never stack different currencies or dimensionally different
-   metrics on one axis — one chart per metric.
+   metric, using the same `baseline`/`scenario` join. Never stack
+   different currencies or dimensionally different metrics on one axis —
+   one chart per metric.
 6. **Source footer** (shared chrome).
 
 ### Layout B — multi-scenario comparison (full)
@@ -319,8 +396,8 @@ order:
    do not fabricate bases.
 3. **Comparison chart** — one chart comparing the candidate scenarios
    across the horizon:
-   - Default: a multi-line `LineChart`, one line per scenario, over the
-     Forecast horizon.
+   - Default: a multi-line `LineChart`, one line per scenario's `scenario`
+     series, over the Forecast horizon (share one `baseline` line).
    - When the user cares about the scenario's position in a tradeoff
      space (e.g. CAC vs. Ad Spend), use a `ScatterChart` with a
      translucent **green target region** marking the desirable zone
@@ -395,6 +472,8 @@ Keep it short — the chart is the answer.
   rounding-error win as a solution. Surface going-concern signals (deep
   negative cash, sub-quarter runway) as a **separate flag above the
   artifact**, not buried under the win.
+- **Anything in `skipped` / `missing`** that affected the answer (a driver
+  you meant to move but couldn't, because it was NaN or a no-op).
 
 Do not narrate the tool calls or the phases in the reply. The user sees
 the answer, not the workflow.
@@ -406,29 +485,32 @@ the answer, not the workflow.
 Things that go wrong when the loop is not followed. Do not do these.
 
 1. **Fabricating driver ids.** Ids like `opex_ga_line_item_1` don't
-   exist unless Phase 2 returned them. Every id in `changes` / `results`
+   exist unless Phase 2 returned them. Every id in `rules` / `results`
    must be copied verbatim from a prior tool response. Fabricated ids
-   are silently ignored; the scenario appears to run but nothing changes.
-2. **One tiny change instead of the full batch.** Sending a single edit
-   like `[{tab: "Opex", id: "…", values: [{date: "2026-07", value: 39.99}]}]`
-   when you intended to zero five drivers across four months. Always
-   assemble the full `changes` array in one call.
-3. **Skipping the baseline.** Running the scenario and asking the user to
-   trust that "before" was worse. Always run a baseline preview first (or
-   diff against Phase-3 driver values for driver-only comparisons).
-4. **Ignoring NaN drivers.** A single NaN in a driver's Forecast can
-   propagate through Raptor and produce garbage across every metric in
-   `data`. If Phase 3 shows NaN, drop that driver from the scenario and
-   surface it to the user.
+   land in `missing`; the scenario appears to run but that driver never
+   moved.
+2. **Splitting a scenario across calls.** Sending one driver's rule, then
+   another driver's rule in a second call. Assemble **all** driver rules
+   into a single `preview_plan_scenario` call so baseline and scenario are
+   internally consistent and diffable.
+3. **Fabricating a before-series.** The `baseline` is returned to you —
+   never eyeball, hand-type, or approximate "before" numbers. If you need
+   before/after, it's already in the response.
+4. **Ignoring NaN drivers.** A NaN driver can't be expanded — the server
+   skips those periods and lists the driver in `skipped`. Drop it from the
+   scenario and surface it to the user rather than pretending it moved.
 5. **Sign-flip on negative baselines.** "Improve cash by 10%" against a
    -$3.8M baseline means -$3.42M (less negative), not -$4.18M. Confirm
    the interpretation before running, and use it consistently in the
    presentation.
-6. **Percent-vs-decimal confusion.** Percent drivers (dataType
-   `percent_*`) store decimals. "15%" is `0.15`, not `15`. "Cut by 10%"
-   is a `-0.10` delta, not `-10`.
-7. **Editing Actuals.** Only Forecast periods can be changed. Actuals in
-   `changes` are ignored — do not include them.
+6. **Percent-vs-decimal confusion.** A "% change" is
+   `interval_type: "percent"` with a **whole number** — "increase 10%" is
+   `value: 10`, "cut 10%" is `value: -10`. Passing `0.10` for "10%" is a
+   0.1% change. Decimals are only for `absolute` / `setTo` on `percent_*`
+   drivers (e.g. `absolute` `0.05` = +5 percentage points).
+7. **Windowing onto Actuals.** Pick `start_date` / `end_date` inside the
+   Forecast horizon. Actuals that fall in the window are booked and are
+   ignored — they won't error, but they also won't move.
 8. **Multi-plan variance in one scenario.** Only one `planId` per
    scenario. If the user asks to compare two plans, that's a different
    analysis — not a scenario preview.
@@ -448,20 +530,22 @@ Things that go wrong when the loop is not followed. Do not do these.
 13. **Wiring artifact buttons to actions.** SAVE / RUN buttons are inert;
     toggles and selectors recompute from in-memory data only. No tool,
     network, or storage calls from inside the artifact.
+14. **Ignoring `skipped` / `missing`.** If a rule silently did nothing it
+    is reported there. Read it every time; never claim a change that was
+    skipped or dropped.
 
 ---
 
 ## Tool reference (quick)
 
-| Phase | Tool                                | Purpose                                                             |
-| ----- | ----------------------------------- | ------------------------------------------------------------------- |
-| 0     | (no tool — frame the goal in prose) | Confirm target metric, horizon, lever, sign convention.             |
-| 1     | `list_company_plans`                | Pick `planId`.                                                      |
-| 1     | `get_valid_plan_tabs`               | Get the roll-forward tab names for the plan.                        |
-| 2     | `list_plan_key_drivers_and_results` | Metadata for editable drivers and read-only results on chosen tabs. |
-| 3     | `get_plan_key_driver_values`        | Per-period values for the shortlisted drivers (batched).            |
-| 3     | `preview_plan_scenario` (no-op)     | Baseline `data` for the target Key Results.                         |
-| 4     | `preview_plan_scenario` (scenario)  | Recalculated `data` after your batched changes.                     |
+| Phase | Tool                                | Purpose                                                                                         |
+| ----- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 0     | (no tool — frame the goal in prose) | Confirm target metric, horizon, lever, sign convention.                                         |
+| 1     | `list_company_plans`                | Pick `planId`.                                                                                  |
+| 1     | `get_valid_plan_tabs`               | Get the roll-forward tab names for the plan.                                                    |
+| 2     | `list_plan_key_drivers_and_results` | Metadata for editable drivers and read-only results on chosen tabs.                             |
+| 3     | `get_plan_key_driver_values`        | Sanity-check drivers (NaN / dataType / rough magnitude) — not transcribed.                      |
+| 4     | `preview_plan_scenario` (rules)     | Expand your rules across the window → Raptor; returns `baseline`, `scenario`, `appliedChanges`. |
 
 All tools are read-only from the plan's perspective — nothing here mutates
 the SmartModel workbook.
