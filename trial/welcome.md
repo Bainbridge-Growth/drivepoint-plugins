@@ -37,7 +37,7 @@ Then greet the user. Present these options:
 > 2. **Show me a sample analysis.** I'll run a real analysis on a fictional brand so you can see the output
 > 3. **I'm ready to get started.** Help me set up my account and connect my data
 
-Wait for the user to pick. Do not proceed until they choose.
+**STOP here.** Wait for the user to pick one of the three options. Do NOT show the analysis menu, use cases, or Oatwave data yet. Your first message must end with this menu and nothing else.
 
 ---
 
