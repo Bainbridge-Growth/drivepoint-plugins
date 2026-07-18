@@ -9,6 +9,12 @@ For single-chart output, see `artifact-style-guide.md`. For visual tokens,
 chart-type selection, and number formatting, follow the artifact style
 guide as well — this file extends it, it does not replace it.
 
+This guide produces an **in-chat artifact**. If the user wants the report to
+live in their Drivepoint app — "save this to Drivepoint," "add it to my
+reports page," a recurring page the whole team opens — build a **saved
+report definition** instead: see `saved-reports-guide.md`
+(list_reports / get_report / preview_report / save_report).
+
 ---
 
 ## When the answer is a report
