@@ -97,9 +97,40 @@ Rules that keep templates robust:
 - **Drivepoint brand**: Manrope for headings, Roboto for body, the dp-design
   light palette (ink `#191815`, muted `#7a7774`, accent `#76a4ea`, borders
   `#ecebe9`). No em dashes in copy.
-- A worked example is the Retention Forecast Scorecard
-  (`report_type: "retention-scorecard"`) — fetch it with `get_report` on a
-  tenant that has it, and mirror its structure.
+
+A minimal template that follows every rule above (namespaced style block,
+one IIFE, empty-state guard, defensive formatting):
+
+```html
+<style>
+.sp-root { font-family:"Roboto",sans-serif; color:#191815; padding:24px 0; }
+.sp-title { font-family:"Manrope",sans-serif; font-weight:700; font-size:26px; }
+.sp-tbl { width:100%; border-collapse:collapse; font-size:13.5px; }
+.sp-tbl th, .sp-tbl td { padding:9px 14px; border-bottom:1px solid #ecebe9; text-align:right; }
+.sp-tbl th:first-child, .sp-tbl td:first-child { text-align:left; }
+</style>
+<div class="sp-root">
+  <h1 class="sp-title">Sales Pulse</h1>
+  ${(function () {
+    var rows = Array.isArray($.rows) ? $.rows : [];
+    if (!rows.length) { return "<p>No sales data yet for this period.</p>"; }
+    var fmt = function (v) { return Math.round(Number(v)).toLocaleString("en-US"); };
+    var html = "<table class='sp-tbl'><thead><tr><th>Month</th><th>Channel</th><th>Orders</th><th>Net sales</th></tr></thead><tbody>";
+    rows.forEach(function (r) {
+      html += "<tr><td>" + r.month + "</td><td>" + r.channel + "</td><td>" + fmt(r.orders) + "</td><td>" + fmt(r.net_sales) + "</td></tr>";
+    });
+    return html + "</tbody></table>";
+  })()}
+</div>
+```
+
+Scale the same shape up for richer reports: KPI card rows, per-section
+tables, comparison layouts. The section design rules in
+`report-creation-guide.md` (source-mart routing, comparisons, commentary
+discipline, pre-publish cross-checks) apply to saved reports too — the
+output medium changes, the analytical discipline does not. To match an
+existing house style, `list_reports` + `get_report` any definition already
+saved for the tenant and mirror its structure.
 
 ## Rendering a saved report in-chat
 
