@@ -1,10 +1,11 @@
 # Example Artifacts
 
-Seven working artifact templates covering nine rendered samples. Pattern-match
-against these when producing new artifacts. Each uses **synthetic data** —
-when adapting for a real question, replace the embedded data with the actual
-query result and update the subtitle (date range, plan, channel filter,
-currency).
+Eight working artifact templates covering ten rendered samples. Pattern-match
+against these when producing new artifacts. Examples 1–7 use **synthetic
+data** — when adapting for a real question, replace the embedded data with
+the actual query result and update the subtitle (date range, plan, channel
+filter, currency). Example 8 is a non-data reference document — replace its
+row labels with the customer's real workbook rows, not invented scaffolding.
 
 > ⚠️ **All numeric values in this file are illustrative placeholders.**
 > Never reuse them in a response to a real user question. Always derive
@@ -976,6 +977,380 @@ export default function App() {
       </table>
       <div className="text-xs text-[#716e6b] mt-4">Source: ecommerce_transactions_order_level</div>
     </div>
+  );
+}
+```
+
+---
+
+## Example 8 — Reference guide (no data)
+
+**When this shape applies:** a structured reference or instruction document
+with **no charts and no numeric series** — workbook field maps, model update
+guides, tab-by-tab checklists. Co-brand via the `customer` prop on
+`ArtifactHeader` (name as text; never an emoji or mark-alone masthead).
+
+**When it does not:** if the answer has numbers to chart or table, it is a
+report — follow `report-creation-guide.md` instead of this template.
+
+**Triggered by:** "Write a model update guide for my SmartModel — what to
+change on each tab."
+
+**Tier:** Full — `kicker` + `ArtifactPage` + `SignatureFooter`.
+
+**Chips (three kinds, not interchangeable):**
+
+| Kind | Token | Why |
+|---|---|---|
+| Tab name | `bg-[#f7f4f1]` + `text-[#191815]` | Warm surface label — section identity, not emphasis |
+| `KEY DRIVER` | `bg-[#FFDE6A]` + `text-[#191815]` | Drivepoint yellow — same emphasis vocabulary as the BETA pill |
+| `AVG LAST 3 MO` | `bg-[#f9f8f6]` + `text-[#716e6b]` + `border-[#ecebe9]` | Quiet secondary tag; must not compete with KEY DRIVER |
+
+Row-number chips use hairline `#ecebe9` fill + primary ink so they read as
+coordinates, not status.
+
+```jsx
+import React from 'react';
+
+const CUSTOMER_NAME = 'Brutus Broth';
+
+const Chip = ({ children, tone }) => {
+  const styles = {
+    tab: { background: '#f7f4f1', color: '#191815', border: '1px solid transparent' },
+    key: { background: '#FFDE6A', color: '#191815', border: '1px solid transparent' },
+    avg: { background: '#f9f8f6', color: '#716e6b', border: '1px solid #ecebe9' },
+    row: { background: '#ecebe9', color: '#191815', border: '1px solid transparent' },
+  }[tone];
+  return (
+    <span
+      className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide whitespace-nowrap"
+      style={styles}
+    >
+      {children}
+    </span>
+  );
+};
+
+const TABS = [
+  {
+    name: 'Product',
+    note: null,
+    rows: [
+      {
+        row: '52+',
+        label: 'Average unit cost — materials & direct labor',
+        body: "Input all SKUs' average unit costs here (e.g., one row for 32oz Beef Broth, another for 32oz Chicken Broth, etc.). Add any shipping or freight percentages in the rows below.",
+        tags: [],
+      },
+    ],
+  },
+  {
+    name: 'DTC Acquisition',
+    note: 'These cells flow into the DTC tab, rows 55–58.',
+    rows: [
+      {
+        row: '39+',
+        label: 'Direct ad spend',
+        body: 'The forecast currently just repeats last month — enter what you actually plan to spend each month.',
+        tags: [],
+      },
+      { row: '50', label: 'Blended paid CAC', body: '', tags: ['AVG LAST 3 MO'] },
+      { row: '52', label: 'Customer to order ratio', body: '', tags: ['AVG LAST 3 MO'] },
+      {
+        row: '59',
+        label: '% of first-time customer orders in Non-Subscription segment',
+        body: '',
+        tags: [],
+      },
+      {
+        row: '60',
+        label: '% of first-time customer orders in Subscription segment',
+        body: '',
+        tags: [],
+      },
+      {
+        row: '71+',
+        label: 'Other advertising on DTC',
+        body: 'e.g., sponsorship.',
+        tags: [],
+      },
+      {
+        row: '85+',
+        label: 'Other marketing',
+        body: 'e.g., tradeshow expenses, product samples, social media / podcast.',
+        tags: [],
+      },
+      { row: '99+', label: 'Marketing agency', body: '', tags: [] },
+    ],
+  },
+  {
+    name: 'DTC',
+    note: null,
+    rows: [
+      { row: '117+', label: 'Sales mix % by value', body: '', tags: [] },
+      { row: '150', label: 'DTC list prices', body: '', tags: [] },
+      { row: '562', label: 'Fulfillment cost per order', body: '', tags: ['AVG LAST 3 MO'] },
+      { row: '566', label: 'Shipping costs', body: '', tags: [] },
+      { row: '570', label: 'Merchant fees %', body: '', tags: [] },
+      { row: '574', label: 'Other variable costs %', body: '', tags: [] },
+    ],
+  },
+  {
+    name: 'DTC-OTP',
+    note: null,
+    rows: [
+      {
+        row: '69',
+        label: 'AOV',
+        body: 'Flex up or down as you see fit.',
+        tags: ['AVG LAST 3 MO'],
+      },
+      {
+        row: '73–76',
+        label: '% discounts, refunds, and shipping income',
+        body: '',
+        tags: ['AVG LAST 3 MO'],
+      },
+      {
+        row: '67',
+        label: 'Adjustments to Drivepoint predicted orders',
+        body: "Once cohorted data starts flowing in correctly, you'll be able to adjust our order predictions by changing the % in row 67.",
+        tags: [],
+      },
+    ],
+  },
+  {
+    name: 'DTC-SUB',
+    note: 'Same line items as DTC-OTP, but for subscription customers.',
+    rows: [
+      { row: '67', label: 'AOV', body: '', tags: [] },
+      {
+        row: '71–73',
+        label: '% discounts, refunds, and shipping income',
+        body: '',
+        tags: [],
+      },
+      {
+        row: '65',
+        label: 'Adjustments to Drivepoint predicted orders',
+        body: '',
+        tags: [],
+      },
+    ],
+  },
+  {
+    name: 'AMZN + TikTok',
+    note: 'Identical layout, same rows. Unlike DTC, Amazon and TikTok have no separate "- Acquisition" tab — acquisition and marketing inputs live directly on the channel tab.',
+    rows: [
+      {
+        row: '76',
+        label: 'Direct ad spend',
+        body: 'Forecast just repeats last month — enter what you plan to spend each month.',
+        tags: ['KEY DRIVER'],
+      },
+      {
+        row: '77',
+        label: 'Blended cost per order',
+        body: "Replaces DTC's separate blended CAC + customer-to-order ratio.",
+        tags: ['KEY DRIVER', 'AVG LAST 3 MO'],
+      },
+      {
+        row: '80',
+        label: 'Spillover from DTC acquisition channels',
+        body: '% of first-time orders driven by DTC spillover.',
+        tags: [],
+      },
+      { row: '84', label: 'Gross average order value', body: '', tags: [] },
+      {
+        row: '86 / 87',
+        label: 'OTP / Sub order mix %',
+        body: 'Split of orders between one-time-purchase and subscription.',
+        tags: ['KEY DRIVER'],
+      },
+      {
+        row: '101–104',
+        label: '% discounts, refunds, shipping income, taxes collected (of gross sales)',
+        body: '',
+        tags: ['AVG LAST 3 MO'],
+      },
+      {
+        row: '62 / 63 / 64',
+        label: 'Other advertising / other marketing / marketing agency',
+        body: 'Direct advertising links from row 76.',
+        tags: [],
+      },
+      {
+        row: '117–146',
+        label: 'Sales mix % by value, per SKU',
+        body: 'Must sum to 100%.',
+        tags: [],
+      },
+      { row: '150–179', label: 'List prices per unit, per SKU', body: '', tags: [] },
+      { row: '602–631', label: '% of each SKU fulfilled via FBA', body: '', tags: [] },
+      { row: '635–664', label: 'Unit FBA fulfillment fee by SKU', body: '', tags: [] },
+      { row: '668–697', label: 'Unit FBM fulfillment cost by SKU', body: '', tags: [] },
+      {
+        row: '736–765',
+        label: 'Unit referral fee by SKU',
+        body: 'Marketplace "merchant fee".',
+        tags: [],
+      },
+      { row: '800', label: 'Other merchant fees per net unit sold', body: '', tags: [] },
+      { row: '805', label: 'Other variable costs % of gross sales', body: '', tags: [] },
+    ],
+  },
+  {
+    name: 'AMZN-OTP/SUB + TikTok-OTP/SUB',
+    note: 'All four identical. These split assumptions into first-time vs. returning customer blocks.',
+    rows: [
+      {
+        row: '44',
+        label: 'First-time customers — AOV',
+        body: '',
+        tags: ['KEY DRIVER'],
+      },
+      {
+        row: '48–51',
+        label: 'First-time customers — % discounts, refunds, shipping income, taxes collected',
+        body: '',
+        tags: [],
+      },
+      {
+        row: '65',
+        label: 'Returning customers — adjustment to Drivepoint predicted orders',
+        body: '',
+        tags: ['KEY DRIVER'],
+      },
+      {
+        row: '67',
+        label: 'Returning customers — AOV',
+        body: '',
+        tags: ['KEY DRIVER'],
+      },
+      {
+        row: '71–74',
+        label: 'Returning customers — % discounts, refunds, shipping income, taxes collected',
+        body: '',
+        tags: [],
+      },
+    ],
+  },
+  {
+    name: 'Wholesale (+8 sub-channels)',
+    note: 'Mass Market, Grocery, Pet Specialty, Farm and Feed, Ecomm, Club, Other, Discounters. All tabs share the same layout — enter inputs on each sub-channel tab (accounts differ per tab, up to 10 each).',
+    rows: [
+      { row: '86–95', label: 'Doors, by account', body: '', tags: ['KEY DRIVER'] },
+      { row: '99–108', label: 'SKUs per door', body: '', tags: ['KEY DRIVER'] },
+      {
+        row: '112–121',
+        label: 'Units per SKU per week',
+        body: '',
+        tags: ['KEY DRIVER'],
+      },
+      { row: '141–170', label: 'Sales mix % by product', body: '', tags: [] },
+      { row: '175–204', label: 'Wholesale list prices', body: '', tags: [] },
+      { row: '221–230', label: 'Trade spend, by account', body: '', tags: [] },
+      { row: '234–243', label: 'Early pay discount, by account', body: '', tags: [] },
+      { row: '247–256', label: 'Other fees, by account', body: '', tags: [] },
+      {
+        row: '61–64',
+        label: 'Direct advertising / other advertising / other marketing / marketing agency',
+        body: '',
+        tags: ['KEY DRIVER'],
+      },
+    ],
+  },
+  {
+    name: 'OPEX',
+    note: null,
+    rows: [
+      {
+        row: '—',
+        label: 'Operating expense forecasts',
+        body: "Get your forecasts baked in here (right now it's just carrying forward previous months).",
+        tags: [],
+      },
+    ],
+  },
+  {
+    name: 'Payroll',
+    note: null,
+    rows: [
+      {
+        row: '43',
+        label: 'Payroll total',
+        body: 'Show payroll however you like — every employee, by department, or one total line. The total just needs to land in row 43.',
+        tags: [],
+      },
+    ],
+  },
+];
+
+export default function App() {
+  return (
+    <ArtifactPage width={920}>
+      <ArtifactHeader
+        title="Model Update Guide — what to update, tab by tab"
+        subtitle="SmartModel inputs to keep the forecast current · July 2026"
+        customer={CUSTOMER_NAME}
+        meta="July 2026"
+        kicker="Model update guide"
+      />
+
+      <p className="text-sm m-0 mb-3" style={{ color: '#716e6b' }}>
+        The inputs to fill in to keep your SmartModel forecast current, organized by model tab.
+        Where noted, average the last 3 months as a starting point, then flex up or down as you
+        see fit. Rows marked <Chip tone="key">KEY DRIVER</Chip> are the main levers of the forecast.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3 mb-6 text-xs" style={{ color: '#716e6b' }}>
+        <span className="inline-flex items-center gap-1.5">
+          <Chip tone="key">KEY DRIVER</Chip>
+          <span>main forecast lever</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Chip tone="avg">AVG LAST 3 MO</Chip>
+          <span>recommended starting point</span>
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        {TABS.map((tab) => (
+          <section
+            key={tab.name}
+            className="rounded-lg p-4"
+            style={{ background: '#fefefe', border: '1px solid #ecebe9' }}
+          >
+            <div className="mb-3">
+              <Chip tone="tab">{tab.name}</Chip>
+            </div>
+            {tab.note ? (
+              <p className="text-xs italic m-0 mb-3" style={{ color: '#716e6b' }}>{tab.note}</p>
+            ) : null}
+            <ul className="list-none m-0 p-0 flex flex-col gap-3">
+              {tab.rows.map((r) => (
+                <li key={`${tab.name}-${r.row}-${r.label}`} className="flex gap-3 items-start">
+                  <Chip tone="row">{r.row}</Chip>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                      <span className="text-sm font-semibold" style={{ color: '#191815' }}>{r.label}</span>
+                      {r.tags.map((t) => (
+                        <Chip key={t} tone={t === 'KEY DRIVER' ? 'key' : 'avg'}>{t}</Chip>
+                      ))}
+                    </div>
+                    {r.body ? (
+                      <p className="text-sm m-0" style={{ color: '#716e6b' }}>{r.body}</p>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+
+      <SignatureFooter sourceLine={`Source: SmartModel workbook · ${CUSTOMER_NAME} · Prepared by Drivepoint`} />
+    </ArtifactPage>
   );
 }
 ```

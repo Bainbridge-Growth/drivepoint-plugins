@@ -13,6 +13,10 @@ system so this file is self-contained.
   the supporting SQL.
 - A result with >5 rows or ≥2 dimensions → suggest or produce a
   visualization.
+- A structured reference or instruction document with **no charts and no
+  numeric series** (e.g. model update guide, workbook field map) → React
+  artifact using Example 8 in `example-artifacts.md`. If the answer has
+  numbers to chart or table, use `report-creation-guide.md` instead.
 
 When in doubt, produce the artifact AND show the SQL underneath.
 
@@ -339,6 +343,9 @@ Never use:
   `p-6 bg-white` shell is fine. See § "Brand lockup" for the prop rule.
   The `subtitle` prop contains the date range, plan (if SmartModel),
   channel filter, and currency — all on one line, separated by `·`.
+- Non-data reference guides (tab-by-tab instructions, field maps): Full
+  shell + Example 8 in `example-artifacts.md`. Do not invent a custom
+  header or mark-alone masthead for these.
 - Dashboards: card grid for KPIs across the top (2–4 columns on desktop,
   stack on narrow), main chart below, supporting table at the bottom.
 - Chart container: `<ResponsiveContainer width="100%" height={360}>`
