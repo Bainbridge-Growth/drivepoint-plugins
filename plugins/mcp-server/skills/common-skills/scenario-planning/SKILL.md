@@ -276,7 +276,7 @@ style guide.
   phrase — the levers you moved ("Opex cuts: 5 lines, Jun–Sep 2026").
 - In the multi-scenario layout only, add a "Drivepoint Intelligence"
   wordmark with a small **BETA** pill (Drivepoint yellow `#FFDE6A` fill /
-  `#92400e` text) beside `ArtifactHeader`, above the proposals block.
+  `#191815` text) beside `ArtifactHeader`, above the proposals block.
 
 **2. Source footer.** Literal text:
 `Source: plan '<planName>' · Raptor preview (workbook not modified)`.

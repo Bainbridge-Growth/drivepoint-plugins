@@ -46,8 +46,9 @@ beside a separate wordmark SVG.
 
 - Complete lockup (`DrivepointLockup`): height **27px** (viewBox `0 0 144 32`).
   Width scales from the viewBox. Do not enlarge.
-- Mark alone (`DrivepointMark`): 24px square — favicons, tight spaces, and
-  other constrained uses only. Never pair it with a separate wordmark.
+- Mark alone (`DrivepointMark`): 24px square — favicons, tight spaces,
+  SVG-failure fallback, and other constrained uses only. Never pair it
+  with a separate wordmark.
 
 ### Surface
 
@@ -64,9 +65,10 @@ character breaks the brand color split. After pasting, render the
 lockup once standalone and eyeball it against a known-good reference
 before propagating to a full artifact.
 
-If the SVG fails to render cleanly, **do not ship broken artwork** —
-fall back to the text-only string `Drivepoint` in
-`text-[#191815] font-semibold tracking-tight` and omit the lockup SVG.
+If the lockup SVG fails to render cleanly, **do not ship broken artwork** —
+fall back to `DrivepointMark` alone (24px square). Never render the
+Drivepoint logotype as typed text in any font, and never pair the mark
+with typed "Drivepoint".
 
 `customer` and `meta` are optional. Existing two-prop call sites
 (`title`, `subtitle` only) keep working unchanged.
@@ -235,9 +237,10 @@ primary ink: `<Legend formatter={(value) => <span style={{ color: '#191815' }}>{
 
 - Positive / favorable: `#2f7d54`
 - Negative / unfavorable: `#b0472f`
-- Neutral / zero: `#94a3b8`
-- Forecast (when contrasted with actual): `#cbd5e1` (lighter than the
-  actual-series color, with reduced opacity or a dashed stroke)
+- Neutral / zero: `#716e6b` (muted text)
+- Forecast (when contrasted with actual): `DP_CHART_SERIES[19]`
+  (`#acacac`) — lighter than the actual-series color; prefer reduced
+  opacity or a dashed stroke when the fill alone is not enough
 
 Never use color as the only encoder for sign or variance. Pair color with
 an arrow, sign, or label.

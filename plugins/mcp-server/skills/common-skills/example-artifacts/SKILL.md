@@ -394,7 +394,7 @@ export default function App() {
           <Tooltip formatter={(v) => fmtMoney(v, CURRENCY)} />
           <Legend formatter={(value) => <span style={{ color: '#191815' }}>{value}</span>} />
           <Bar dataKey="actual_value" name="Actual" fill={DP_CHART_SERIES[0]} />
-          <Bar dataKey="forecast_value" name="Forecast" fill="#cbd5e1" />
+          <Bar dataKey="forecast_value" name="Forecast" fill={DP_CHART_SERIES[19]} />
         </BarChart>
       </ResponsiveContainer>
 
@@ -515,7 +515,7 @@ export default function App() {
 
       <div className="flex items-center gap-2 mb-6">
         <span className="text-sm font-semibold text-[#191815]">Drivepoint Intelligence</span>
-        <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide" style={{ background: '#FFDE6A', color: '#92400e' }}>
+        <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide" style={{ background: '#FFDE6A', color: '#191815' }}>
           BETA
         </span>
       </div>
