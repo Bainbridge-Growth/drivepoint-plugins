@@ -267,8 +267,8 @@ Do not mix them. If unsure, default to the single-scenario preview.
 **1. Header lockup.** Render the `ArtifactHeader` component from
 `artifact-style-guide.md` § "Brand lockup" as the first child — do not
 draw a custom or "circular" mark. It already carries the real Drivepoint
-mark + wordmark and the title/subtitle block, with colors and sizes fixed
-by the style guide.
+lockup and the title/subtitle block, with colors and sizes fixed by the
+style guide.
 
 - `title` — the experiment / scenario name (e.g. "Ad Spend and CAC ·
   03/15/2025" or "`<KeyResult>` · Scenario Preview").
@@ -284,29 +284,28 @@ Keep it — it warns the user the change is not persisted.
 
 **3. Formatting.** Every number is formatted per its metric's `dataType`
 (currency in the _plan's_ currency, not hardcoded USD; percent to one
-decimal; days to zero decimals). Color deltas with `text-emerald-600`
-(better) / `text-red-600` (worse) **and** a `↑`/`↓` glyph — never color
-alone. For negative baselines use the less-negative-is-better convention
-consistently.
+decimal; days to zero decimals). Color deltas with `#2f7d54` (better) /
+`#b0472f` (worse) **and** a `↑`/`↓` glyph — never color alone. For
+negative baselines use the less-negative-is-better convention consistently.
 
-### Series roles (from the brand palette)
+### Series roles (from the chart palette)
 
 `artifact-style-guide.md` § "Color tokens" is the palette. Do not add new
 hexes — map each scenario series onto the existing tokens:
 
-- **Baseline series line:** slate `#cbd5e1` (the muted / forecast token),
+- **Baseline series line:** `DP_CHART_SERIES[19]` (`#acacac`),
   `strokeWidth={2}`, `dot={false}`.
-- **Scenario / primary series line:** Drivepoint blue `#5b8dd8` (primary
-  series token), `strokeWidth={2}`, `dot={false}`.
+- **Scenario / primary series line:** `DP_CHART_SERIES[0]`,
+  `strokeWidth={2}`, `dot={false}`.
 - **Second comparison series (two scenarios on one small chart):**
-  Drivepoint yellow `#E1BD3D` (second series token).
+  `DP_CHART_SERIES[1]`.
 - **Target / "winning" region highlight** (scatter view): the favorable
   token — border `#2f7d54`, fill `rgba(47,125,84,0.08)`.
 
 Grid, axes, cards, page background, fonts, and spacing are **not**
 redefined here — use them exactly as `artifact-style-guide.md` specifies
-(grid `#e2e8f0` `strokeDasharray="3 3"`, axis text `#64748b`, cards
-`border border-slate-200 rounded-lg shadow-sm` on `bg-white`).
+(grid `#ecebe9` `strokeDasharray="3 3"`, axis text `#716e6b`, cards
+`border border-[#ecebe9] rounded-lg shadow-sm` on `bg-[#fefefe]`).
 
 ### Layout A — single-scenario preview (compact)
 
@@ -318,29 +317,29 @@ In order, top to bottom:
    - Baseline at horizon end (formatted per the metric's `dataType`).
    - Scenario at horizon end (same formatting).
    - Delta — absolute value **and** percent, both signed, with `↑`/`↓`
-     and the emerald/red rule above.
+     and the favorable/unfavorable rule above.
 3. **Two-series `LineChart`** — the primary trend,
    `ResponsiveContainer width="100%" height={360}`. Baseline + scenario,
    Forecast periods only, aligned monthly:
 
    ```jsx
    <LineChart data={rows}>
-     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-     <XAxis dataKey="date" stroke="#64748b" />
-     <YAxis stroke="#64748b" tickFormatter={fmt} />
+     <CartesianGrid strokeDasharray="3 3" stroke="#ecebe9" />
+     <XAxis dataKey="date" stroke="#716e6b" />
+     <YAxis stroke="#716e6b" tickFormatter={fmt} />
      <Tooltip formatter={fmt} />
-     <Legend />
+     <Legend formatter={(value) => <span style={{ color: '#191815' }}>{value}</span>} />
      <Line
        dataKey="baseline"
        name="Baseline"
-       stroke="#cbd5e1"
+       stroke={DP_CHART_SERIES[19]}
        strokeWidth={2}
        dot={false}
      />
      <Line
        dataKey="scenario"
        name="Scenario"
-       stroke="#5b8dd8"
+       stroke={DP_CHART_SERIES[0]}
        strokeWidth={2}
        dot={false}
      />
@@ -395,7 +394,7 @@ order:
    optimize `<lever>` based on the following trends and criteria.").
    Optionally a responsive grid of small "trend" cards (one per basis:
    Short-Term Growth, Medium-Term, Seasonality, Benchmarks, …), each a
-   titled mini `LineChart` (blue `#5b8dd8` vs. yellow `#E1BD3D`,
+   titled mini `LineChart` (`DP_CHART_SERIES[0]` vs. `DP_CHART_SERIES[1]`,
    `dot={false}`, no legend, tiny axes). Only include the trend cards you
    actually have data for — do not fabricate bases.
 3. **Comparison chart** — one chart comparing the candidate scenarios
@@ -415,9 +414,11 @@ order:
      In a static artifact these are real, working React controls:
      the toggle switches the table between absolute values and
      variance-vs-baseline; the Output Variable `<select>` re-renders the
-     table against whichever Key Result the user picks (so include every
-     Key Result you pulled in `results`); the Date Range can be a
-     read-only label if you only have one horizon.
+     table against whichever Key Result the user picks when more than one
+     Key Result is present (include every Key Result you pulled in
+     `results`). Use a read-only Output Variable label when exactly one
+     Key Result is present. The Date Range can be a read-only label if you
+     only have one horizon.
    - **Table**: a leading checkbox + scenario-name column, then one column
      per month across the horizon (Month 1 … Month N, labeled with the
      actual `YYYY-MM`). One row per scenario. Values formatted per the
@@ -428,8 +429,8 @@ order:
      default. Do not invent a winner; base it on the delta-vs-target you
      computed in Phase 5, and say in prose why it won.
    - **Relative-variance mode**: when the toggle is on, show each cell as
-     the signed delta vs. baseline (emerald/red + arrow), not the raw
-     value.
+     the signed delta vs. baseline (favorable/unfavorable color + arrow),
+     not the raw value.
 5. **Source footer** (shared chrome).
 
 ### Choosing a non-default chart type

@@ -39,8 +39,9 @@ data justifies it.
 1. **Title + lockup** — render via the `ArtifactHeader` component (see
    `artifact-style-guide.md` § "Brand lockup"). Title is
    `<noun> · <period>` — e.g. "Monthly Business Review · Mar 2026", "DTC
-   Sales · Last 12 Months". The Drivepoint mark + wordmark sit top-right;
-   title and source-context line stack top-left.
+   Sales · Last 12 Months". The complete Drivepoint lockup anchors the
+   top-left, with an optional customer co-brand and meta line beside it.
+   The title and source-context line sit below the header hairline.
 2. **Source-context line** — one sentence with the date range, plan name
    (if SmartModel data is used), channel / segment filter, currency, and
    the last booked month if any actuals are involved. Same content as the
@@ -287,7 +288,8 @@ before showing the report — do not ship with a caveat.
    breakdown, the breakdown sums to the KPI value (within rounding).
    Reconcile or remove one.
 10. **Brand lockup is present.** The report's first child renders the
-    `ArtifactHeader` component (Drivepoint mark + wordmark).
+    `ArtifactHeader` component with the complete Drivepoint lockup on the
+    left.
 
 ---
 

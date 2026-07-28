@@ -106,9 +106,9 @@ const momChange = (lastMonthSales - firstMonthSales) / firstMonthSales;
 
 const KpiCard = ({ label, value, sub }) => (
   <div className="bg-white border border-[#ecebe9] rounded-lg shadow-sm p-4">
-    <div className="text-xs text-[#7a7774] uppercase tracking-wide">{label}</div>
+    <div className="text-xs text-[#716e6b] uppercase tracking-wide">{label}</div>
     <div className="text-2xl font-semibold text-[#191815] mt-1 tabular-nums">{value}</div>
-    {sub && <div className="text-xs text-[#7a7774] mt-1">{sub}</div>}
+    {sub && <div className="text-xs text-[#716e6b] mt-1">{sub}</div>}
   </div>
 );
 
@@ -134,10 +134,10 @@ export default function App() {
       <ResponsiveContainer width="100%" height={360}>
         <LineChart data={pivoted} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#ecebe9" />
-          <XAxis dataKey="month" stroke="#7a7774" />
-          <YAxis stroke="#7a7774" tickFormatter={(v) => fmtMoneyCompact(v, CURRENCY)} />
+          <XAxis dataKey="month" stroke="#716e6b" />
+          <YAxis stroke="#716e6b" tickFormatter={(v) => fmtMoneyCompact(v, CURRENCY)} />
           <Tooltip formatter={(v) => fmtMoney(v, CURRENCY)} />
-          <Legend />
+          <Legend formatter={(value) => <span style={{ color: '#191815' }}>{value}</span>} />
           {channels.map((c, i) => (
             <Line
               key={c}
@@ -256,7 +256,7 @@ export default function App() {
       />
       <div className="overflow-x-auto">
         <table className="w-full text-sm tabular-nums">
-          <thead className="bg-[#f9f8f6] text-[#7a7774] sticky top-0">
+          <thead className="bg-[#f9f8f6] text-[#716e6b] sticky top-0">
             <tr>
               <th className="text-left font-medium py-2 px-3">Line item</th>
               {months.map((m) => (
@@ -280,9 +280,9 @@ export default function App() {
         </table>
       </div>
       {REPORT_LINK && (
-        <div className="text-xs text-[#7a7774] mt-4">
+        <div className="text-xs text-[#716e6b] mt-4">
           Also available in Drivepoint:{' '}
-          <a href={REPORT_LINK.url} target="_blank" rel="noopener noreferrer" className="text-[#191c21] underline hover:text-[#191815]">
+          <a href={REPORT_LINK.url} target="_blank" rel="noopener noreferrer" className="text-[#191815] underline hover:decoration-2">
             {REPORT_LINK.name}
           </a>
         </div>
@@ -371,15 +371,15 @@ export default function App() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border border-[#ecebe9] rounded-lg p-4">
-          <div className="text-xs text-[#7a7774] uppercase">Actual (total)</div>
+          <div className="text-xs text-[#716e6b] uppercase">Actual (total)</div>
           <div className="text-xl font-semibold tabular-nums">{fmtMoney(totalActual, CURRENCY)}</div>
         </div>
         <div className="bg-white border border-[#ecebe9] rounded-lg p-4">
-          <div className="text-xs text-[#7a7774] uppercase">Forecast (total)</div>
+          <div className="text-xs text-[#716e6b] uppercase">Forecast (total)</div>
           <div className="text-xl font-semibold tabular-nums">{fmtMoney(totalForecast, CURRENCY)}</div>
         </div>
         <div className="bg-white border border-[#ecebe9] rounded-lg p-4">
-          <div className="text-xs text-[#7a7774] uppercase">Variance</div>
+          <div className="text-xs text-[#716e6b] uppercase">Variance</div>
           <div className="text-xl font-semibold">
             <VarianceCell value={totalVariance} pct={totalVariancePct} />
           </div>
@@ -389,10 +389,10 @@ export default function App() {
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={RAW} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#ecebe9" />
-          <XAxis dataKey="report_month" stroke="#7a7774" />
-          <YAxis stroke="#7a7774" tickFormatter={(v) => fmtMoneyCompact(v, CURRENCY)} />
+          <XAxis dataKey="report_month" stroke="#716e6b" />
+          <YAxis stroke="#716e6b" tickFormatter={(v) => fmtMoneyCompact(v, CURRENCY)} />
           <Tooltip formatter={(v) => fmtMoney(v, CURRENCY)} />
-          <Legend />
+          <Legend formatter={(value) => <span style={{ color: '#191815' }}>{value}</span>} />
           <Bar dataKey="actual_value" name="Actual" fill={DP_CHART_SERIES[0]} />
           <Bar dataKey="forecast_value" name="Forecast" fill="#cbd5e1" />
         </BarChart>
@@ -400,7 +400,7 @@ export default function App() {
 
       <div className="mt-6 overflow-x-auto">
         <table className="w-full text-sm tabular-nums">
-          <thead className="bg-[#f9f8f6] text-[#7a7774]">
+          <thead className="bg-[#f9f8f6] text-[#716e6b]">
             <tr>
               <th className="text-left  font-medium py-2 px-3">Month</th>
               <th className="text-right font-medium py-2 px-3">Actual</th>
@@ -440,12 +440,10 @@ for series roles, interactivity, and table controls — **do not duplicate that
 spec here.** Chrome follows the signature theme (`kicker`, `ArtifactPage`,
 `SignatureFooter`).
 
-**Conflict noted:** `scenario-planning` still names brand hexes
-`#5b8dd8` / `#E1BD3D` / `#cbd5e1` for series roles. This example maps those
-*roles* onto PM-314 (`DP_CHART_SERIES[0]` primary, `[1]` second, `[19]`
-baseline grey) so chart hues stay in the series system. Theme wins for
-chrome; the Layout B structure and interactivity rules from the scenario
-skill still apply when building a live artifact.
+**Series alignment:** the scenario skill and this example both use PM-314
+(`DP_CHART_SERIES[0]` primary, `[1]` second, `[19]` baseline grey). The
+Layout B structure and interactivity rules from the scenario skill remain
+the canonical behavior contract.
 
 ```jsx
 import React, { useState } from 'react';
@@ -491,6 +489,19 @@ const chartData = MONTHS.map((m, i) => {
 export default function App() {
   const [relative, setRelative] = useState(false);
   const winner = SCENARIOS.find((s) => s.recommended);
+  const winnerDelta = winner.values[3] - BASELINE[3];
+  const winnerDeltaSign = winnerDelta > 0 ? '+' : winnerDelta < 0 ? '−' : '';
+  const [selectedScenarioIds, setSelectedScenarioIds] = useState(
+    () => new Set(winner ? [winner.id] : []),
+  );
+  const toggleScenario = (scenarioId) => {
+    setSelectedScenarioIds((current) => {
+      const next = new Set(current);
+      if (next.has(scenarioId)) next.delete(scenarioId);
+      else next.add(scenarioId);
+      return next;
+    });
+  };
 
   return (
     <ArtifactPage width={1040}>
@@ -502,17 +513,24 @@ export default function App() {
         kicker="Scenario comparison"
       />
 
+      <div className="flex items-center gap-2 mb-6">
+        <span className="text-sm font-semibold text-[#191815]">Drivepoint Intelligence</span>
+        <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide" style={{ background: '#FFDE6A', color: '#92400e' }}>
+          BETA
+        </span>
+      </div>
+
       <ArtifactSection title="3 Scenario Proposals">
-        <p className="text-sm text-[#7a7774] m-0 mb-4">
+        <p className="text-sm text-[#716e6b] m-0 mb-4">
           I've identified 3 scenarios that best optimize cash based on short-term opex and seasonality.
         </p>
         <ResponsiveContainer width="100%" height={320}>
           <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#ecebe9" />
-            <XAxis dataKey="month" stroke="#7a7774" />
-            <YAxis stroke="#7a7774" tickFormatter={(v) => fmtMoneyCompact(v, CURRENCY)} />
+            <XAxis dataKey="month" stroke="#716e6b" />
+            <YAxis stroke="#716e6b" tickFormatter={(v) => fmtMoneyCompact(v, CURRENCY)} />
             <Tooltip formatter={(v) => fmtMoney(v, CURRENCY)} />
-            <Legend />
+            <Legend formatter={(value) => <span style={{ color: '#191815' }}>{value}</span>} />
             <Line type="monotone" dataKey="baseline" name="Baseline" stroke={DP_CHART_SERIES[19]} strokeWidth={2} dot={false} />
             {SCENARIOS.map((s, i) => (
               <Line
@@ -529,19 +547,28 @@ export default function App() {
         </ResponsiveContainer>
       </ArtifactSection>
 
-      <ArtifactSection title="Scenario Details">
-        <div className="flex justify-end gap-3 mb-3 text-sm">
-          <label className="flex items-center gap-2 text-[#7a7774]">
+      <section className="mt-11 rounded-lg border border-[#ecebe9] bg-[#fefefe] p-4 sm:p-5">
+        <h2 className="text-[17px] font-bold m-0 mb-1 pb-1.5 border-b border-[#ecebe9] text-[#191815]">
+          Scenario Details
+        </h2>
+        <p className="text-sm text-[#716e6b] mt-2 mb-3">
+          Analyze scenario impact month by month on output variable.
+        </p>
+        <div className="flex flex-wrap justify-end gap-3 mb-3 text-sm">
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-[#716e6b]">
             <input type="checkbox" checked={relative} onChange={(e) => setRelative(e.target.checked)} />
             Show relative variance
           </label>
-          <span className="text-[#7a7774]">Date Range: Jun–Nov 2026</span>
-          <span className="text-[#7a7774]">Output: Cash</span>
+          <span className="text-[#716e6b]">Date Range: Jun–Nov 2026</span>
+          <span className="text-[#716e6b]">Output: Cash</span>
         </div>
         <div className="overflow-x-auto border border-[#ecebe9] rounded-lg">
           <table className="w-full text-sm tabular-nums">
-            <thead className="bg-[#f9f8f6] text-[#7a7774]">
+            <thead className="bg-[#f9f8f6] text-[#716e6b]">
               <tr>
+                <th className="w-12 py-2 px-1">
+                  <span className="sr-only">Select scenario</span>
+                </th>
                 <th className="text-left py-2 px-3">Scenario</th>
                 {MONTHS.map((m) => (
                   <th key={m} className="text-right py-2 px-3">{m}</th>
@@ -551,21 +578,33 @@ export default function App() {
             <tbody>
               {SCENARIOS.map((s) => (
                 <tr key={s.id} className="border-t border-[#ecebe9]">
+                  <td className="py-0 px-1">
+                    <label className="inline-flex h-11 w-11 cursor-pointer items-center justify-center">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${s.name}`}
+                        checked={selectedScenarioIds.has(s.id)}
+                        onChange={() => toggleScenario(s.id)}
+                      />
+                    </label>
+                  </td>
                   <td className="py-2 px-3">
                     <div className="font-medium text-[#191815]">{s.name}</div>
                     {s.recommended ? (
-                      <div className="text-xs text-[#7a7774]">Drivepoint Intelligence Winner</div>
+                      <div className="text-xs text-[#716e6b]">Drivepoint Intelligence Winner</div>
                     ) : s.id === 's2' ? (
-                      <div className="text-xs text-[#7a7774]">Secondary Pick</div>
+                      <div className="text-xs text-[#716e6b]">Secondary Pick</div>
                     ) : null}
                   </td>
                   {s.values.map((v, i) => {
                     const cell = relative ? v - BASELINE[i] : v;
+                    const direction = cell > 0 ? '↑ +' : cell < 0 ? '↓ −' : '→ ';
+                    const color = cell > 0 ? '#2f7d54' : cell < 0 ? '#b0472f' : '#191815';
                     const display = relative
-                      ? `${cell >= 0 ? '+' : ''}${fmtMoney(cell, CURRENCY)}`
+                      ? `${direction}${fmtMoney(Math.abs(cell), CURRENCY)}`
                       : fmtMoney(v, CURRENCY);
                     return (
-                      <td key={MONTHS[i]} className="py-2 px-3 text-right" style={relative ? { color: cell >= 0 ? '#2f7d54' : '#b0472f' } : undefined}>
+                      <td key={MONTHS[i]} className="py-2 px-3 text-right" style={relative ? { color } : undefined}>
                         {display}
                       </td>
                     );
@@ -575,10 +614,10 @@ export default function App() {
             </tbody>
           </table>
         </div>
-        <p className="text-sm text-[#7a7774] mt-3">
-          {winner.name} wins on Sep cash (+{fmtMoney(winner.values[3] - BASELINE[3], CURRENCY)} vs baseline).
+        <p className="text-sm text-[#716e6b] mt-3">
+          {winner.name} wins on Sep cash ({winnerDeltaSign}{fmtMoney(Math.abs(winnerDelta), CURRENCY)} vs baseline).
         </p>
-      </ArtifactSection>
+      </section>
 
       <SignatureFooter sourceLine={`Source: plan '${PLAN_NAME}' · Raptor preview (workbook not modified)`} />
     </ArtifactPage>
@@ -651,7 +690,7 @@ export default function App() {
           { label: 'Gross margin', value: fmtPct(MARGINS[0].value) },
         ].map((k) => (
           <div key={k.label} className="border border-[#ecebe9] rounded-lg p-4">
-            <div className="text-xs text-[#7a7774] uppercase">{k.label}</div>
+            <div className="text-xs text-[#716e6b] uppercase">{k.label}</div>
             <div className="text-xl font-semibold tabular-nums mt-1" style={{ color: k.color || '#191815' }}>{k.value}</div>
           </div>
         ))}
@@ -662,8 +701,8 @@ export default function App() {
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={SALES_BY_CHANNEL} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#ecebe9" />
-              <XAxis type="number" stroke="#7a7774" tickFormatter={(v) => fmtMoney(v, CURRENCY)} />
-              <YAxis type="category" dataKey="channel" width={90} stroke="#7a7774" />
+              <XAxis type="number" stroke="#716e6b" tickFormatter={(v) => fmtMoney(v, CURRENCY)} />
+              <YAxis type="category" dataKey="channel" width={90} stroke="#716e6b" />
               <Tooltip formatter={(v) => fmtMoney(v, CURRENCY)} />
               <Bar dataKey="sales" fill={DP_CHART_SERIES[0]} />
             </BarChart>
@@ -688,7 +727,7 @@ export default function App() {
 
         <ArtifactSection title="Inventory weeks of supply">
           <table className="w-full text-sm tabular-nums">
-            <thead className="text-[#7a7774]">
+            <thead className="text-[#716e6b]">
               <tr>
                 <th className="text-left py-2">SKU</th>
                 <th className="text-right py-2">Weeks</th>
@@ -740,6 +779,7 @@ const COHORTS = Array.from({ length: 24 }, (_, i) => {
   const label = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   return label;
 });
+const DATE_RANGE = `${COHORTS[0]}–${COHORTS.at(-1)}`;
 const AGES = Array.from({ length: 12 }, (_, i) => `M${i}`);
 
 // Retention decay with slight cohort-quality drift so curves cross.
@@ -758,7 +798,7 @@ export default function App() {
     <ArtifactPage width={1180}>
       <ArtifactHeader
         title="Cohort retention"
-        subtitle="24 monthly acquisition cohorts · DTC · synthetic scaffolding"
+        subtitle={`${DATE_RANGE} · 24 monthly acquisition cohorts · DTC · synthetic scaffolding`}
         customer={CUSTOMER_NAME}
         meta="24 series"
         kicker="Cohort analysis"
@@ -767,8 +807,8 @@ export default function App() {
       <ResponsiveContainer width="100%" height={520}>
         <LineChart data={chartData} margin={{ top: 10, right: 24, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#ecebe9" />
-          <XAxis dataKey="age" stroke="#7a7774" />
-          <YAxis stroke="#7a7774" domain={[0, 1]} tickFormatter={(v) => `${Math.round(v * 100)}%`} />
+          <XAxis dataKey="age" stroke="#716e6b" />
+          <YAxis stroke="#716e6b" domain={[0, 1]} tickFormatter={(v) => `${Math.round(v * 100)}%`} />
           <Tooltip formatter={(v) => `${(v * 100).toFixed(1)}%`} />
           {COHORTS.map((c, i) => (
             <Line
@@ -793,7 +833,7 @@ export default function App() {
         ))}
       </div>
 
-      <SignatureFooter sourceLine="Source: cohortanalysis_bundle pattern" />
+      <SignatureFooter sourceLine="Source: ecommerce_transactions_order_level" />
     </ArtifactPage>
   );
 }
@@ -828,7 +868,7 @@ export default function App() {
         meta="MTD"
       />
       <div className="text-4xl font-bold tabular-nums text-[#191815]">{fmtMoney(VALUE, CURRENCY)}</div>
-      <div className="text-xs text-[#7a7774] mt-4">Source: ecommerce_transactions_order_level</div>
+      <div className="text-xs text-[#716e6b] mt-4">Source: ecommerce_transactions_order_level</div>
     </div>
   );
 }
@@ -879,13 +919,13 @@ export default function App() {
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={RAW} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#ecebe9" />
-          <XAxis dataKey="day" stroke="#7a7774" />
-          <YAxis stroke="#7a7774" tickFormatter={(v) => fmtMoneyCompact(v, CURRENCY)} />
+          <XAxis dataKey="day" stroke="#716e6b" />
+          <YAxis stroke="#716e6b" tickFormatter={(v) => fmtMoneyCompact(v, CURRENCY)} />
           <Tooltip formatter={(v) => fmtMoney(v, CURRENCY)} />
           <Area type="monotone" dataKey="sales" stroke={DP_CHART_SERIES[0 % DP_CHART_SERIES.length]} fill={DP_CHART_SERIES[0]} fillOpacity={0.15} />
         </AreaChart>
       </ResponsiveContainer>
-      <div className="text-xs text-[#7a7774] mt-4">Source: ecommerce_transactions_order_level</div>
+      <div className="text-xs text-[#716e6b] mt-4">Source: ecommerce_transactions_order_level</div>
     </div>
   );
 }
@@ -916,7 +956,7 @@ export default function App() {
         meta="Oct 2025"
       />
       <table className="w-full text-sm tabular-nums">
-        <thead className="text-[#7a7774]">
+        <thead className="text-[#716e6b]">
           <tr>
             <th className="text-left py-2">Channel</th>
             <th className="text-right py-2">Gross sales</th>
@@ -934,7 +974,7 @@ export default function App() {
           ))}
         </tbody>
       </table>
-      <div className="text-xs text-[#7a7774] mt-4">Source: ecommerce_transactions_order_level</div>
+      <div className="text-xs text-[#716e6b] mt-4">Source: ecommerce_transactions_order_level</div>
     </div>
   );
 }

@@ -54,7 +54,7 @@ wrong plan ids, and wrong formatting. Do not skip it.
    filter) so the user knows the period boundary.
 7. **Use `plan_id` to identify plans in SQL.** `plan_name` is editable in
    the source and not guaranteed unique; show it only for display.
-8. **Brand every artifact.** Always render the Drivepoint mark + wordmark
+8. **Brand every artifact.** Always render the complete Drivepoint lockup
    via the `ArtifactHeader` component (defined in
    `artifact-style-guide.md` § "Brand lockup") as the first child of every
    React artifact. No exceptions for small artifacts.
