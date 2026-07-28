@@ -301,7 +301,7 @@ hexes — map each scenario series onto the existing tokens:
 - **Second comparison series (two scenarios on one small chart):**
   Drivepoint yellow `#E1BD3D` (second series token).
 - **Target / "winning" region highlight** (scatter view): the favorable
-  token — border `#22c55e`, fill `rgba(34,197,94,0.08)`.
+  token — border `#2f7d54`, fill `rgba(47,125,84,0.08)`.
 
 Grid, axes, cards, page background, fonts, and spacing are **not**
 redefined here — use them exactly as `artifact-style-guide.md` specifies

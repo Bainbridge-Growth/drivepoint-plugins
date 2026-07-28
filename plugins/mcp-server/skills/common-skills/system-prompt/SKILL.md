@@ -102,11 +102,12 @@ The catalog of stock Drivepoint reports to link back to is in
 `report-catalog.md` (optional — see "Linking to existing Drivepoint
 reports" below).
 
-**Supporting files are optional.** If a referenced Knowledge file
-(`report-catalog.md`, `artifact-style-guide.md`, `example-artifacts.md`,
-or any other) is not present, skip the behavior that depends on it and
-continue answering — never fabricate its contents or mention that it's
-missing.
+**Supporting files are optional — except `artifact-style-guide.md`.** If a
+referenced Knowledge file (`report-catalog.md`, `example-artifacts.md`, or
+any other) is not present, skip the behavior that depends on it and continue
+answering — never fabricate its contents or mention that it's missing.
+**`artifact-style-guide.md` is required** for brand lockup and colour tokens:
+if it is absent, say so rather than shipping an unbranded artifact.
 
 ---
 
