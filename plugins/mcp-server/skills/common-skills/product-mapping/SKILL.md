@@ -81,16 +81,55 @@ Follow these steps in order. Never skip a step, never reorder them.
 7. **Present the canonical summary + flagged rows** as a JSX/React
    artifact (see "Presenting the result"). Do NOT render every source
    row.
-8. **Call `save_product_mappings_to_firebase` ONCE**, passing the
+8. **STOP. Wait for explicit user approval.** See the "Approval gate"
+   block below — this is a hard stop, not a soft one.
+9. **Call `save_product_mappings_to_firebase` ONCE**, passing the
    complete decision set as a **CSV string** (see "Compact CSV
    format"). **Overwrites the Firestore doc.**
-9. **Call `publish_product_mappings_to_bigquery` ONCE.** **Overwrites
-   the BigQuery catalog table.** If this call fails after save, rerun
-   publish — the Firestore doc is already correct, do not re-save.
+10. **Call `publish_product_mappings_to_bigquery` ONCE.** **Overwrites
+    the BigQuery catalog table.** If this call fails after save, rerun
+    publish — the Firestore doc is already correct, do not re-save.
 
-Do not design a pipeline, build an intermediate data structure, or
-write clustering scripts. The grouping is a judgment you make directly
-against the roster in context.
+**Use whatever is fastest.** Reason inline against the roster, or
+write a small script (normalize titles, group by size, dedupe SKUs,
+serialize the CSV) — whichever gets you to a correct decision set
+sooner. The only rule is that the CSV you eventually pass to
+`save_product_mappings_to_firebase` is **RFC 4180 compliant**: quote
+any field containing a comma, double quote, or newline with `"..."`,
+and escape embedded quotes as `""`. If you script the serialization,
+use a real CSV library (Python's `csv` module, Node's `csv-stringify`,
+etc.) rather than raw `join(",")` — the naive form silently corrupts
+any row whose title contains a comma.
+
+---
+
+## Approval gate — DO NOT SKIP
+
+Between step 7 (render the artifact) and step 9 (call save) there is
+a **hard stop**. The user reviews the artifact and explicitly tells
+you to proceed. You do not save until they do.
+
+- After rendering the artifact, your next message ends with a short
+  prompt: *"Review the map above. Reply `save` (or `looks good`,
+  `proceed`, `publish`) to write to Firestore, or tell me what to
+  change."*
+- **Do NOT call `save_product_mappings_to_firebase` on the same turn
+  as the artifact.** The artifact is for the user's eyes, not a
+  self-triggering signal.
+- **Do NOT call save on a follow-up turn unless the user's latest
+  message is an explicit approval.** A neutral message ("ok",
+  "thanks", "cool") is NOT an approval — ask again. A request for
+  changes is not an approval — regenerate the artifact.
+- **Do NOT infer approval from your own confidence.** "I've validated
+  the counts and everything looks right" is not a reason to save;
+  it is a reason to *ask*.
+- **Do NOT save partially "to make progress".** If the user hasn't
+  approved yet, there is nothing to save.
+
+Bypassing this gate is the single most-reported failure of this
+workflow. The user has been burned by silent saves; they treat any
+save without prior approval as broken behavior. If you are ever
+unsure whether the user has approved, the answer is no — ask.
 
 ---
 
@@ -433,8 +472,11 @@ nobody reviews it.
 and follow its tokens so the table matches the server's other
 artifacts.
 
-After the user reviews, save then publish per steps 8–9 of the
-workflow.
+**End your turn here.** Ask the user to review and reply with
+`save` / `looks good` / `proceed` / `publish` to write, or to tell
+you what to change. **Do NOT call `save_product_mappings_to_firebase`
+on the same turn as the artifact.** See "Approval gate — DO NOT SKIP"
+above; save is step 9, and only after explicit approval.
 
 ---
 
@@ -472,6 +514,16 @@ workflow.
   `mappings` argument is a CSV string — header row + data rows,
   emitted directly. Do not wrap it in an array, do not JSON-encode
   the values.
+- **Never build the CSV with naive `join(",")`.** Titles/sourceKeys
+  can contain commas. Use a real CSV library (Python `csv`, Node
+  `csv-stringify`) OR quote every field that contains a comma /
+  double quote / newline with `"..."` and escape embedded quotes as
+  `""`. Silent truncation on the first comma-containing row is the
+  most common data-corruption bug in this workflow.
+- **Never call `save_product_mappings_to_firebase` without prior
+  explicit user approval.** See "Approval gate — DO NOT SKIP". The
+  artifact-and-immediately-save pattern is a protocol violation, no
+  matter how confident you are in the mappings.
 - **Never silently map a bundle as a single simple unit.** Flag it
   and ask.
 - **Never save partially and expect the doc to merge.** Each call to
