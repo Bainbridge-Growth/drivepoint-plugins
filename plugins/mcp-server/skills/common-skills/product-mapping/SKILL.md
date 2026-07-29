@@ -82,7 +82,8 @@ Follow these steps in order. Never skip a step, never reorder them.
    artifact (see "Presenting the result"). Do NOT render every source
    row.
 8. **Call `save_product_mappings_to_firebase` ONCE**, passing the
-   compact patch set. **Overwrites the Firestore doc.**
+   complete decision set as a **CSV string** (see "Compact CSV
+   format"). **Overwrites the Firestore doc.**
 9. **Call `publish_product_mappings_to_bigquery` ONCE.** **Overwrites
    the BigQuery catalog table.** If this call fails after save, rerun
    publish — the Firestore doc is already correct, do not re-save.
@@ -243,36 +244,70 @@ attribute is more useful than a fabricated one.
 
 ---
 
-## Compact patch shape
+## Compact CSV format
 
-`save_product_mappings_to_firebase` takes an array of COMPACT PATCHES:
-one entry per row you're marking `confirmed` or `rejected`, and
-nothing for rows you're leaving unmapped.
+`save_product_mappings_to_firebase` takes a single `mappings`
+argument: a **CSV string**, not an array of objects. Emit CSV
+directly — do not JSON-encode it, do not wrap it in an array. Line 1
+is the header, one data line per row you're marking `confirmed` or
+`rejected`. **Omit rows you're leaving unmapped entirely; the server
+records them as `unmapped` for you.**
 
-Each patch contains ONLY these fields:
+**Columns (pick whichever subset you need; always include `sourceKey`
+and `status`):**
 
 - `sourceKey` — copy verbatim from the source row
   (`channel::stores::sku`, falling back to title). This is how the
-  server rejoins your patch to the source row.
+  server rejoins your row to the source row. Required in every line.
 - `status` — `confirmed` when you are sure; `rejected` to exclude
-  the row (display/sample/non-product lines). Omit all other rows
-  entirely; the server records them as `unmapped` for you.
-- `drivepointMappedId` — derived per the rule above. Required for
-  `confirmed`.
+  the row (display/sample/non-product lines). Required in every
+  line.
+- `drivepointMappedId` — derived per the rule above. Required when
+  `status = confirmed`; leave the cell empty for `rejected`.
 - `drivepointMappedProductName` — selected per "Choosing the mapped
-  values". Required for `confirmed`.
+  values". Required when `status = confirmed`.
 - `drivepointMappedSku` — selected per "Choosing the mapped values";
-  null when unknown.
+  empty cell when unknown.
 - `productFamily`, `productCategory`, `productFormat`, `sizeVariant`,
-  `productDescription` — per "Choosing the mapped values"; null when
-  unknown.
+  `productDescription` — per "Choosing the mapped values"; empty
+  cell when unknown.
 
-Never include `channel`, `stores`, `sku`, `title`, or `productType`
-in a patch — the server rehydrates those from BigQuery via
-`sourceKey`. Including them wastes tokens and is ignored.
+**An empty cell is null.** Two commas in a row (`,,`) is how you
+mark "unknown / not applicable" for a column.
+
+**Never include `channel`, `stores`, `sku`, `title`, or `productType`
+columns.** The server rehydrates those from BigQuery via `sourceKey`;
+including them in the CSV wastes tokens and is ignored.
+
+**Do not quote fields.** The customer's source data does not contain
+commas, newlines, or double quotes inside any field — every value
+lands cleanly between commas. If you find yourself wanting to quote
+a field, the field almost certainly needs to be renamed / normalized
+instead.
 
 Only `confirmed` rows are materialized into the BigQuery catalog;
 `unmapped` / `rejected` are saved for review but not published.
+
+### Example
+
+Header + a few confirmed rows (multiple source rows collapsing onto
+the same canonical product) and one rejected row:
+
+```csv
+sourceKey,status,drivepointMappedId,drivepointMappedProductName,drivepointMappedSku,productFamily,productCategory,productFormat,sizeVariant
+Shopify::Mad Rabbit::BALM-VAN,confirmed,tattoo-balm-vanilla-coconut,Tattoo Balm,BALM-VAN,Tattoo Balm,Targeted Tattoo Aftercare,Balm,
+Shopify::Mad Rabbit::BALM-VAN-P,confirmed,tattoo-balm-vanilla-coconut,Tattoo Balm,BALM-VAN,Tattoo Balm,Targeted Tattoo Aftercare,Balm,
+Shopify::Mad Rabbit::Vanilla Balm,confirmed,tattoo-balm-vanilla-coconut,Tattoo Balm,BALM-VAN,Tattoo Balm,Targeted Tattoo Aftercare,Balm,
+Shopify::Mad Rabbit::2PK-B-VAN,confirmed,tattoo-balm-vanilla-coconut-2pack,Tattoo Balm,2PK-B-VAN,Tattoo Balm,Targeted Tattoo Aftercare,Balm,2pack
+Amazon::Mad Rabbit::UNKNOWN,rejected,,,,,,,
+```
+
+Notice every row sharing `tattoo-balm-vanilla-coconut` has identical
+name, SKU, family, category, format, and size — that's the "decide
+once per canonical, repeat verbatim" rule. The 2-pack has its own
+`drivepointMappedId` and its own SKU because it's a different
+physical product. The rejected row still needs the trailing commas
+so the field count matches the header.
 
 ---
 
@@ -427,12 +462,16 @@ workflow.
 - **Never trust a UPC-only match without corroboration.** UPCs get
   reused, mistyped, and truncated. Confirm against brand + title +
   size before using UPC alone.
-- **Never echo source-context fields into a save patch.** `channel`,
+- **Never echo source-context columns into the save CSV.** `channel`,
   `stores`, `sku`, `title`, `productType` are rehydrated server-side
-  from `sourceKey`. Including them in the patch wastes tokens and
-  will be ignored.
-- **Never send patches for `unmapped` rows.** Omit them entirely; the
-  server records them as `unmapped` by default.
+  from `sourceKey`. Including them as columns wastes tokens and will
+  be ignored.
+- **Never send CSV rows for `unmapped` source rows.** Omit them
+  entirely; the server records them as `unmapped` by default.
+- **Never send JSON to `save_product_mappings_to_firebase`.** The
+  `mappings` argument is a CSV string — header row + data rows,
+  emitted directly. Do not wrap it in an array, do not JSON-encode
+  the values.
 - **Never silently map a bundle as a single simple unit.** Flag it
   and ask.
 - **Never save partially and expect the doc to merge.** Each call to
