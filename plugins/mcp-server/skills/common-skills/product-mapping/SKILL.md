@@ -142,16 +142,27 @@ Follow these steps in order. Never skip a step, never reorder them.
     the BigQuery catalog table.** If this call fails after save, rerun
     publish — the Firestore doc is already correct, do not re-save.
 
-**Use whatever is fastest.** Reason inline against the roster, or
-write a small script (normalize titles, group by size, dedupe SKUs,
-serialize the CSV) — whichever gets you to a correct decision set
-sooner. The only rule is that the CSV you eventually pass to
-`save_product_mappings_to_firebase` is **RFC 4180 compliant**: quote
-any field containing a comma, double quote, or newline with `"..."`,
-and escape embedded quotes as `""`. If you script the serialization,
-use a real CSV library (Python's `csv` module, Node's `csv-stringify`,
-etc.) rather than raw `join(",")` — the naive form silently corrupts
-any row whose title contains a comma.
+**Reason inline. Do not script the decision-making.** The mapping
+judgment — normalization, grouping, canonical id derivation, value
+selection, rejection calls — happens in your head against the roster
+in your context. The tool response IS the roster; do not try to
+re-materialize it as a file, do not build a "decision engine" script
+that iterates over it, do not spend turns hand-transcribing 500+
+source rows into records.json so a script can read them. Your script
+environment cannot reference the tool response as a file — the only
+place the roster exists is in your context, and inline reasoning is
+the only workflow that respects that.
+
+**Scripts are appropriate only for CSV serialization at the very
+end**, once your complete decision set already exists inline. If you
+write a script for that, use a real CSV library (Python's `csv`
+module, Node's `csv-stringify`) — the naive `join(",")` silently
+corrupts any row whose title contains a comma. The CSV you pass to
+`save_product_mappings_to_firebase` must be **RFC 4180 compliant**:
+quote any field containing a comma, double quote, or newline with
+`"..."`, and escape embedded quotes as `""`. For most rosters,
+emitting the CSV inline is also fine — just quote every field that
+could contain a delimiter.
 
 ---
 
@@ -612,6 +623,20 @@ above; save is step 9, and only after explicit approval.
   anything else. If the roster is too large to reason about in one
   context, ask the user which subset to focus on rather than issuing
   multiple reads.
+- **Never try to re-materialize the roster as a file.** Your script
+  environment cannot access the tool response — the roster only
+  exists in your context. Do not spend turns hand-typing 500+ rows
+  into records.json / records.tsv via shell echo/append commands so
+  a "decision engine" script can read them. That is not the fastest
+  path, it is the slowest one — you burn tokens transcribing data
+  you already have. Reason inline; scripts are for CSV serialization
+  at the end, not for the mapping decisions themselves.
+- **Never write a "decision engine" or "grouping algorithm" script.**
+  The mapping decisions are inline judgment (normalize → block →
+  group → assign id → pick values) against the roster in your
+  context. If you find yourself designing a pipeline, stop —
+  reasoning against the roster directly is dramatically faster than
+  building infrastructure to reason for you.
 - **Never invent a `drivepointMappedId`.** Always derive it from
   `slug(productFamily) + '-' + slug(flavor/variant) + '-' + slug(sizeVariant)`.
 - **Never invent a name, SKU, or description.** Every value in
