@@ -17,10 +17,16 @@ The MCP server exposes exactly three product-mapping tools:
 
 - `read_product_mapping_source` — read-only; returns the cross-channel
   product roster (one row per `channel/stores/sku/title`) from the
-  customer's BigQuery warehouse.
+  customer's BigQuery warehouse. Each record also carries an
+  `existing` field: the last saved decision for that sourceKey (or
+  `null` on first-run). The response's `existingMappingCount` tells
+  you whether this is a re-run.
 - `save_product_mappings_to_firebase` — writes the current decision
-  set to the company's Firestore mapping document. **Each call fully
-  OVERWRITES the doc — submit the complete decision set every time.**
+  set to the company's Firestore mapping document. Takes two inputs:
+  `mappings` (a CSV string of confirmed/rejected decisions) and
+  optional `rejected_source_keys` (a JSON array of sourceKeys to
+  reject in bulk). **Each call fully OVERWRITES the doc — submit the
+  complete decision set every time.**
 - `publish_product_mappings_to_bigquery` — reads the confirmed
   decisions out of Firestore and **fully OVERWRITES** the mapped-
   products catalog table in BigQuery.
@@ -52,6 +58,39 @@ If you only remember two things, remember these:
 If you catch yourself typing a title, SKU, or description that doesn't
 appear (in any form) in the source roster, stop — you are inventing,
 which corrupts the crosswalk.
+
+---
+
+## Re-runs — the roster remembers
+
+`read_product_mapping_source` returns each row with its last saved
+decision attached as `existing` (or `null` on the very first run for
+this customer). Treat `existingMappingCount > 0` as the signal you are
+in a **re-run**, not a fresh mapping.
+
+On a re-run:
+
+- **The existing decisions are the baseline.** Trust them unless you
+  have a reason to change one. Do not re-derive canonical ids or
+  re-select names/SKUs for rows whose `existing.status = confirmed`
+  and whose source fields haven't drifted meaningfully.
+- **Emit deltas, not the whole world.** In the save CSV, unchanged
+  confirmed rows should appear as `sourceKey,confirmed` with every
+  other column empty — the server inherits the previous mapped-* /
+  product-* values from Firestore. See the "Inheritance on re-runs"
+  subsection under "The save call" below.
+- **Bulk-reject via `rejected_source_keys`, not CSV rows.** POS junk
+  and promotional lines that were rejected last run stay rejected
+  cheaply by listing their sourceKeys in the array param.
+- **Focus your judgment on three groups:** (a) rows with
+  `existing = null` (brand new since last run), (b) rows with
+  `existing.status = unmapped` (previously flagged, still open),
+  (c) rows whose source title/SKU has drifted since the previous
+  mapping (rare, but happens with rebrands and marketplace edits).
+
+On a first-run (all `existing = null`) the workflow is the same as it
+has always been — derive everything, decide everything, emit
+everything.
 
 ---
 
