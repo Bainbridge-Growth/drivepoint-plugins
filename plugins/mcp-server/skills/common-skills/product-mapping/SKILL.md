@@ -100,31 +100,44 @@ Follow these steps in order. Never skip a step, never reorder them.
 
 1. **Read ONCE.** Call `read_product_mapping_source` a single time
    for the entire roster. Do NOT split the read by channel, by key
-   type, or by SKU presence. One read, one roster in context.
+   type, or by SKU presence. One read, one roster in context. Each
+   record carries an `existing` field with the last saved decision —
+   check `existingMappingCount` to see if this is a re-run.
 2. **Normalize titles and sizes in place.** As you read each row,
    mentally apply the normalization rules in the next section. Do not
-   write a script for this — do it inline as you group.
+   write a script for this — do it inline as you group. (On re-runs,
+   most rows already have a canonical mapping — you're normalizing to
+   spot drift, not to re-derive everything.)
 3. **Block, then group.** Cluster rows first by an obvious grouping
    attribute (brand line / product family), then within each block
    group by normalized title + normalized size into candidate
    canonical products. Blocking keeps you from comparing every row to
    every other row and is how a human analyst actually does this.
+   On re-runs, the `existing.drivepointMappedId` already gives you
+   the groups for free — use it as your blocking key and only cluster
+   the rows with `existing = null` or `existing.status = unmapped`.
 4. **Assign each group a canonical id** using the derivation rule
-   below. Never invent an arbitrary id.
+   below. Never invent an arbitrary id. (On re-runs, keep the
+   existing id unless the product has genuinely changed.)
 5. **Select the canonical values** for each group — name, SKU,
    description, attributes — from the source rows themselves, using
-   the rules in "Choosing the mapped values". Never fabricate.
+   the rules in "Choosing the mapped values". Never fabricate. On
+   re-runs, if the existing values still fit, you don't need to
+   re-supply them — inheritance handles it (see "The save call").
 6. **Resolve leftover rows** using the join-key ladder in Part 2:
    exact internal SKU, then UPC, then name semantics. Flag anything
    resolved by name semantics alone as `unmapped` (omit the patch).
 7. **Present the canonical summary + flagged rows** as a JSX/React
    artifact (see "Presenting the result"). Do NOT render every source
-   row.
+   row. On re-runs, call out what CHANGED since the last mapping
+   (new rows, drift, corrections) — that's the useful review, not
+   the unchanged baseline.
 8. **STOP. Wait for explicit user approval.** See the "Approval gate"
    block below — this is a hard stop, not a soft one.
 9. **Call `save_product_mappings_to_firebase` ONCE**, passing the
-   complete decision set as a **CSV string** (see "Compact CSV
-   format"). **Overwrites the Firestore doc.**
+   complete decision set. See "The save call" for the two inputs
+   (CSV + optional reject list) and the inheritance rules that let
+   re-runs stay tiny. **Overwrites the Firestore doc.**
 10. **Call `publish_product_mappings_to_bigquery` ONCE.** **Overwrites
     the BigQuery catalog table.** If this call fails after save, rerun
     publish — the Firestore doc is already correct, do not re-save.
@@ -322,36 +335,83 @@ attribute is more useful than a fabricated one.
 
 ---
 
-## Compact CSV format
+## The save call
 
-`save_product_mappings_to_firebase` takes a single `mappings`
-argument: a **CSV string**, not an array of objects. Emit CSV
-directly — do not JSON-encode it, do not wrap it in an array. Line 1
-is the header, one data line per row you're marking `confirmed` or
-`rejected`. **Omit rows you're leaving unmapped entirely; the server
-records them as `unmapped` for you.**
+`save_product_mappings_to_firebase` takes two inputs:
 
-**Columns (pick whichever subset you need; always include `sourceKey`
-and `status`):**
+- **`mappings`** — a CSV string of confirmed/rejected decisions.
+  Line 1 is the header, one data line per row you're marking
+  `confirmed` (or `rejected`, if the row has fields to spell out).
+- **`rejected_source_keys`** *(optional)* — a JSON array of sourceKey
+  strings to mark `rejected` in bulk. Use this for POS junk,
+  promotional lines, donations, samples — anything you're rejecting
+  with no mapped fields to record. **Much cheaper than CSV rows**
+  because you skip the empty trailing columns. Do NOT also include
+  these sourceKeys in the CSV.
+
+Omit rows you're leaving unmapped entirely; the server records them
+as `unmapped` for you. Only `confirmed` rows are materialized into
+the BigQuery catalog; `unmapped` / `rejected` are saved for review
+but not published.
+
+### Inheritance on re-runs — write attributes ONLY when they change
+
+On re-runs, most confirmed rows are unchanged. Emitting the full
+mapping for every one of them is a huge token cost you don't need to
+pay. The server implements **inheritance**:
+
+- If a row has `status = confirmed` and every other column is empty,
+  the server looks up the existing Firestore row for that sourceKey
+  and inherits `drivepointMappedId`, `drivepointMappedProductName`,
+  `drivepointMappedSku`, `productFamily`, `productCategory`,
+  `productFormat`, `sizeVariant`, and `productDescription` from it.
+- If a row has `status = confirmed` and any mapped-* / product-*
+  cell is non-empty, the server uses the values you supplied (the
+  full row wins — inheritance is triggered by *empty*, not by
+  *partial*).
+- If a row has `status = rejected`, no fields are needed — just the
+  sourceKey. Put pure rejects in `rejected_source_keys` instead of
+  the CSV.
+- If `existing` is `null` and you emit `sourceKey,confirmed` with no
+  fields, the row saves with all-null attributes — which is wrong.
+  **Always fill in fields for NEW confirmations.** Inheritance is
+  strictly for preserving prior state.
+
+Rule of thumb per row:
+
+| Situation                                              | Emit                                          |
+| ------------------------------------------------------ | --------------------------------------------- |
+| Re-run, previously confirmed, no changes               | `sourceKey,confirmed` (empty other columns)   |
+| Re-run, previously confirmed, some attribute changed   | Full row with the corrected values            |
+| Re-run, previously unmapped, now decided               | Full row with all decided values              |
+| First-run or brand-new sourceKey                       | Full row with all decided values              |
+| Row to reject (any run)                                | Put sourceKey in `rejected_source_keys` array |
+
+### Columns (CSV)
+
+Pick whichever subset you need; always include `sourceKey` and
+`status`:
 
 - `sourceKey` — copy verbatim from the source row
   (`channel::stores::sku`, falling back to title). This is how the
   server rejoins your row to the source row. Required in every line.
 - `status` — `confirmed` when you are sure; `rejected` to exclude
-  the row (display/sample/non-product lines). Required in every
-  line.
-- `drivepointMappedId` — derived per the rule above. Required when
-  `status = confirmed`; leave the cell empty for `rejected`.
+  the row. Required in every line.
+- `drivepointMappedId` — derived per the rule above. Required for a
+  NEW confirmation (no prior mapping); leave empty on an unchanged
+  re-run confirmation to inherit.
 - `drivepointMappedProductName` — selected per "Choosing the mapped
-  values". Required when `status = confirmed`.
+  values". Required for a new confirmation; leave empty on an
+  unchanged re-run confirmation to inherit.
 - `drivepointMappedSku` — selected per "Choosing the mapped values";
-  empty cell when unknown.
+  empty cell when unknown (or on inheritance).
 - `productFamily`, `productCategory`, `productFormat`, `sizeVariant`,
   `productDescription` — per "Choosing the mapped values"; empty
-  cell when unknown.
+  cell when unknown (or on inheritance).
 
 **An empty cell is null.** Two commas in a row (`,,`) is how you
-mark "unknown / not applicable" for a column.
+mark "unknown / not applicable" for a column — and also how you
+trigger inheritance on a re-run confirmation.
 
 **Never include `channel`, `stores`, `sku`, `title`, or `productType`
 columns.** The server rehydrates those from BigQuery via `sourceKey`;
@@ -366,29 +426,52 @@ so quote whenever a field could contain a delimiter. If you're
 serializing the CSV via a script, use a real CSV library (Python
 `csv`, Node `csv-stringify`) that handles this automatically.
 
-Only `confirmed` rows are materialized into the BigQuery catalog;
-`unmapped` / `rejected` are saved for review but not published.
-
 ### Example
 
-Header + a few confirmed rows (multiple source rows collapsing onto
-the same canonical product) and one rejected row:
+A representative re-run save call — inheritance-shape rows for
+unchanged confirmations, one fresh confirmation with full fields,
+one confirmation with an attribute correction (new SKU), and a bulk
+reject list:
+
+**`mappings` (CSV):**
 
 ```csv
 sourceKey,status,drivepointMappedId,drivepointMappedProductName,drivepointMappedSku,productFamily,productCategory,productFormat,sizeVariant
-Shopify::Mad Rabbit::BALM-VAN,confirmed,tattoo-balm-vanilla-coconut,Tattoo Balm,BALM-VAN,Tattoo Balm,Targeted Tattoo Aftercare,Balm,
-Shopify::Mad Rabbit::BALM-VAN-P,confirmed,tattoo-balm-vanilla-coconut,Tattoo Balm,BALM-VAN,Tattoo Balm,Targeted Tattoo Aftercare,Balm,
-Shopify::Mad Rabbit::Vanilla Balm,confirmed,tattoo-balm-vanilla-coconut,Tattoo Balm,BALM-VAN,Tattoo Balm,Targeted Tattoo Aftercare,Balm,
+Shopify::Mad Rabbit::BALM-VAN,confirmed,,,,,,,
+Shopify::Mad Rabbit::BALM-VAN-P,confirmed,,,,,,,
+Shopify::Mad Rabbit::Vanilla Balm,confirmed,,,,,,,
 Shopify::Mad Rabbit::2PK-B-VAN,confirmed,tattoo-balm-vanilla-coconut-2pack,Tattoo Balm,2PK-B-VAN,Tattoo Balm,Targeted Tattoo Aftercare,Balm,2pack
-Amazon::Mad Rabbit::UNKNOWN,rejected,,,,,,,
+Shopify::Mad Rabbit::BALM-CUC,confirmed,tattoo-balm-cucumber,Tattoo Balm,BALM-CUC-V2,Tattoo Balm,Targeted Tattoo Aftercare,Balm,
 ```
 
-Notice every row sharing `tattoo-balm-vanilla-coconut` has identical
-name, SKU, family, category, format, and size — that's the "decide
-once per canonical, repeat verbatim" rule. The 2-pack has its own
-`drivepointMappedId` and its own SKU because it's a different
-physical product. The rejected row still needs the trailing commas
-so the field count matches the header.
+**`rejected_source_keys` (JSON array):**
+
+```json
+[
+  "Shopify::Mad Rabbit::Charge for Premiere",
+  "Shopify::Mad Rabbit::FLAT DONATION 5847",
+  "Shopify::Mad Rabbit::tester-product",
+  "Amazon::Mad Rabbit::UNKNOWN"
+]
+```
+
+Reading this row-by-row:
+
+- The first three rows (`BALM-VAN`, `BALM-VAN-P`, `Vanilla Balm`) are
+  unchanged confirmations from the last save — the server inherits
+  `tattoo-balm-vanilla-coconut` / `Tattoo Balm` / `BALM-VAN` / … from
+  Firestore.
+- `2PK-B-VAN` is a fresh confirmation (or an override of an existing
+  one) — full attributes are supplied.
+- `BALM-CUC` corrects the master SKU from `BALM-CUC` to `BALM-CUC-V2`
+  — because non-empty fields are supplied, the row overrides the
+  inherited state.
+- The four sourceKeys in `rejected_source_keys` are marked
+  `rejected` server-side — no CSV rows needed, no empty trailing
+  commas, no wasted tokens.
+
+On a **first-run** (no `existing` on any record), all confirmations
+must be full rows — inheritance has nothing to inherit from.
 
 ---
 
@@ -538,7 +621,9 @@ above; save is step 9, and only after explicit approval.
   guess.
 - **Never let two rows share a `drivepointMappedId` but disagree on
   name/family/category/format/size.** Those are canonical attributes;
-  decide them once per canonical, then repeat verbatim.
+  decide them once per canonical, then repeat verbatim (or lean on
+  inheritance on re-runs — an empty CSV cell inherits the previously
+  saved value, so unchanged aliases stay in lockstep for free).
 - **Never collapse discriminating variants.** Different sizes,
   different pack counts, different flavors are DIFFERENT canonical
   products — even if the base name is identical. Splitting real
@@ -552,16 +637,31 @@ above; save is step 9, and only after explicit approval.
   be ignored.
 - **Never send CSV rows for `unmapped` source rows.** Omit them
   entirely; the server records them as `unmapped` by default.
-- **Never send JSON to `save_product_mappings_to_firebase`.** The
-  `mappings` argument is a CSV string — header row + data rows,
-  emitted directly. Do not wrap it in an array, do not JSON-encode
-  the values.
+- **Never JSON-encode the `mappings` argument itself.** `mappings` is
+  a **CSV string** — header row + data rows, emitted directly. Do
+  not wrap it in an array, do not JSON-encode the values.
+  `rejected_source_keys` IS a JSON array of strings — those are two
+  different arguments with two different shapes.
 - **Never build the CSV with naive `join(",")`.** Titles/sourceKeys
   can contain commas. Use a real CSV library (Python `csv`, Node
   `csv-stringify`) OR quote every field that contains a comma /
   double quote / newline with `"..."` and escape embedded quotes as
   `""`. Silent truncation on the first comma-containing row is the
   most common data-corruption bug in this workflow.
+- **Never re-emit full attribute values for an unchanged confirmed
+  row on a re-run.** Emit `sourceKey,confirmed` (empty other columns)
+  and let inheritance carry the prior state. Re-emitting the full
+  row is correct but wasteful — on a 300-row roster it costs 60-90
+  seconds of extra generation time for zero data change.
+- **Never CSV a pure reject.** If a row is being rejected with no
+  fields to spell out, put its sourceKey in `rejected_source_keys`
+  instead. A row of `key,rejected,,,,,,,` is 40+ characters of
+  filler for something that could be one string in a JSON array.
+- **Never rely on inheritance for a brand-new confirmation.** If
+  `existing` is `null` for a sourceKey, `sourceKey,confirmed` with
+  empty fields saves an all-null row — that's a bug. Fill in the
+  fields for new confirmations. Inheritance is strictly for
+  preserving prior state.
 - **Never call `save_product_mappings_to_firebase` without prior
   explicit user approval.** See "Approval gate — DO NOT SKIP". The
   artifact-and-immediately-save pattern is a protocol violation, no
