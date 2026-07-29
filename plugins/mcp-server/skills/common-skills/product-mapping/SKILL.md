@@ -318,11 +318,14 @@ mark "unknown / not applicable" for a column.
 columns.** The server rehydrates those from BigQuery via `sourceKey`;
 including them in the CSV wastes tokens and is ignored.
 
-**Do not quote fields.** The customer's source data does not contain
-commas, newlines, or double quotes inside any field — every value
-lands cleanly between commas. If you find yourself wanting to quote
-a field, the field almost certainly needs to be renamed / normalized
-instead.
+**Quote fields per RFC 4180.** Wrap any field that contains a comma,
+a double quote, or a newline in `"..."`, and escape embedded double
+quotes as `""`. Most rows won't need quoting, but titles and
+sourceKeys occasionally do — silent truncation on the first
+comma-containing row is the single most common bug in this workflow,
+so quote whenever a field could contain a delimiter. If you're
+serializing the CSV via a script, use a real CSV library (Python
+`csv`, Node `csv-stringify`) that handles this automatically.
 
 Only `confirmed` rows are materialized into the BigQuery catalog;
 `unmapped` / `rejected` are saved for review but not published.
