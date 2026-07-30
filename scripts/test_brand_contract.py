@@ -29,6 +29,26 @@ class BrandContractTests(unittest.TestCase):
         drifts = bcc.check_repo()
         self.assertEqual(drifts, [], msg="\n".join(d.format_message() for d in drifts))
 
+    def test_drift_is_plain_data(self) -> None:
+        drift = bcc.Drift("skill.md", "DP_TEXT_PRIMARY", "#191815", "#00ff00")
+
+        self.assertNotIsInstance(drift, BaseException)
+        self.assertIn("DP_TEXT_PRIMARY", drift.format_message())
+
+    def test_unterminated_dp_string_is_rejected_as_malformed(self) -> None:
+        for quote in ("'", '"'):
+            with self.subTest(quote=quote):
+                text = (
+                    f"const DP_TEXT_PRIMARY = {quote}#191815;\n"
+                    f"const DP_TEXT_MUTED = {quote}#716e6b{quote};"
+                )
+
+                with self.assertRaisesRegex(
+                    bcc.ContractError,
+                    "unterminated string assignment for DP_TEXT_PRIMARY",
+                ):
+                    bcc.extract_dp_constants(text)
+
     def test_deliberate_drift_message_names_file_and_values(self) -> None:
         """Mutate DP_TEXT_PRIMARY in a temp copy; assert exit-1 style message."""
         with tempfile.TemporaryDirectory() as tmp:

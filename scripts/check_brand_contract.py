@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -32,14 +33,14 @@ class ContractError(Exception):
     """Malformed or missing contract / skill input (exit 2)."""
 
 
-class Drift(Exception):
+@dataclass
+class Drift:
     """A single brand-value mismatch (collected into exit 1)."""
 
-    def __init__(self, file: str, key: str, expected: Any, found: Any):
-        self.file = file
-        self.key = key
-        self.expected = expected
-        self.found = found
+    file: str
+    key: str
+    expected: Any
+    found: Any
 
     def format_message(self) -> str:
         return (
@@ -76,6 +77,21 @@ def extract_balanced(text: str, start: int, opening: str, closing: str) -> str:
     raise ContractError(f"unterminated {opening}{closing} assignment")
 
 
+def extract_quoted_value(text: str, name: str) -> str:
+    quote = text[0]
+    escaped = False
+    for index, char in enumerate(text[1:], start=1):
+        if char in "\r\n":
+            raise ContractError(f"unterminated string assignment for {name}")
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif char == quote:
+            return text[1:index]
+    raise ContractError(f"unterminated string assignment for {name}")
+
+
 def extract_dp_constants(text: str) -> dict[str, Any]:
     consts: dict[str, Any] = {}
     for m in re.finditer(r"^const (DP_[A-Z0-9_]+)\s*=\s*", text, re.M):
@@ -100,13 +116,7 @@ def extract_dp_constants(text: str) -> dict[str, Any]:
                 for single, double, single_value, double_value in pairs
             }
         elif rest[0] in "\"'":
-            q = rest[0]
-            k = 1
-            while k < len(rest):
-                if rest[k] == q and rest[k - 1] != "\\":
-                    break
-                k += 1
-            consts[name] = rest[1:k]
+            consts[name] = extract_quoted_value(rest, name)
         else:
             m2 = re.match(r"(\d+)", rest)
             if not m2:
