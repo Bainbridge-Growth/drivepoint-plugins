@@ -9,7 +9,6 @@ Exit codes:
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import sys
@@ -18,6 +17,10 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONTRACT = REPO_ROOT / "plugins/mcp-server/skills/brand-contract.json"
+CSS_HEX_RE = re.compile(
+    r"(?<![0-9A-Fa-f])#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|"
+    r"[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})(?![0-9A-Fa-f])"
+)
 
 REMEDY = (
     "restore this value from brand-contract.json. Only update the pin itself if your "
@@ -48,6 +51,31 @@ class Drift(Exception):
         )
 
 
+def extract_balanced(text: str, start: int, opening: str, closing: str) -> str:
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in "\"'":
+            quote = char
+        elif char == opening:
+            depth += 1
+        elif char == closing:
+            depth -= 1
+            if depth == 0:
+                return text[start : index + 1]
+    raise ContractError(f"unterminated {opening}{closing} assignment")
+
+
 def extract_dp_constants(text: str) -> dict[str, Any]:
     consts: dict[str, Any] = {}
     for m in re.finditer(r"^const (DP_[A-Z0-9_]+)\s*=\s*", text, re.M):
@@ -58,19 +86,19 @@ def extract_dp_constants(text: str) -> dict[str, Any]:
             raise ContractError(f"empty assignment for {name}")
         if rest.startswith("["):
             i = text.find("[", start)
-            depth = 0
-            j = i
-            while j < len(text):
-                if text[j] == "[":
-                    depth += 1
-                elif text[j] == "]":
-                    depth -= 1
-                    if depth == 0:
-                        j += 1
-                        break
-                j += 1
-            raw = text[i:j]
+            raw = extract_balanced(text, i, "[", "]")
             consts[name] = [a or b for a, b in re.findall(r"'([^']+)'|\"([^\"]+)\"", raw)]
+        elif rest.startswith("{"):
+            i = text.find("{", start)
+            raw = extract_balanced(text, i, "{", "}")
+            pairs = re.findall(
+                r"(?:'([^']+)'|\"([^\"]+)\")\s*:\s*(?:'([^']*)'|\"([^\"]*)\")",
+                raw,
+            )
+            consts[name] = {
+                single or double: single_value or double_value
+                for single, double, single_value, double_value in pairs
+            }
         elif rest[0] in "\"'":
             q = rest[0]
             k = 1
@@ -87,16 +115,28 @@ def extract_dp_constants(text: str) -> dict[str, Any]:
     return consts
 
 
-def parse_font_face(css: str) -> dict[str, str]:
-    mime_m = re.search(r"data:([^;]+);", css)
-    fam_m = re.search(r"font-family:'([^']+)'", css)
-    if not mime_m or not fam_m:
-        raise ContractError("DP_FONT_FACE_CSS missing data: mime or font-family")
-    return {
-        "family": fam_m.group(1),
-        "mime": mime_m.group(1),
-        "sha256": hashlib.sha256(css.encode()).hexdigest(),
-    }
+def extract_fenced_code(text: str, languages: set[str]) -> list[str]:
+    pattern = re.compile(
+        r"^```(?P<language>[\w+-]+)[ \t]*\r?\n(?P<body>.*?)^```[ \t]*$",
+        re.M | re.S,
+    )
+    return [
+        match.group("body")
+        for match in pattern.finditer(text)
+        if match.group("language") in languages
+    ]
+
+
+def extract_component(code_blocks: list[str], name: str) -> str | None:
+    pattern = re.compile(
+        rf"^const {re.escape(name)}\b(?P<body>.*?)(?=^const [A-Z]\w*\b|\Z)",
+        re.M | re.S,
+    )
+    for code in code_blocks:
+        match = pattern.search(code)
+        if match:
+            return match.group(0)
+    return None
 
 
 def load_contract(path: Path) -> dict[str, Any]:
@@ -114,15 +154,19 @@ def load_contract(path: Path) -> dict[str, Any]:
 def check_style_guide(rel: str, text: str, pin: dict[str, Any], drifts: list[Drift]) -> None:
     found = extract_dp_constants(text)
     expected_consts = pin.get("dp_constants") or {}
+    code_blocks = extract_fenced_code(text, {"js", "jsx"})
+    executable_code = "\n".join(code_blocks)
     font_css = found.pop("DP_FONT_FACE_CSS", None)
-    if font_css is None:
+    if pin.get("forbid_font_face"):
+        font_face_sources = []
+        if font_css is not None:
+            font_face_sources.append("DP_FONT_FACE_CSS")
+        if re.search(r"@font-face\b", executable_code, re.I):
+            font_face_sources.append("@font-face")
+        if font_face_sources:
+            drifts.append(Drift(rel, "font_face", "<absent>", font_face_sources))
+    elif font_css is None:
         drifts.append(Drift(rel, "DP_FONT_FACE_CSS", "<present>", "<missing>"))
-    else:
-        ff_found = parse_font_face(font_css)
-        ff_pin = pin.get("font_face") or {}
-        for k in ("family", "mime", "sha256"):
-            if ff_pin.get(k) != ff_found.get(k):
-                drifts.append(Drift(rel, f"font_face.{k}", ff_pin.get(k), ff_found.get(k)))
 
     for name, expected in expected_consts.items():
         if name not in found:
@@ -133,13 +177,25 @@ def check_style_guide(rel: str, text: str, pin: dict[str, Any], drifts: list[Dri
         if name not in expected_consts:
             drifts.append(Drift(rel, name, "<not in pin>", found[name]))
 
+    for name in pin.get("required_components") or []:
+        if extract_component(code_blocks, name) is None:
+            drifts.append(Drift(rel, f"required_component.{name}", name, "<missing>"))
+
     attr = pin.get("footer_attribution")
-    if attr and attr not in text:
-        drifts.append(Drift(rel, "footer_attribution", attr, "<missing>"))
+    footer = extract_component(code_blocks, "BuiltWithFooter")
+    if attr and (footer is None or f"<span>{attr}</span>" not in footer):
+        drifts.append(Drift(rel, "footer_attribution", attr, "<missing from BuiltWithFooter>"))
 
     ch = pin.get("compact_header") or {}
-    kind_m = re.search(r"style=\{\{\s*color:\s*(DP_TEXT_\w+)\s*\}\}>\{kind\}", text)
-    period_m = re.search(r"style=\{\{\s*color:\s*(DP_TEXT_\w+)\s*\}\}>\{period\}", text)
+    compact_header = extract_component(code_blocks, "CompactHeader") or ""
+    kind_m = re.search(
+        r"style=\{\{\s*color:\s*(DP_TEXT_\w+)\s*\}\}>\{kind\}",
+        compact_header,
+    )
+    period_m = re.search(
+        r"style=\{\{\s*color:\s*(DP_TEXT_\w+)\s*\}\}>\{period\}",
+        compact_header,
+    )
     kind_found = kind_m.group(1) if kind_m else "<missing>"
     period_found = period_m.group(1) if period_m else "<missing>"
     if ch.get("kind_color") != kind_found:
@@ -147,24 +203,47 @@ def check_style_guide(rel: str, text: str, pin: dict[str, Any], drifts: list[Dri
     if ch.get("period_color") != period_found:
         drifts.append(Drift(rel, "compact_header.period_color", ch.get("period_color"), period_found))
 
-    for key in ("status_positive", "status_negative"):
-        expected = pin.get(key)
-        if expected and expected not in text:
-            drifts.append(Drift(rel, key, expected, "<missing>"))
-
 
 def check_examples(rel: str, text: str, pin: dict[str, Any], drifts: list[Drift]) -> None:
-    for name in pin.get("required_components") or []:
-        if name not in text:
-            drifts.append(Drift(rel, f"required_component.{name}", name, "<missing>"))
+    code_blocks = extract_fenced_code(text, {"jsx"})
+    if not code_blocks:
+        drifts.append(Drift(rel, "artifact_code_blocks", "at least one JSX block", "<missing>"))
 
-    for key in ("status_positive", "status_negative", "ink", "muted"):
-        expected = pin.get(key)
-        if expected and expected not in text:
-            drifts.append(Drift(rel, key, expected, "<missing>"))
+    for index, code in enumerate(code_blocks, start=1):
+        for name in pin.get("required_components") or []:
+            if not re.search(rf"<{re.escape(name)}(?:\s|/?>)", code):
+                drifts.append(
+                    Drift(
+                        rel,
+                        f"artifact.{index}.required_component.{name}",
+                        f"<{name} ...>",
+                        "<missing>",
+                    )
+                )
+
+    allowed_hex = {value.lower() for value in pin.get("allowed_hex_values") or []}
+    used_hex = {
+        value.lower()
+        for code in code_blocks
+        for value in CSS_HEX_RE.findall(code)
+    }
+    unapproved_hex = sorted(used_hex - allowed_hex)
+    if unapproved_hex:
+        drifts.append(
+            Drift(
+                rel,
+                "allowed_hex_values",
+                sorted(allowed_hex),
+                unapproved_hex,
+            )
+        )
 
     if pin.get("forbid_dp_redeclarations"):
-        redecs = re.findall(r"^const (DP_[A-Z0-9_]+)\s*=", text, re.M)
+        redecs = [
+            name
+            for code in code_blocks
+            for name in re.findall(r"^const (DP_[A-Z0-9_]+)\s*=", code, re.M)
+        ]
         if redecs:
             drifts.append(
                 Drift(
@@ -174,6 +253,15 @@ def check_examples(rel: str, text: str, pin: dict[str, Any], drifts: list[Drift]
                     f"found {redecs}",
                 )
             )
+
+
+def check_terms(rel: str, text: str, pin: dict[str, Any], drifts: list[Drift]) -> None:
+    for term in pin.get("required_terms") or []:
+        if term not in text:
+            drifts.append(Drift(rel, f"required_term.{term}", term, "<missing>"))
+    for term in pin.get("forbidden_terms") or []:
+        if term in text:
+            drifts.append(Drift(rel, f"forbidden_term.{term}", "<absent>", term))
 
 
 def check_repo(contract_path: Path = DEFAULT_CONTRACT, repo_root: Path = REPO_ROOT) -> list[Drift]:
@@ -196,6 +284,8 @@ def check_repo(contract_path: Path = DEFAULT_CONTRACT, repo_root: Path = REPO_RO
             check_style_guide(rel, text, pin, drifts)
         elif rel.endswith("example-artifacts/SKILL.md"):
             check_examples(rel, text, pin, drifts)
+        elif "required_terms" in pin or "forbidden_terms" in pin:
+            check_terms(rel, text, pin, drifts)
         else:
             raise ContractError(f"no checker registered for {rel}")
     return drifts

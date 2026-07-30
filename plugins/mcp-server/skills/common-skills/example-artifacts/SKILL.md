@@ -14,7 +14,7 @@ row labels with the customer's real workbook rows, not invented scaffolding.
 
 > **Shared components.** Every example below is **customer-built compact**:
 > paste `CompactHeader`, `BuiltWithFooter`, `ArtifactSection`,
-> `DrivepointFonts`, `DrivepointMark`, `DP_CHART_SERIES`, and font/token
+> `DrivepointMark`, `DP_CHART_SERIES`, `DP_CHART_DELTA`, and font/token
 > constants from `artifact-style-guide.md`. Do **not** use `ArtifactPage`,
 > `ArtifactHeader`, `DrivepointLockup`, or `SignatureFooter` for these
 > connector examples — that chrome is for sent docs only.
@@ -355,7 +355,7 @@ const totalVariancePct = totalVariance / totalForecast;
 
 const VarianceCell = ({ value, pct }) => {
   const pos = value >= 0;
-  const color = pos ? '#2f7d54' : '#b0472f';
+  const color = pos ? DP_CHART_DELTA.positive : DP_CHART_DELTA.negative;
   const arrow = pos ? '↑' : '↓';
   return (
     <span className="tabular-nums" style={{ color }}>
@@ -399,7 +399,7 @@ export default function App() {
           <Tooltip formatter={(v) => fmtMoney(v, CURRENCY)} />
           <Legend formatter={(value) => <span style={{ color: '#191815' }}>{value}</span>} />
           <Bar dataKey="actual_value" name="Actual" fill={DP_CHART_SERIES[0]} />
-          <Bar dataKey="forecast_value" name="Forecast" fill={DP_CHART_SERIES[19]} />
+          <Bar dataKey="forecast_value" name="Forecast" fill={DP_CHART_DELTA.forecast} />
         </BarChart>
       </ResponsiveContainer>
 
@@ -446,9 +446,10 @@ for series roles, interactivity, and table controls — **do not duplicate that
 spec here.** Chrome follows customer-built compact (`CompactHeader`, `BuiltWithFooter`).
 
 **Series alignment:** the scenario skill and this example both use PM-314
-(`DP_CHART_SERIES[0]` primary, `[1]` second, `[19]` baseline grey). The
-Layout B structure and interactivity rules from the scenario skill remain
-the canonical behavior contract.
+for scenario lines (`DP_CHART_SERIES[0]` primary, `[1]` second) and
+`DP_CHART_DELTA.forecast` for the baseline. The Layout B structure and
+interactivity rules from the scenario skill remain the canonical behavior
+contract.
 
 ```jsx
 import React, { useState } from 'react';
@@ -490,6 +491,11 @@ const chartData = MONTHS.map((m, i) => {
   SCENARIOS.forEach((s) => { row[s.id] = s.values[i]; });
   return row;
 });
+const chartValues = [...BASELINE, ...SCENARIOS.flatMap((s) => s.values)];
+const chartMin = Math.min(...chartValues);
+const chartMax = Math.max(...chartValues);
+const chartPadding = Math.max((chartMax - chartMin) * 0.12, 1);
+const chartDomain = [chartMin - chartPadding, chartMax + chartPadding];
 
 export default function App() {
   const [relative, setRelative] = useState(false);
@@ -532,10 +538,14 @@ export default function App() {
           <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#ecebe9" />
             <XAxis dataKey="month" stroke="#716e6b" />
-            <YAxis stroke="#716e6b" tickFormatter={(v) => fmtMoneyCompact(v, CURRENCY)} />
+            <YAxis
+              stroke="#716e6b"
+              domain={chartDomain}
+              tickFormatter={(v) => fmtMoneyCompact(v, CURRENCY)}
+            />
             <Tooltip formatter={(v) => fmtMoney(v, CURRENCY)} />
             <Legend formatter={(value) => <span style={{ color: '#191815' }}>{value}</span>} />
-            <Line type="monotone" dataKey="baseline" name="Baseline" stroke={DP_CHART_SERIES[19]} strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="baseline" name="Baseline" stroke={DP_CHART_DELTA.forecast} strokeWidth={2} dot={false} />
             {SCENARIOS.map((s, i) => (
               <Line
                 key={s.id}
@@ -603,7 +613,11 @@ export default function App() {
                   {s.values.map((v, i) => {
                     const cell = relative ? v - BASELINE[i] : v;
                     const direction = cell > 0 ? '↑ +' : cell < 0 ? '↓ −' : '→ ';
-                    const color = cell > 0 ? '#2f7d54' : cell < 0 ? '#b0472f' : '#191815';
+                    const color = cell > 0
+                      ? DP_CHART_DELTA.positive
+                      : cell < 0
+                        ? DP_CHART_DELTA.negative
+                        : DP_TEXT_MUTED;
                     const display = relative
                       ? `${direction}${fmtMoney(Math.abs(cell), CURRENCY)}`
                       : fmtMoney(v, CURRENCY);
@@ -689,7 +703,7 @@ export default function App() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {[
           { label: "Yesterday's sales", value: fmtMoney(SALES_BY_CHANNEL.reduce((s, r) => s + r.sales, 0), CURRENCY) },
-          { label: 'MTD vs plan', value: `${fmtMoney(MTD.actual, CURRENCY)} (${mtdVar >= 0 ? '↑' : '↓'} ${fmtMoney(Math.abs(mtdVar), CURRENCY)})`, color: mtdVar >= 0 ? '#2f7d54' : '#b0472f' },
+          { label: 'MTD vs plan', value: `${fmtMoney(MTD.actual, CURRENCY)} (${mtdVar >= 0 ? '↑' : '↓'} ${fmtMoney(Math.abs(mtdVar), CURRENCY)})`, color: mtdVar >= 0 ? DP_CHART_DELTA.positive : DP_CHART_DELTA.negative },
           { label: 'Cash position', value: fmtMoney(CASH, CURRENCY) },
           { label: 'Gross margin', value: fmtPct(MARGINS[0].value) },
         ].map((k) => (
@@ -743,7 +757,7 @@ export default function App() {
                 <tr key={r.sku} className="border-t border-[#ecebe9]">
                   <td className="py-2">{r.sku}</td>
                   <td className="py-2 text-right">{r.weeks.toFixed(1)}</td>
-                  <td className="py-2 text-right" style={{ color: r.status === 'ok' ? '#2f7d54' : '#b0472f' }}>
+                  <td className="py-2 text-right" style={{ color: r.status === 'ok' ? DP_CHART_DELTA.positive : DP_CHART_DELTA.negative }}>
                     {r.status === 'ok' ? 'OK' : r.status === 'watch' ? 'Watch' : 'Stock-out risk'}
                   </td>
                 </tr>
@@ -850,13 +864,14 @@ export default function App() {
 
 **Triggered by:** high-traffic openers like "What were my net sales for June so far?"
 All three variants **collapse the title block** — metadata band only (`kind` + `period`).
+The collapsed `kind` carries the answer's subject; never replace it with a generic
+label such as "Single answer" or "Daily flash."
 
 ### 7a — One number
 
 ```jsx
 import React from 'react';
 
-const CUSTOMER_NAME = 'Sample Brand';
 const CURRENCY = 'USD';
 const VALUE = 612000;
 
@@ -867,8 +882,8 @@ export default function App() {
   return (
     <div className="p-6 bg-white" style={{ maxWidth: 920, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
       <CompactHeader
-        kind="Single answer"
-        period="MTD"
+        kind="Net sales"
+        period="June MTD"
       />
       <div className="text-4xl font-bold tabular-nums text-[#191815]">{fmtMoney(VALUE, CURRENCY)}</div>
       <div className="text-xs text-[#716e6b] mt-4">Source: ecommerce_transactions_order_level</div>
@@ -886,7 +901,6 @@ import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 
-const CUSTOMER_NAME = 'Sample Brand';
 const CURRENCY = 'USD';
 const RAW = [
   { day: 'Jun 1', sales: 18000 },
@@ -915,8 +929,8 @@ export default function App() {
   return (
     <div className="p-6 bg-white" style={{ maxWidth: 920, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
       <CompactHeader
-        kind="Daily flash"
-        period="Daily"
+        kind="Net sales trend"
+        period="Jun 1–18"
       />
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={RAW} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
@@ -939,7 +953,6 @@ export default function App() {
 ```jsx
 import React from 'react';
 
-const CUSTOMER_NAME = 'Sample Brand';
 const CURRENCY = 'USD';
 const RAW = [
   { channel: 'TikTok', sales: 84000 },
@@ -953,7 +966,7 @@ export default function App() {
   return (
     <div className="p-6 bg-white" style={{ maxWidth: 920, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
       <CompactHeader
-        kind="Channel breakdown"
+        kind="Gross sales by channel"
         period="Oct 2025"
       />
       <table className="w-full text-sm tabular-nums">

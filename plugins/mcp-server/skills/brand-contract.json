@@ -9,7 +9,7 @@
         "DP_TEXT_MUTED": "#716e6b",
         "DP_BORDER_SUBTLE": "#ecebe9",
         "DP_CUSTOMER_PX": 16,
-        "DP_FONT_STACK": "Manrope, ui-sans-serif, system-ui, sans-serif",
+        "DP_FONT_STACK": "ui-sans-serif, system-ui, sans-serif",
         "DP_BLUE_2": "#76a4ea",
         "DP_YELLOW_CTA": "#f6ce42",
         "DP_BG_WARM": "#f7f4f1",
@@ -45,31 +45,67 @@
           "#96caf9",
           "#e76ea3",
           "#55ccd8"
-        ]
+        ],
+        "DP_CHART_DELTA": {
+          "forecast": "#cbd5e1",
+          "negative": "#b0472f",
+          "neutral": "#94a3b8",
+          "positive": "#2f7d54"
+        }
       },
-      "font_face": {
-        "family": "Manrope",
-        "mime": "font/ttf",
-        "sha256": "230a8a614087994e929a48dc00a8f6fc698e6f9d820c812a24343ee10145987b"
-      },
+      "forbid_font_face": true,
+      "required_components": [
+        "CompactHeader",
+        "BuiltWithFooter"
+      ],
       "footer_attribution": "Built with Drivepoint",
       "compact_header": {
         "kind_color": "DP_TEXT_PRIMARY",
         "period_color": "DP_TEXT_MUTED"
-      },
-      "status_positive": "#2f7d54",
-      "status_negative": "#b0472f"
+      }
     },
     "example-artifacts/SKILL.md": {
       "required_components": [
         "CompactHeader",
         "BuiltWithFooter"
       ],
-      "status_positive": "#2f7d54",
-      "status_negative": "#b0472f",
-      "ink": "#191815",
-      "muted": "#716e6b",
+      "allowed_hex_values": [
+        "#191815",
+        "#716e6b",
+        "#ecebe9",
+        "#f7f4f1",
+        "#f9f8f6",
+        "#fefefe",
+        "#FFDE6A"
+      ],
       "forbid_dp_redeclarations": true
+    },
+    "report-creation-guide/SKILL.md": {
+      "required_terms": [
+        "CompactHeader",
+        "BuiltWithFooter"
+      ],
+      "forbidden_terms": [
+        "ArtifactHeader"
+      ]
+    },
+    "scenario-planning/SKILL.md": {
+      "required_terms": [
+        "CompactHeader",
+        "BuiltWithFooter"
+      ],
+      "forbidden_terms": [
+        "ArtifactHeader"
+      ]
+    },
+    "system-prompt/SKILL.md": {
+      "required_terms": [
+        "CompactHeader",
+        "BuiltWithFooter"
+      ],
+      "forbidden_terms": [
+        "ArtifactHeader"
+      ]
     }
   }
 }

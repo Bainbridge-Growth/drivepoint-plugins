@@ -285,16 +285,17 @@ the change is not persisted.
 
 **3. Formatting.** Every number is formatted per its metric's `dataType`
 (currency in the _plan's_ currency, not hardcoded USD; percent to one
-decimal; days to zero decimals). Color deltas with `#2f7d54` (better) /
-`#b0472f` (worse) **and** a `↑`/`↓` glyph — never color alone. For
-negative baselines use the less-negative-is-better convention consistently.
+decimal; days to zero decimals). Color deltas with
+`DP_CHART_DELTA.positive` (better) / `DP_CHART_DELTA.negative` (worse)
+**and** a `↑`/`↓` glyph — never color alone. For negative baselines use the
+less-negative-is-better convention consistently.
 
 ### Series roles (from the chart palette)
 
 `artifact-style-guide.md` § "Color tokens" is the palette. Do not add new
 hexes — map each scenario series onto the existing tokens:
 
-- **Baseline series line:** `DP_CHART_SERIES[19]` (`#acacac`),
+- **Baseline series line:** `DP_CHART_DELTA.forecast` (`#cbd5e1`),
   `strokeWidth={2}`, `dot={false}`.
 - **Scenario / primary series line:** `DP_CHART_SERIES[0]`,
   `strokeWidth={2}`, `dot={false}`.
@@ -333,7 +334,7 @@ In order, top to bottom:
      <Line
        dataKey="baseline"
        name="Baseline"
-       stroke={DP_CHART_SERIES[19]}
+       stroke={DP_CHART_DELTA.forecast}
        strokeWidth={2}
        dot={false}
      />
@@ -402,6 +403,9 @@ order:
    across the horizon:
    - Default: a multi-line `LineChart`, one line per scenario's `scenario`
      series, over the Forecast horizon (share one `baseline` line).
+   - Give line comparisons a data-derived padded Y-axis domain. Do not
+     default to zero when every series occupies a narrow high-value band;
+     that hides the differences this view exists to compare.
    - When the user cares about the scenario's position in a tradeoff
      space (e.g. CAC vs. Ad Spend), use a `ScatterChart` with a
      translucent **green target region** marking the desirable zone

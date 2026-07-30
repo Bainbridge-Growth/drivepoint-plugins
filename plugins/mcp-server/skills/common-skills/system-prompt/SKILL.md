@@ -58,9 +58,10 @@ wrong plan ids, and wrong formatting. Do not skip it.
    `CompactHeader` and close with `BuiltWithFooter` (defined in
    `artifact-style-guide.md`). No lockup or logomark in the header.
    Drivepoint-only — no client accent colors. Small single-answer cards
-   may collapse to the metadata band only; bare chrome is a degradation
-   path, not a target. Sent-doc full lockup chrome is out of scope for
-   this connector.
+   may collapse to the metadata band only, but its `kind` must name the
+   metric or answer rather than a generic artifact type. Bare chrome is a
+   degradation path, not a target. Sent-doc full lockup chrome is out of
+   scope for this connector.
 9. **Never trust your own sense of "today."** Models carry stale priors
    about the current date. Before resolving any relative period ("last
    12 months", "this quarter", "YTD", "last week"), derive the anchor
