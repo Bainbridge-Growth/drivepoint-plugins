@@ -206,7 +206,7 @@ const CompactHeader = ({ kind, period, title, subtitle }) => (
   <DrivepointFonts />
   <header className="mb-4" style={{ fontFamily: DP_FONT_STACK }}>
     <div className="flex items-baseline justify-between gap-3 pb-[11px]" style={{ borderBottom: `1px solid ${DP_BORDER_SUBTLE}` }}>
-      <div className="text-[10.5px] font-bold uppercase tracking-[0.11em]" style={{ color: DP_TEXT_MUTED }}>{kind}</div>
+      <div className="text-[10.5px] font-bold uppercase tracking-[0.11em]" style={{ color: DP_TEXT_PRIMARY }}>{kind}</div>
       {period ? (
         <div className="text-[10.5px] font-bold uppercase tracking-[0.11em] tabular-nums shrink-0" style={{ color: DP_TEXT_MUTED }}>{period}</div>
       ) : null}
@@ -241,9 +241,10 @@ Sent-doc brand row: 1px `#ecebe9` hairline under the lockup; optional
 
 Default for this connector. Match the D2.1 pattern:
 
-1. **Metadata band** — artifact type small-caps left (e.g. `MODEL UPDATE GUIDE`),
-   period small-caps right (e.g. `JULY 2026`), hairline beneath. **No lockup,
-   no logomark, no client mark** in the header.
+1. **Metadata band** — artifact type small-caps left in **ink** (`DP_TEXT_PRIMARY`,
+   e.g. `MODEL UPDATE GUIDE`); period small-caps right stays **muted**
+   (`DP_TEXT_MUTED`, e.g. `JULY 2026`); hairline beneath. Type leads, period
+   stays quiet. **No lockup, no logomark, no client mark** in the header.
 2. **Title block** — title (customer or artifact name) at 17px bold + one-line
    muted subtitle. Data is the hero; type stays restrained.
 3. **Footer** — `BuiltWithFooter`: 13px mark + "Built with Drivepoint" left,
@@ -320,9 +321,10 @@ Sent docs use `ArtifactPage` (warm `#f7f4f1` ground, near-white card).
   in each artifact.
 - Prefer `DP_FONT_STACK` (`Manrope, ui-sans-serif, system-ui, sans-serif`).
   The system fallback covers runtimes where the data URI is unavailable.
-- **Customer-built:** restrained type — metadata band ~10.5px small-caps,
-  title 17px bold, subtitle 12px muted. Section labels small-caps muted.
-  Data is the hero; do not use display-scale headers.
+- **Customer-built:** restrained type — metadata band ~10.5px small-caps
+  (artifact type in ink, period muted), title 17px bold, subtitle 12px muted.
+  Section labels small-caps muted. Data is the hero; do not use display-scale
+  headers.
 - **Sent docs:** headers `font-semibold`; `text-base` for chart titles and
   `text-xl` for dashboard headers.
 - Body: same stack as headers.
