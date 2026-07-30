@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "description": "Pinned brand values for customer-facing MCP artifact skills. Source of truth is drivepoint-internal-plugins brand-core/tokens.json; update this pin only in the same PR that intentionally syncs brand changes.",
+  "skills_root": "plugins/mcp-server/skills/common-skills",
+  "files": {
+    "artifact-style-guide/SKILL.md": {
+      "dp_constants": {
+        "DP_TEXT_PRIMARY": "#191815",
+        "DP_TEXT_MUTED": "#716e6b",
+        "DP_BORDER_SUBTLE": "#ecebe9",
+        "DP_CUSTOMER_PX": 16,
+        "DP_FONT_STACK": "Manrope, ui-sans-serif, system-ui, sans-serif",
+        "DP_BLUE_2": "#76a4ea",
+        "DP_YELLOW_CTA": "#f6ce42",
+        "DP_BG_WARM": "#f7f4f1",
+        "DP_BG_NEAR_WHITE": "#fefefe",
+        "DP_CHART_SERIES": [
+          "#3975d0",
+          "#dca729",
+          "#39c1d0",
+          "#d03975",
+          "#8436c9",
+          "#d76c13",
+          "#543ed6",
+          "#195b5c",
+          "#a33267",
+          "#ca9ae9",
+          "#4296f2",
+          "#e1bd3d",
+          "#1c2cc0",
+          "#27a6b6",
+          "#d98820",
+          "#2c469e",
+          "#e3538e",
+          "#a354d8",
+          "#515151",
+          "#acacac",
+          "#6fb5f6",
+          "#e5ca59",
+          "#2ab6c9",
+          "#e23c7a",
+          "#b472e0",
+          "#ddb32f",
+          "#735add",
+          "#96caf9",
+          "#e76ea3",
+          "#55ccd8"
+        ]
+      },
+      "font_face": {
+        "family": "Manrope",
+        "mime": "font/ttf",
+        "sha256": "230a8a614087994e929a48dc00a8f6fc698e6f9d820c812a24343ee10145987b"
+      },
+      "footer_attribution": "Built with Drivepoint",
+      "compact_header": {
+        "kind_color": "DP_TEXT_PRIMARY",
+        "period_color": "DP_TEXT_MUTED"
+      },
+      "status_positive": "#2f7d54",
+      "status_negative": "#b0472f"
+    },
+    "example-artifacts/SKILL.md": {
+      "required_components": [
+        "CompactHeader",
+        "BuiltWithFooter"
+      ],
+      "status_positive": "#2f7d54",
+      "status_negative": "#b0472f",
+      "ink": "#191815",
+      "muted": "#716e6b",
+      "forbid_dp_redeclarations": true
+    }
+  }
+}

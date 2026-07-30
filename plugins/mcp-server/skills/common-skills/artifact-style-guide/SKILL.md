@@ -90,6 +90,9 @@ with typed "Drivepoint".
 On sent docs, `customer` and `meta` are optional.
 
 ```jsx
+// Brand-locked: CI checks these against brand-contract.json. Brand changes
+// come from the brand-core token set (drivepoint-internal-plugins), not from
+// editing these lines.
 const DrivepointMark = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 1000 1000" fill="none" aria-hidden="true" focusable="false">
     <path d="M759.561 156.165L501.552 95.4526L294.435 46.7212L102.114 197.892L309.242 246.623L567.373 307.235L567.362 307.246L759.561 156.176V156.165Z" fill="#76A4EA"/>

@@ -23,6 +23,10 @@ row labels with the customer's real workbook rows, not invented scaffolding.
 > Single-answer cards may omit `title` / `subtitle` (metadata band only).
 > `generated` is the artifact's actual creation date; replace the sample
 > `28 Jul 2026` value in every template.
+>
+> **Brand-locked:** CI checks brand hexes / chrome names against
+> `brand-contract.json`. Brand changes come from the brand-core token set
+> (drivepoint-internal-plugins), not from editing these lines.
 
 ---
 
@@ -1011,6 +1015,9 @@ import React from 'react';
 
 const CUSTOMER_NAME = 'Brutus Broth';
 
+// Brand-locked: CI checks these against brand-contract.json. Brand changes
+// come from the brand-core token set (drivepoint-internal-plugins), not from
+// editing these lines.
 const Chip = ({ children, tone }) => {
   const styles = {
     tab: { background: '#f7f4f1', color: '#191815', border: '1px solid transparent' },
