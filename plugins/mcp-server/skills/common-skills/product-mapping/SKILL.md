@@ -130,20 +130,43 @@ Follow these steps in order. Never skip a step, never reorder them.
 6. **Resolve leftover rows** using the join-key ladder in Part 2:
    exact internal SKU, then UPC, then name semantics. Flag anything
    resolved by name semantics alone as `unmapped` (omit the patch).
-7. **Present the canonical summary + flagged rows** as a JSX/React
-   artifact (see "Presenting the result"). Do NOT render every source
-   row. On re-runs, call out what CHANGED since the last mapping
-   (new rows, drift, corrections) — that's the useful review, not
-   the unchanged baseline.
-8. **STOP. Wait for explicit user approval.** See the "Approval gate"
+7. **Materialize the per-sourceKey decision set** — the single source
+   of truth that BOTH the artifact and the save read from. For every
+   source row from step 1, write down (in your head or scratch text)
+   exactly one line:
+
+   `<sourceKey> → <confirmed | rejected | unmapped>` plus, if
+   confirmed, the full canonical attributes (`drivepointMappedId`,
+   `drivepointMappedProductName`, `drivepointMappedSku`,
+   `productFamily`, `productCategory`, `productFormat`,
+   `sizeVariant`, `productDescription`).
+
+   Aliases sharing a canonical each get their OWN line — the
+   canonical attributes repeat verbatim across them. This is the
+   set the save CSV serializes; do it NOW, not at save time. The
+   artifact in the next step is a rollup of this set, not a
+   replacement for it.
+8. **Present the canonical summary + flagged rows** as a JSX/React
+   artifact (see "Presenting the result"). The artifact aggregates
+   the step-7 set for human review — one row per canonical, not per
+   source row — but the underlying decisions are still per sourceKey.
+   On re-runs, call out what CHANGED since the last mapping (new
+   rows, drift, corrections) — that's the useful review, not the
+   unchanged baseline.
+9. **STOP. Wait for explicit user approval.** See the "Approval gate"
    block below — this is a hard stop, not a soft one.
-9. **Call `save_product_mappings_to_firebase` ONCE**, passing only
-   the deltas. See "The save call" for the three inputs (CSV of
-   new/changed confirmations + optional bulk-reject list + optional
-   unmap list). **Merges into the Firestore doc.** On re-runs, this
-   is typically a small payload — a handful of new/changed rows, not
-   the whole roster.
-10. **Call `publish_product_mappings_to_bigquery` ONCE.** **Overwrites
+10. **Call `save_product_mappings_to_firebase` ONCE**, serializing the
+    confirmations from step 7 directly into the CSV — one row per
+    confirmed sourceKey — plus the step-7 rejections into
+    `rejected_source_keys`, plus any demotions in
+    `unmapped_source_keys`. **Do not re-enumerate aliases from the
+    roster here** — step 7 already recorded every sourceKey → decision
+    pair. If you find yourself scanning the roster row-by-row at save
+    time to figure out which aliases belong to which canonical, you
+    skipped step 7 — go back and do it. **Merges into the Firestore
+    doc.** On re-runs the payload is typically small — only the rows
+    whose decisions changed.
+11. **Call `publish_product_mappings_to_bigquery` ONCE.** **Overwrites
     the BigQuery catalog table.** If this call fails after save, rerun
     publish — the Firestore doc is already correct, do not re-save.
 
@@ -173,7 +196,7 @@ could contain a delimiter.
 
 ## Approval gate — DO NOT SKIP
 
-Between step 7 (render the artifact) and step 9 (call save) there is
+Between step 8 (render the artifact) and step 10 (call save) there is
 a **hard stop**. The user reviews the artifact and explicitly tells
 you to proceed. You do not save until they do.
 
@@ -582,6 +605,12 @@ minimum:
 
 ## Presenting the result
 
+The artifact is a **projection** of the per-sourceKey decision set
+you built in step 7 — it aggregates for human review, but the
+underlying data is still one decision per sourceKey. When you save
+in step 10, you serialize the step-7 set directly; the artifact is
+never the source of truth.
+
 Render ONE JSX/React artifact (`application/vnd.ant.react`)
 containing three sections. Do NOT render one row per source row — on
 a 500+ row roster that is thousands of cells of transcription and
@@ -591,7 +620,9 @@ nobody reviews it.
    `drivepointMappedId`, `drivepointMappedProductName`,
    `drivepointMappedSku`, `productFamily`, `productCategory`,
    `productFormat`, `sizeVariant`, `sourceRowCount`, `channels`
-   (comma-separated).
+   (comma-separated). `sourceRowCount` is the count of aliases from
+   the step-7 set that share this canonical — a reminder to yourself
+   that each of those aliases becomes its own CSV row on save.
 2. **Flagged rows** — one row per flagged source row. Columns:
    `channel`, `stores`, `sku`, `title`, `proposedCanonical`,
    `reasonFlagged`. Visually distinguish this section from Canonical
@@ -607,7 +638,7 @@ artifacts.
 `save` / `looks good` / `proceed` / `publish` to write, or to tell
 you what to change. **Do NOT call `save_product_mappings_to_firebase`
 on the same turn as the artifact.** See "Approval gate — DO NOT SKIP"
-above; save is step 9, and only after explicit approval.
+above; save is step 10, and only after explicit approval.
 
 ---
 
@@ -674,6 +705,17 @@ above; save is step 9, and only after explicit approval.
   automatically. Re-sending the full 500-row baseline every save
   bloats the payload for zero benefit and costs 60-90 seconds of
   generation time.
+- **Never re-enumerate aliases at save time.** If step 10 starts with
+  "let me scan the roster and figure out which sourceKeys belong to
+  the cucumber balm canonical" — stop. You skipped step 7. The
+  per-sourceKey decision set was supposed to be built once, before
+  the artifact, and the save is a straight serialization of it. If
+  the artifact only lists one representative per canonical and you're
+  hitting the "which aliases go on this canonical?" question at save
+  time, the mapping decisions never got materialized — go back to
+  step 7 and record every source row's decision (with the shared
+  canonical attributes for confirmed rows) so save is a pure
+  transcription pass, not a re-derivation.
 - **Never emit a `confirmed` row with empty mapped-\* / product-\*
   fields.** Every confirmation must carry its full attribute set. The
   server drops fieldless confirmations and reports them under
