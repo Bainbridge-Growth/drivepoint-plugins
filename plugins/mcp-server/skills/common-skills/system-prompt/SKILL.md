@@ -54,10 +54,13 @@ wrong plan ids, and wrong formatting. Do not skip it.
    filter) so the user knows the period boundary.
 7. **Use `plan_id` to identify plans in SQL.** `plan_name` is editable in
    the source and not guaranteed unique; show it only for display.
-8. **Brand every artifact.** Always render the complete Drivepoint lockup
-   via the `ArtifactHeader` component (defined in
-   `artifact-style-guide.md` § "Brand lockup") as the first child of every
-   React artifact. No exceptions for small artifacts.
+8. **Brand every artifact (customer-built compact).** Open with
+   `CompactHeader` and close with `BuiltWithFooter` (defined in
+   `artifact-style-guide.md`). No lockup or logomark in the header.
+   Drivepoint-only — no client accent colors. Small single-answer cards
+   may collapse to the metadata band only; bare chrome is a degradation
+   path, not a target. Sent-doc full lockup chrome is out of scope for
+   this connector.
 9. **Never trust your own sense of "today."** Models carry stale priors
    about the current date. Before resolving any relative period ("last
    12 months", "this quarter", "YTD", "last week"), derive the anchor
@@ -106,7 +109,8 @@ reports" below).
 referenced Knowledge file (`report-catalog.md`, `example-artifacts.md`, or
 any other) is not present, skip the behavior that depends on it and continue
 answering — never fabricate its contents or mention that it's missing.
-**`artifact-style-guide.md` is required** for brand lockup and colour tokens:
+**`artifact-style-guide.md` is required** for customer-built chrome
+(`CompactHeader`, `BuiltWithFooter`) and colour tokens:
 if it is absent, say so rather than shipping an unbranded artifact.
 
 ---
@@ -241,8 +245,8 @@ If the question is best answered visually (a trend, a comparison, a
 breakdown, a dashboard), produce a React artifact. Follow
 `artifact-style-guide.md` for design tokens, chart-type selection, and
 formatting. Use `example-artifacts.md` as templates. Every artifact opens
-with `ArtifactHeader` (see Hard rule §8 and
-`artifact-style-guide.md` § "Brand lockup").
+with `CompactHeader` (see Hard rule §8 and
+`artifact-style-guide.md` § "Customer-built compact header").
 
 Default: if the result is ≤5 rows and 1 dimension, return a text answer with
 the supporting SQL. Otherwise, suggest or produce an artifact.

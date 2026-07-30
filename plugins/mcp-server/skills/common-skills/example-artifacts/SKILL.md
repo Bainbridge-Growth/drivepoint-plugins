@@ -12,16 +12,15 @@ row labels with the customer's real workbook rows, not invented scaffolding.
 > figures (and currency) from the actual query result. The `RAW` arrays in
 > each example are scaffolding for the rendering pattern only.
 
-> **Shared components.** Every example below uses `DrivepointLockup`,
-> `ArtifactHeader`, `DrivepointFonts`, `DP_CHART_SERIES`, and — for Full
-> documents — `ArtifactPage` / `ArtifactSection` / `SignatureFooter`
-> (plus `DrivepointMark` only when a constrained mark-alone is needed).
-> The canonical definitions live in `artifact-style-guide.md` § "Brand
-> lockup" and § "Color tokens" — paste them into the artifact before the
-> `App` component. They are not re-declared in each example.
-> Pass optional `customer` (and `meta`) on `ArtifactHeader` when the
-> tenant display name is known. Pass `kicker` only when the artifact has
-> a category to name (Full); omit it for Compact single-answer shells.
+> **Shared components.** Every example below is **customer-built compact**:
+> paste `CompactHeader`, `BuiltWithFooter`, `DrivepointFonts`,
+> `DrivepointMark`, `DP_CHART_SERIES`, and font/token constants from
+> `artifact-style-guide.md`. Do **not** use `ArtifactPage`,
+> `ArtifactHeader`, `DrivepointLockup`, or `SignatureFooter` for these
+> connector examples — that chrome is for sent docs only.
+> Map: `kind` ← former kicker / artifact type; `period` ← date band;
+> `title` ← customer or artifact name; `subtitle` ← context line.
+> Single-answer cards may omit `title` / `subtitle` (metadata band only).
 
 ---
 
@@ -31,7 +30,7 @@ row labels with the customer's real workbook rows, not invented scaffolding.
 
 **Data shape:** `[{ month, channel, currency, net_sales, orders }, …]`
 
-**Tier:** Full — `kicker` + `ArtifactPage`.
+**Tier:** Customer-built compact — `CompactHeader` + `BuiltWithFooter`.
 
 ```jsx
 import React from 'react';
@@ -115,13 +114,12 @@ const KpiCard = ({ label, value, sub }) => (
 
 export default function App() {
   return (
-    <ArtifactPage>
-      <ArtifactHeader
-        title="Revenue by Channel"
-        subtitle={`${DATE_RANGE} · all channels · ${CURRENCY}`}
-        customer={CUSTOMER_NAME}
-        meta={DATE_RANGE}
-        kicker="Monthly business review"
+    <div className="p-6 bg-white" style={{ maxWidth: 920, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
+      <CompactHeader
+        kind="Monthly business review"
+        period={DATE_RANGE}
+        title={CUSTOMER_NAME}
+        subtitle={`Revenue by channel · ${DATE_RANGE} · all channels · ${CURRENCY}`}
       />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <KpiCard label="Net Sales" value={fmtMoney(totalSales, CURRENCY)} sub="6-month total" />
@@ -151,14 +149,15 @@ export default function App() {
           ))}
         </LineChart>
       </ResponsiveContainer>
-      <SignatureFooter sourceLine="Source: ecommerce_transactions_order_level" />
-    </ArtifactPage>
+      <div className="text-xs text-[#716e6b] mt-4">Source: ecommerce_transactions_order_level</div>
+      <BuiltWithFooter generated="28 Jul 2026" />
+    </div>
   );
 }
 ```
 
 **Patterns demonstrated:**
-- Full tier via `kicker` + `ArtifactPage`.
+- Customer-built compact via `CompactHeader` + `BuiltWithFooter`.
 - KPI card grid + line chart; series indexed with `DP_CHART_SERIES[i % …]`.
 - Currency derived from the data, never hardcoded.
 
@@ -170,7 +169,7 @@ export default function App() {
 
 **Data shape:** `[{ report_month, metric_id, metric_name, metric_format, metric_sort_order, metric_value }, …]`
 
-**Tier:** Full — `kicker` + `ArtifactPage`.
+**Tier:** Customer-built compact — `CompactHeader` + `BuiltWithFooter`.
 
 The supporting SQL should `ORDER BY metric_sort_order` so the array arrives
 pre-sorted. The component uses that ordering directly instead of a
@@ -247,13 +246,12 @@ const months = [...new Set(RAW.map((r) => r.report_month))].sort();
 
 export default function App() {
   return (
-    <ArtifactPage>
-      <ArtifactHeader
-        title="P&amp;L Summary"
-        subtitle={`${DATE_RANGE} · live plan actuals · ${CURRENCY}`}
-        customer={CUSTOMER_NAME}
-        meta={DATE_RANGE}
-        kicker="Financial statements"
+    <div className="p-6 bg-white" style={{ maxWidth: 920, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
+      <CompactHeader
+        kind="Financial statements"
+        period={DATE_RANGE}
+        title={CUSTOMER_NAME}
+        subtitle={`P&L summary · ${DATE_RANGE} · live plan actuals · ${CURRENCY}`}
       />
       <div className="overflow-x-auto">
         <table className="w-full text-sm tabular-nums">
@@ -288,8 +286,9 @@ export default function App() {
           </a>
         </div>
       )}
-      <SignatureFooter sourceLine="Source: smartmodel_actuals" />
-    </ArtifactPage>
+      <div className="text-xs text-[#716e6b] mt-4">Source: smartmodel_actuals</div>
+      <BuiltWithFooter generated="28 Jul 2026" />
+    </div>
   );
 }
 ```
@@ -302,7 +301,7 @@ export default function App() {
 
 **Data shape:** `[{ report_month, metric_name, actual_value, forecast_value, variance, variance_pct }, …]`
 
-**Tier:** Full. Warm deltas `#2f7d54` / `#b0472f` are visible in the variance cells.
+**Tier:** Customer-built compact. Warm deltas `#2f7d54` / `#b0472f` are visible in the variance cells.
 
 ```jsx
 import React from 'react';
@@ -361,13 +360,12 @@ const VarianceCell = ({ value, pct }) => {
 
 export default function App() {
   return (
-    <ArtifactPage>
-      <ArtifactHeader
-        title={`${METRIC_NAME} — Actuals vs. ${PLAN_NAME}`}
-        subtitle={`${DATE_RANGE} · ${CURRENCY}`}
-        customer={CUSTOMER_NAME}
-        meta={DATE_RANGE}
-        kicker="Plan variance"
+    <div className="p-6 bg-white" style={{ maxWidth: 920, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
+      <CompactHeader
+        kind="Plan variance"
+        period={DATE_RANGE}
+        title={CUSTOMER_NAME}
+        subtitle={`${METRIC_NAME} — Actuals vs. ${PLAN_NAME} · ${DATE_RANGE} · ${CURRENCY}`}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -424,8 +422,9 @@ export default function App() {
         </table>
       </div>
 
-      <SignatureFooter sourceLine="Source: smartmodel_actuals_vs_forecast" />
-    </ArtifactPage>
+      <div className="text-xs text-[#716e6b] mt-4">Source: smartmodel_actuals_vs_forecast</div>
+      <BuiltWithFooter generated="28 Jul 2026" />
+    </div>
   );
 }
 ```
@@ -438,8 +437,7 @@ export default function App() {
 
 **Spec:** follow `scenario-planning.md` § "Layout B — multi-scenario comparison"
 for series roles, interactivity, and table controls — **do not duplicate that
-spec here.** Chrome follows the signature theme (`kicker`, `ArtifactPage`,
-`SignatureFooter`).
+spec here.** Chrome follows customer-built compact (`CompactHeader`, `BuiltWithFooter`).
 
 **Series alignment:** the scenario skill and this example both use PM-314
 (`DP_CHART_SERIES[0]` primary, `[1]` second, `[19]` baseline grey). The
@@ -505,13 +503,12 @@ export default function App() {
   };
 
   return (
-    <ArtifactPage width={1040}>
-      <ArtifactHeader
-        title="Cash · Scenario Proposals"
-        subtitle={`${PLAN_NAME} · Jun–Nov 2026 · ${CURRENCY} · levers: discretionary opex`}
-        customer={CUSTOMER_NAME}
-        meta="Raptor preview"
-        kicker="Scenario comparison"
+    <div className="p-6 bg-white" style={{ maxWidth: 1040, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
+      <CompactHeader
+        kind="Scenario comparison"
+        period="Jun–Nov 2026"
+        title={CUSTOMER_NAME}
+        subtitle={`Cash · Scenario proposals · ${PLAN_NAME} · ${CURRENCY} · levers: discretionary opex`}
       />
 
       <div className="flex items-center gap-2 mb-6">
@@ -620,8 +617,9 @@ export default function App() {
         </p>
       </section>
 
-      <SignatureFooter sourceLine={`Source: plan '${PLAN_NAME}' · Raptor preview (workbook not modified)`} />
-    </ArtifactPage>
+      <div className="text-xs text-[#716e6b] mt-4">{`Source: plan '${PLAN_NAME}' · Raptor preview (workbook not modified)`}</div>
+      <BuiltWithFooter generated="28 Jul 2026" />
+    </div>
   );
 }
 ```
@@ -634,7 +632,7 @@ export default function App() {
 (Field-proven showpiece from `baku/tools/starter-prompts/library.md` —
 sales + margins from the model + inventory in one artifact.)
 
-**Tier:** Full.
+**Tier:** Customer-built compact.
 
 ```jsx
 import React from 'react';
@@ -674,13 +672,12 @@ const CASH = 1240000;
 export default function App() {
   const mtdVar = MTD.actual - MTD.plan;
   return (
-    <ArtifactPage width={1040}>
-      <ArtifactHeader
-        title="Daily flash"
-        subtitle={`As of ${AS_OF} · yesterday + MTD · ${CURRENCY}`}
-        customer={CUSTOMER_NAME}
-        meta={AS_OF}
-        kicker="Executive flash"
+    <div className="p-6 bg-white" style={{ maxWidth: 1040, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
+      <CompactHeader
+        kind="Executive flash"
+        period={AS_OF}
+        title={CUSTOMER_NAME}
+        subtitle={`Daily flash · as of ${AS_OF} · yesterday + MTD · ${CURRENCY}`}
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
@@ -750,8 +747,9 @@ export default function App() {
         </ArtifactSection>
       </div>
 
-      <SignatureFooter sourceLine="Source: ecommerce_transactions_order_level · smartmodel_actuals · inventory snapshot" />
-    </ArtifactPage>
+      <div className="text-xs text-[#716e6b] mt-4">Source: ecommerce_transactions_order_level · smartmodel_actuals · inventory snapshot</div>
+      <BuiltWithFooter generated="28 Jul 2026" />
+    </div>
   );
 }
 ```
@@ -762,7 +760,7 @@ export default function App() {
 
 **Triggered by:** cohort / LTV questions (`report-catalog` `cohortanalysis_bundle`).
 
-**Tier:** Full. **24 monthly cohorts** — saturates PM-314 so adjacent hues can be judged.
+**Tier:** Customer-built compact. **24 monthly cohorts** — saturates PM-314 so adjacent hues can be judged.
 **Legend:** two-column swatch grid (12 × 2) under the chart — keeps 24 entries on-canvas.
 **Cycling:** `DP_CHART_SERIES[i % DP_CHART_SERIES.length]`. Series 31 would receive
 position 1 (`#3975d0`) again.
@@ -796,13 +794,12 @@ const chartData = AGES.map((age, ageIdx) => {
 
 export default function App() {
   return (
-    <ArtifactPage width={1180}>
-      <ArtifactHeader
-        title="Cohort retention"
-        subtitle={`${DATE_RANGE} · 24 monthly acquisition cohorts · DTC · synthetic scaffolding`}
-        customer={CUSTOMER_NAME}
-        meta="24 series"
-        kicker="Cohort analysis"
+    <div className="p-6 bg-white" style={{ maxWidth: 1180, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
+      <CompactHeader
+        kind="Cohort analysis"
+        period={DATE_RANGE}
+        title={CUSTOMER_NAME}
+        subtitle={`Cohort retention · ${DATE_RANGE} · 24 monthly acquisition cohorts · DTC`}
       />
 
       <ResponsiveContainer width="100%" height={520}>
@@ -834,18 +831,19 @@ export default function App() {
         ))}
       </div>
 
-      <SignatureFooter sourceLine="Source: ecommerce_transactions_order_level" />
-    </ArtifactPage>
+      <div className="text-xs text-[#716e6b] mt-4">Source: ecommerce_transactions_order_level</div>
+      <BuiltWithFooter generated="28 Jul 2026" />
+    </div>
   );
 }
 ```
 
 ---
 
-## Example 7 — Single answer (Compact × 3)
+## Example 7 — Single answer (customer-built compact × 3)
 
 **Triggered by:** high-traffic openers like "What were my net sales for June so far?"
-All three variants **omit `kicker`** — that is what makes them Compact.
+All three variants **collapse the title block** — metadata band only (`kind` + `period`).
 
 ### 7a — One number
 
@@ -861,15 +859,14 @@ const fmtMoney = (n, c) =>
 
 export default function App() {
   return (
-    <div className="p-6 bg-white">
-      <ArtifactHeader
-        title="Net sales — June MTD"
-        subtitle={`As of 2025-06-18 · ${CURRENCY}`}
-        customer={CUSTOMER_NAME}
-        meta="MTD"
+    <div className="p-6 bg-white" style={{ maxWidth: 920, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
+      <CompactHeader
+        kind="Single answer"
+        period="MTD"
       />
       <div className="text-4xl font-bold tabular-nums text-[#191815]">{fmtMoney(VALUE, CURRENCY)}</div>
       <div className="text-xs text-[#716e6b] mt-4">Source: ecommerce_transactions_order_level</div>
+      <BuiltWithFooter generated="28 Jul 2026" />
     </div>
   );
 }
@@ -910,12 +907,10 @@ const fmtMoneyCompact = (n, c) => {
 
 export default function App() {
   return (
-    <div className="p-6 bg-white">
-      <ArtifactHeader
-        title="Net sales — June daily"
-        subtitle={`Jun 1–18 2025 · ${CURRENCY}`}
-        customer={CUSTOMER_NAME}
-        meta="Daily"
+    <div className="p-6 bg-white" style={{ maxWidth: 920, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
+      <CompactHeader
+        kind="Daily flash"
+        period="Daily"
       />
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={RAW} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
@@ -927,6 +922,7 @@ export default function App() {
         </AreaChart>
       </ResponsiveContainer>
       <div className="text-xs text-[#716e6b] mt-4">Source: ecommerce_transactions_order_level</div>
+      <BuiltWithFooter generated="28 Jul 2026" />
     </div>
   );
 }
@@ -949,12 +945,10 @@ const fmtMoney = (n, c) =>
 
 export default function App() {
   return (
-    <div className="p-6 bg-white">
-      <ArtifactHeader
-        title="Gross sales by channel — last month"
-        subtitle={`Oct 2025 · ${CURRENCY}`}
-        customer={CUSTOMER_NAME}
-        meta="Oct 2025"
+    <div className="p-6 bg-white" style={{ maxWidth: 920, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
+      <CompactHeader
+        kind="Channel breakdown"
+        period="Oct 2025"
       />
       <table className="w-full text-sm tabular-nums">
         <thead className="text-[#716e6b]">
@@ -976,6 +970,7 @@ export default function App() {
         </tbody>
       </table>
       <div className="text-xs text-[#716e6b] mt-4">Source: ecommerce_transactions_order_level</div>
+      <BuiltWithFooter generated="28 Jul 2026" />
     </div>
   );
 }
@@ -988,7 +983,7 @@ export default function App() {
 **When this shape applies:** a structured reference or instruction document
 with **no charts and no numeric series** — workbook field maps, model update
 guides, tab-by-tab checklists. Co-brand via the `customer` prop on
-`ArtifactHeader` (name as text; never an emoji or mark-alone masthead).
+`CompactHeader` title (name as text; never an emoji or mark-alone masthead).
 
 **When it does not:** if the answer has numbers to chart or table, it is a
 report — follow `report-creation-guide.md` instead of this template.
@@ -996,7 +991,7 @@ report — follow `report-creation-guide.md` instead of this template.
 **Triggered by:** "Write a model update guide for my SmartModel — what to
 change on each tab."
 
-**Tier:** Full — `kicker` + `ArtifactPage` + `SignatureFooter`.
+**Tier:** Customer-built compact — `CompactHeader` + `BuiltWithFooter`.
 
 **Chips (three kinds, not interchangeable):**
 
@@ -1288,13 +1283,12 @@ const TABS = [
 
 export default function App() {
   return (
-    <ArtifactPage width={920}>
-      <ArtifactHeader
-        title="Model Update Guide — what to update, tab by tab"
-        subtitle="SmartModel inputs to keep the forecast current · July 2026"
-        customer={CUSTOMER_NAME}
-        meta="July 2026"
-        kicker="Model update guide"
+    <div className="p-6 bg-white" style={{ maxWidth: 920, margin: '0 auto', fontFamily: DP_FONT_STACK }}>
+      <CompactHeader
+        kind="Model update guide"
+        period="July 2026"
+        title={CUSTOMER_NAME}
+        subtitle="What to update after July close, tab by tab"
       />
 
       <p className="text-sm m-0 mb-3" style={{ color: '#716e6b' }}>
@@ -1349,8 +1343,9 @@ export default function App() {
         ))}
       </div>
 
-      <SignatureFooter sourceLine={`Source: SmartModel workbook · ${CUSTOMER_NAME} · Prepared by Drivepoint`} />
-    </ArtifactPage>
+      <div className="text-xs text-[#716e6b] mt-4">{`Source: SmartModel workbook · ${CUSTOMER_NAME}`}</div>
+      <BuiltWithFooter generated="28 Jul 2026" />
+    </div>
   );
 }
 ```

@@ -37,45 +37,57 @@ Do not load Google Fonts, CDN scripts, or any external resource.
 
 ---
 
-## Brand lockup
+## Two tiers
 
-Every React artifact opens with the Drivepoint lockup on the **left**,
-paired with an optional customer co-brand and meta line, then the title
-block below a 1px hairline. Use the `ArtifactHeader` component below as
-the first child of the outer container. Do not draw a custom title row.
-Do not place the lockup on the right. Do not compose `DrivepointMark`
-beside a separate wordmark SVG.
+| Tier | Who builds it | Chrome |
+|---|---|---|
+| **Sent docs** | Drivepoint → customer (showcase, renewal, monthly, kickoff) | Full lockup masthead via `ArtifactHeader` + `ArtifactPage` + `SignatureFooter` |
+| **Customer-built** | Customer's own Claude session (this connector) | Compact header + `BuiltWithFooter` — **no lockup in the header**, Drivepoint-only (no client accent colors) |
+
+This skill's MCP path is **customer-built**. Sent-doc chrome stays documented
+below so the components stay in one place; do not use it for connector
+artifacts. Attribution on customer-built work comes from the chart palette
+and the muted status pair (`#2f7d54` / `#b0472f`), plus the small footer —
+not from co-brand accents or a masthead lockup.
+
+---
+
+## Brand lockup (sent docs only)
+
+Sent docs open with the Drivepoint lockup on the **left**, optional
+customer co-brand and meta, then the title block below a 1px hairline.
+Use `ArtifactHeader` as the first child. Do not place the lockup on the
+right. Do not compose `DrivepointMark` beside a separate wordmark SVG.
+
+**Customer-built artifacts do not use this masthead** — use `CompactHeader`
+instead (next section).
 
 ### Sizing
 
 - Complete lockup (`DrivepointLockup`): height **27px** (viewBox `0 0 144 32`).
   Width scales from the viewBox. Do not enlarge.
-- Mark alone (`DrivepointMark`): 24px square — favicons, tight spaces,
-  SVG-failure fallback, and other constrained uses only. Never pair it
-  with a separate wordmark.
+- Mark alone (`DrivepointMark`): 13px in `BuiltWithFooter`; 24px for
+  favicons / SVG-failure fallback only. Never pair it with typed
+  "Drivepoint" as a header stand-in.
 
 ### Surface
 
-The lockup below is the dark-text / light-background variant, which is the
-only surface artifacts use today (`bg-white`, transparent). If a dark
-surface is ever introduced, flag and stop — an inverse lockup is out of
-scope here.
+The lockup below is the dark-text / light-background variant
+(`bg-white`, transparent). If a dark surface is ever introduced, flag and
+stop — an inverse lockup is out of scope here.
 
 ### Components
 
 Path data is character-exact from the Drivepoint brand source. Do not
 modify, reorder, or re-pretty-print the path strings — one stray
-character breaks the brand color split. After pasting, render the
-lockup once standalone and eyeball it against a known-good reference
-before propagating to a full artifact.
+character breaks the brand color split.
 
 If the lockup SVG fails to render cleanly, **do not ship broken artwork** —
 fall back to `DrivepointMark` alone (24px square). Never render the
 Drivepoint logotype as typed text in any font, and never pair the mark
 with typed "Drivepoint".
 
-`customer` and `meta` are optional. Existing two-prop call sites
-(`title`, `subtitle` only) keep working unchanged.
+On sent docs, `customer` and `meta` are optional.
 
 ```jsx
 const DrivepointMark = ({ size = 24 }) => (
@@ -185,19 +197,64 @@ const SignatureFooter = ({ sourceLine }) => (
     <span className="min-w-0 flex-1 text-[10.5px] break-words" style={{ color: DP_TEXT_PRIMARY, opacity: 0.62, fontFamily: DP_FONT_STACK, overflowWrap: "anywhere" }}>{sourceLine}</span>
   </footer>
 );
+
+// --- Customer-built compact chrome (this connector's default) ---
+// No lockup / logomark in the header. Period fills the top-right.
+// Footer is the one Drivepoint brand slot.
+const CompactHeader = ({ kind, period, title, subtitle }) => (
+  <>
+  <DrivepointFonts />
+  <header className="mb-4" style={{ fontFamily: DP_FONT_STACK }}>
+    <div className="flex items-baseline justify-between gap-3 pb-[11px]" style={{ borderBottom: `1px solid ${DP_BORDER_SUBTLE}` }}>
+      <div className="text-[10.5px] font-bold uppercase tracking-[0.11em]" style={{ color: DP_TEXT_MUTED }}>{kind}</div>
+      {period ? (
+        <div className="text-[10.5px] font-bold uppercase tracking-[0.11em] tabular-nums shrink-0" style={{ color: DP_TEXT_MUTED }}>{period}</div>
+      ) : null}
+    </div>
+    {title ? (
+      <h1 className="text-[17px] font-bold leading-tight m-0 mt-4 mb-0.5" style={{ color: DP_TEXT_PRIMARY }}>{title}</h1>
+    ) : null}
+    {subtitle ? (
+      <div className="text-xs m-0 mb-[18px]" style={{ color: DP_TEXT_MUTED }}>{subtitle}</div>
+    ) : null}
+  </header>
+  </>
+);
+
+const BuiltWithFooter = ({ generated }) => (
+  <footer className="flex items-center justify-between gap-3 mt-6" style={{ fontFamily: DP_FONT_STACK, fontSize: '10.5px', color: DP_TEXT_MUTED }}>
+    <div className="flex items-center gap-1.5 min-w-0">
+      <span className="shrink-0 leading-none opacity-70" role="img" aria-label="Drivepoint">
+        <DrivepointMark size={13} />
+      </span>
+      <span>Built with Drivepoint</span>
+    </div>
+    {generated ? <div className="shrink-0 tabular-nums">Generated {generated}</div> : null}
+  </footer>
+);
 ```
 
-The brand row uses a 1px `border.subtle` (`#ecebe9`) hairline under the
-lockup. Optional `customer` renders with a `×` connector after the lockup;
-optional `meta` sits on the right of the brand row.
+Sent-doc brand row: 1px `#ecebe9` hairline under the lockup; optional
+`customer` with a `×` connector; optional `meta` on the right.
 
-**Full vs Compact is a prop consequence, not a choice.** Pass `kicker` when
-the artifact has a category to name (e.g. "Monthly business review",
-"Scenario comparison") — that renders the kicker line and the gradient bar,
-and pair it with `ArtifactPage` for the warm document ground. Omit `kicker`
-when there is no category (a single-answer figure, small chart, or short
-table) — the header stays Compact: lockup, hairline, title, subtitle. Do
-not add a `variant` prop and do not judge "substantial" vs "light."
+### Customer-built compact header
+
+Default for this connector. Match the D2.1 pattern:
+
+1. **Metadata band** — artifact type small-caps left (e.g. `MODEL UPDATE GUIDE`),
+   period small-caps right (e.g. `JULY 2026`), hairline beneath. **No lockup,
+   no logomark, no client mark** in the header.
+2. **Title block** — title (customer or artifact name) at 17px bold + one-line
+   muted subtitle. Data is the hero; type stays restrained.
+3. **Footer** — `BuiltWithFooter`: 13px mark + "Built with Drivepoint" left,
+   "Generated \<date\>" muted right.
+
+**Small-artifact collapse:** single-answer / daily-flash cards may omit the
+title block and keep only the metadata band (kind + period). Bare chrome
+(no header at all) is a degradation path, not a target.
+
+**Do not** invent client accent colors on customer-built artifacts.
+Drivepoint-only: neutrals, `DP_CHART_SERIES`, and the warm status pair.
 
 ---
 
@@ -249,8 +306,8 @@ primary ink: `<Legend formatter={(value) => <span style={{ color: '#191815' }}>{
 Never use color as the only encoder for sign or variance. Pair color with
 an arrow, sign, or label.
 
-Surface for Compact shells: `bg-white` / transparent inherit. Full documents
-use `ArtifactPage` (warm `#f7f4f1` ground, near-white card).
+Surface for **customer-built** shells: `bg-white` / transparent inherit.
+Sent docs use `ArtifactPage` (warm `#f7f4f1` ground, near-white card).
 
 ---
 
@@ -258,13 +315,16 @@ use `ArtifactPage` (warm `#f7f4f1` ground, near-white card).
 
 - **Never load fonts over a network.** An inline base64 `@font-face` data
   URI is permitted and preferred (see `DP_FONT_FACE_CSS` /
-  `DrivepointFonts` in § "Brand lockup"). Paste those shared definitions
-  with the lockup components — do not re-declare the faces in each
-  artifact.
+  `DrivepointFonts` in the shared components). Paste those shared
+  definitions with the chrome components — do not re-declare the faces
+  in each artifact.
 - Prefer `DP_FONT_STACK` (`Manrope, ui-sans-serif, system-ui, sans-serif`).
   The system fallback covers runtimes where the data URI is unavailable.
-- Headers: `font-semibold`. Use `text-base` for chart titles and `text-xl`
-  for dashboard headers.
+- **Customer-built:** restrained type — metadata band ~10.5px small-caps,
+  title 17px bold, subtitle 12px muted. Section labels small-caps muted.
+  Data is the hero; do not use display-scale headers.
+- **Sent docs:** headers `font-semibold`; `text-base` for chart titles and
+  `text-xl` for dashboard headers.
 - Body: same stack as headers.
 - Numbers in tables: `tabular-nums` and right-aligned.
 
@@ -337,23 +397,35 @@ Never use:
 
 ## Layout patterns
 
-- Full documents: wrap in `<ArtifactPage>` and pass `kicker` on
-  `<ArtifactHeader title={…} subtitle={…} kicker={…} customer={…} />`.
-  Compact answers: omit `kicker` (and usually omit `ArtifactPage`); a plain
-  `p-6 bg-white` shell is fine. See § "Brand lockup" for the prop rule.
-  The `subtitle` prop contains the date range, plan (if SmartModel),
-  channel filter, and currency — all on one line, separated by `·`.
-- Non-data reference guides (tab-by-tab instructions, field maps): Full
-  shell + Example 8 in `example-artifacts.md`. Do not invent a custom
-  header or mark-alone masthead for these.
+- **Customer-built (default for this connector):** white `p-6 bg-white`
+  shell (max-width ~920). Open with
+  `<CompactHeader kind={…} period={…} title={…} subtitle={…} />`.
+  Close with `<BuiltWithFooter generated={…} />`. Do **not** use
+  `ArtifactPage`, `ArtifactHeader`, or `SignatureFooter`. Do **not** put
+  a lockup or logomark in the header. Map former `kicker` → `kind`,
+  date/meta → `period`, customer or artifact name → `title`. The
+  `subtitle` holds date range, plan (if SmartModel), channel filter, and
+  currency — one line, separated by `·`.
+- **Small-answer collapse:** single-answer / daily-flash cards may omit
+  `title` / `subtitle` and keep only the metadata band (`kind` +
+  `period`). Bare (no chrome) is a degradation path, not a target.
+- **Sent docs only:** wrap in `<ArtifactPage>` and pass `kicker` on
+  `<ArtifactHeader title={…} subtitle={…} kicker={…} customer={…} />`
+  with `SignatureFooter`. Not for connector artifacts.
+- Non-data reference guides (tab-by-tab instructions, field maps):
+  customer-built compact shell + Example 8 in `example-artifacts.md`.
 - Dashboards: card grid for KPIs across the top (2–4 columns on desktop,
   stack on narrow), main chart below, supporting table at the bottom.
 - Chart container: `<ResponsiveContainer width="100%" height={360}>`
-  (≥320, ≤480 in practice).
+  (≥320, ≤480 in practice). Prefer slightly tighter heights on compact
+  shells when the chart is secondary to a guide body.
 - Tables: sticky header (`sticky top-0 bg-white`), zebra stripes
-  (`even:bg-[#f9f8f6]`), right-aligned numeric columns.
-- Always include a small footer line: `<div className="text-xs text-[#716e6b]
-  mt-4">Source: <table names></div>`. Cite bare relation names (e.g.
+  (`even:bg-[#f9f8f6]`), right-aligned numeric columns. Section labels
+  on customer-built: small-caps muted (`text-[10.5px] font-bold
+  uppercase tracking-[0.11em] text-[#716e6b]`).
+- Always include a small source line when data is shown:
+  `<div className="text-xs text-[#716e6b] mt-4">Source: <table names></div>`
+  above `BuiltWithFooter`. Cite bare relation names (e.g.
   `ecommerce_transactions_order_level · smartmodel_actuals`) — never the
   warehouse-qualified form in customer-visible copy; that belongs in SQL only.
 

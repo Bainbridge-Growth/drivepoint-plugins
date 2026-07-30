@@ -237,8 +237,8 @@ If the scenario misses the target:
 Every completed scenario ships as a **React/Recharts artifact**
 (`application/vnd.ant.react`) unless the user explicitly asked for text
 only. **`artifact-style-guide.md` governs every visual token** — brand
-colors, the `ArtifactHeader` lockup, card surfaces, fonts, and number
-formatting. Do not invent your own colors, marks, or surfaces here. The
+colors, `CompactHeader` / `BuiltWithFooter`, card surfaces, fonts, and
+number formatting. Do not invent your own colors, marks, or surfaces here. The
 Figma reference above informs only the scenario-specific *layout* (the two
 screens below) and *series roles* (which line is baseline vs. scenario);
 everything you draw pulls its style from the artifact style guide.
@@ -249,12 +249,12 @@ The reference board contains **two distinct screens**. Pick based on how
 many scenarios you are presenting:
 
 1. **Single-scenario preview** (one scenario vs. baseline) — build the
-   _compact_ layout: header lockup → KPI card row → two-series line chart
-   → driver-change table → source footer. This is the common case for
-   "what if we cut opex by X?"
+   compact layout: `CompactHeader` → KPI card row → two-series line chart
+   → driver-change table → source line + `BuiltWithFooter`. This is the
+   common case for "what if we cut opex by X?"
 2. **Multi-scenario comparison** (2+ candidate scenarios, e.g. a
-   Drivepoint-Intelligence-style set of proposals) — build the _full_
-   layout: header lockup → proposals summary → comparison chart →
+   Drivepoint-Intelligence-style set of proposals) — same compact chrome,
+   fuller body: `CompactHeader` → proposals summary → comparison chart →
    **Scenario Details** table with per-scenario rows and controls. This
    is the case for "give me a few scenarios to hit breakeven." Run one
    `preview_plan_scenario` call per candidate scenario (each with its own
@@ -264,23 +264,24 @@ Do not mix them. If unsure, default to the single-scenario preview.
 
 ### Shared chrome (both layouts)
 
-**1. Header lockup.** Render the `ArtifactHeader` component from
-`artifact-style-guide.md` § "Brand lockup" as the first child — do not
-draw a custom or "circular" mark. It already carries the real Drivepoint
-lockup and the title/subtitle block, with colors and sizes fixed by the
-style guide.
+**1. Compact header.** Render `CompactHeader` from
+`artifact-style-guide.md` § "Customer-built compact header" as the first
+child — no lockup or logomark in the header.
 
+- `kind` — e.g. "Scenario comparison" or "Scenario preview".
+- `period` — horizon window (e.g. "JUN–SEP 2026").
 - `title` — the experiment / scenario name (e.g. "Ad Spend and CAC ·
   03/15/2025" or "`<KeyResult>` · Scenario Preview").
-- `subtitle` — the plan name, horizon window, currency, and — in one
-  phrase — the levers you moved ("Opex cuts: 5 lines, Jun–Sep 2026").
+- `subtitle` — the plan name, currency, and — in one phrase — the levers
+  you moved ("Opex cuts: 5 lines, Jun–Sep 2026").
 - In the multi-scenario layout only, add a "Drivepoint Intelligence"
   wordmark with a small **BETA** pill (Drivepoint yellow `#FFDE6A` fill /
-  `#191815` text) beside `ArtifactHeader`, above the proposals block.
+  `#191815` text) below the header, above the proposals block.
 
-**2. Source footer.** Literal text:
+**2. Source + Built with footer.** Source line:
 `Source: plan '<planName>' · Raptor preview (workbook not modified)`.
-Keep it — it warns the user the change is not persisted.
+Close with `BuiltWithFooter`. Keep the source line — it warns the user
+the change is not persisted.
 
 **3. Formatting.** Every number is formatted per its metric's `dataType`
 (currency in the _plan's_ currency, not hardcoded USD; percent to one
@@ -311,7 +312,7 @@ redefined here — use them exactly as `artifact-style-guide.md` specifies
 
 In order, top to bottom:
 
-1. **Header lockup** (shared chrome above).
+1. **Compact header** (shared chrome above).
 2. **KPI card row** — 3 cards across (`sm:grid-cols-3`), each a bordered
    white card:
    - Baseline at horizon end (formatted per the metric's `dataType`).
@@ -388,7 +389,7 @@ In order, top to bottom:
 Reproduces the "N Scenario Proposals" + "Scenario Details" screens. In
 order:
 
-1. **Header lockup** with the **Drivepoint Intelligence · BETA** wordmark.
+1. **Compact header** with the **Drivepoint Intelligence · BETA** wordmark.
 2. **Proposals summary** — a short "`N` Scenario Proposals" heading and a
    one-line rationale sentence ("I've identified `N` scenarios that best
    optimize `<lever>` based on the following trends and criteria.").
