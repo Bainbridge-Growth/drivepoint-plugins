@@ -13,14 +13,16 @@ row labels with the customer's real workbook rows, not invented scaffolding.
 > each example are scaffolding for the rendering pattern only.
 
 > **Shared components.** Every example below is **customer-built compact**:
-> paste `CompactHeader`, `BuiltWithFooter`, `DrivepointFonts`,
-> `DrivepointMark`, `DP_CHART_SERIES`, and font/token constants from
-> `artifact-style-guide.md`. Do **not** use `ArtifactPage`,
+> paste `CompactHeader`, `BuiltWithFooter`, `ArtifactSection`,
+> `DrivepointFonts`, `DrivepointMark`, `DP_CHART_SERIES`, and font/token
+> constants from `artifact-style-guide.md`. Do **not** use `ArtifactPage`,
 > `ArtifactHeader`, `DrivepointLockup`, or `SignatureFooter` for these
 > connector examples — that chrome is for sent docs only.
 > Map: `kind` ← former kicker / artifact type; `period` ← date band;
 > `title` ← customer or artifact name; `subtitle` ← context line.
 > Single-answer cards may omit `title` / `subtitle` (metadata band only).
+> `generated` is the artifact's actual creation date; replace the sample
+> `28 Jul 2026` value in every template.
 
 ---
 
@@ -982,8 +984,8 @@ export default function App() {
 
 **When this shape applies:** a structured reference or instruction document
 with **no charts and no numeric series** — workbook field maps, model update
-guides, tab-by-tab checklists. Co-brand via the `customer` prop on
-`CompactHeader` title (name as text; never an emoji or mark-alone masthead).
+guides, tab-by-tab checklists. Put the customer name in `CompactHeader`'s
+`title` prop as text; never use an emoji or mark-alone masthead.
 
 **When it does not:** if the answer has numbers to chart or table, it is a
 report — follow `report-creation-guide.md` instead of this template.
