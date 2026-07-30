@@ -41,10 +41,10 @@ the tools above already query it.
 
 ---
 
-## Two ideas to hold in your head (read this first)
+## Three ideas to hold in your head (read this first)
 
-Everything else in this skill is scaffolding around these two rules.
-If you only remember two things, remember these:
+Everything else in this skill is scaffolding around these three rules.
+If you only remember three things, remember these:
 
 1. **The canonical id is DERIVED, never invented.** Same physical
    product → same `drivepointMappedId` on every run and across every
@@ -57,10 +57,30 @@ flavor/variant + sizeVariant`. You never look up "what id did I use
    already uses somewhere in their own data. Prefer **null** over a
    plausible-sounding guess. You are picking a representative, not
    writing marketing copy.
+3. **The roster is your context, not a database.** One
+   `read_product_mapping_source` call puts the entire cross-channel
+   roster into your working memory. You do the mapping by reading it
+   inline — grouping, comparing, and deciding in your head. **Do NOT
+   spawn scripts to re-analyze the roster.** Concretely, do not run
+   `code_execution` (or any shell/python tool) to "inspect the
+   structure", "preview payloads", "summarize statuses/channels",
+   "list canonicals", "dump unmapped rows", "check the stores
+   dimension", "list previously rejected rows", "see confirmed
+   sourceKeys per canonical", or "sample titles for disambiguation".
+   Every one of those is inline reading of data you already have.
+   Each script round-trip costs 10-30 seconds of pure overhead for
+   information already in your context. The ONE code_execution call
+   that earns its cost is the final RFC-4180 CSV writer at save time
+   — everything else, read inline and decide inline.
 
 If you catch yourself typing a title, SKU, or description that doesn't
 appear (in any form) in the source roster, stop — you are inventing,
 which corrupts the crosswalk.
+
+If you catch yourself planning a multi-step "let me first explore the
+data, then group by X, then dump the Y set" pipeline, stop — you are
+building the decision engine the skill forbids one script at a time.
+Cancel the pipeline, read the roster inline, commit to the decisions.
 
 ---
 
@@ -100,11 +120,15 @@ everything. There's just no prior state to preserve yet.
 
 Follow these steps in order. Never skip a step, never reorder them.
 
-1. **Read ONCE.** Call `read_product_mapping_source` a single time
-   for the entire roster. Do NOT split the read by channel, by key
-   type, or by SKU presence. One read, one roster in context. Each
-   record carries an `existing` field with the last saved decision —
-   check `existingMappingCount` to see if this is a re-run.
+1. **Read ONCE, then reason inline — no follow-up scripts.** Call
+   `read_product_mapping_source` a single time for the entire roster.
+   Do NOT split the read by channel, by key type, or by SKU presence.
+   One read, one roster in context. Each record carries an `existing`
+   field with the last saved decision — check `existingMappingCount`
+   to see if this is a re-run. **Once the roster is loaded, do not
+   run any script to inspect, preview, summarize, filter, dump, or
+   sample it.** All subsequent analysis is inline reading. See "Three
+   ideas to hold in your head" rule #3.
 2. **Normalize titles and sizes in place.** As you read each row,
    mentally apply the normalization rules in the next section. Do not
    write a script for this — do it inline as you group. (On re-runs,
@@ -663,6 +687,18 @@ above; save is step 10, and only after explicit approval.
   context. If you find yourself designing a pipeline, stop —
   reasoning against the roster directly is dramatically faster than
   building infrastructure to reason for you.
+- **Never run exploratory `code_execution` on the roster.** After
+  `read_product_mapping_source` succeeds, the roster is context you
+  read directly. Do not spawn scripts named "inspect structure",
+  "preview payloads", "summarize statuses/channels", "list existing
+  canonicals", "dump unmapped rows", "check stores dimension", "list
+  previously rejected rows", "see confirmed sourceKeys per canonical",
+  or "sample Amazon titles for disambiguation" — every one of those is
+  inline reading of context you already have, and each round-trip is
+  10-30 seconds of overhead for zero new information. If you feel the
+  urge to script an EDA pass, that is the signal to re-read the
+  roster in context and start deciding, not the signal to open a
+  shell.
 - **Never invent a `drivepointMappedId`.** Always derive it from
   `slug(productFamily) + '-' + slug(flavor/variant) + '-' + slug(sizeVariant)`.
 - **Never invent a name, SKU, or description.** Every value in
@@ -719,9 +755,16 @@ above; save is step 10, and only after explicit approval.
   You already have the canonicals inline from step 7; pass them
   directly into the JSX. Spawning a script just to reshape a 30-item
   array into artifact-ready JSON is a 30-60s round-trip that buys
-  nothing. `code_execution` is only worth calling for the final CSV
-  serialization at save time (RFC 4180 quoting) — everything else,
-  emit inline.
+  nothing.
+- **The only justified `code_execution` call in this whole workflow
+  is the ONE RFC-4180 CSV writer at save time**, and only when the
+  CSV is large enough that manual quoting is error-prone (roughly
+  100+ rows). Even then, it is **one** call — build the CSV and emit
+  the tool call in the same turn. Do NOT chain a "verify byte size",
+  "preview first 20 rows", "re-read the CSV back into memory", or
+  any other follow-up script — each of those is a separate 10-30s
+  round-trip for information you can already see. Small saves
+  (<100 rows) should be emitted inline without any script at all.
 - **Never write step 7 out as scratch text.** The per-sourceKey
   decision set is meant to be held in context, not printed as
   hundreds of `sourceKey → decision` lines before the artifact.
