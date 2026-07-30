@@ -8,8 +8,8 @@ Reading this skill is required any time the user asks to "map
 products", "reconcile products", "crosswalk SKUs across channels",
 "deduplicate the catalog", "clean up the catalog", "match Amazon to
 Shopify products", or names the product-mapping flow. This is the
-Drivepoint equivalent of the industry's *product crosswalk / entity
-resolution / master-data-reconciliation* workflow — the vocabulary
+Drivepoint equivalent of the industry's _product crosswalk / entity
+resolution / master-data-reconciliation_ workflow — the vocabulary
 varies, the job is the same: one canonical product per physical unit,
 every channel row tied back to it.
 
@@ -46,7 +46,7 @@ If you only remember two things, remember these:
 1. **The canonical id is DERIVED, never invented.** Same physical
    product → same `drivepointMappedId` on every run and across every
    channel, because the id is a deterministic slug of `productFamily +
-   flavor/variant + sizeVariant`. You never look up "what id did I use
+flavor/variant + sizeVariant`. You never look up "what id did I use
    last time?" — you re-derive it and it matches.
 2. **The canonical VALUES are SELECTED from the source rows, never
    fabricated.** `drivepointMappedProductName`, `drivepointMappedSku`,
@@ -76,8 +76,8 @@ On a re-run:
   and whose source fields haven't drifted meaningfully.
 - **Emit deltas, not the whole world.** In the save CSV, unchanged
   confirmed rows should appear as `sourceKey,confirmed` with every
-  other column empty — the server inherits the previous mapped-* /
-  product-* values from Firestore. See the "Inheritance on re-runs"
+  other column empty — the server inherits the previous mapped-_ /
+  product-_ values from Firestore. See the "Inheritance on re-runs"
   subsection under "The save call" below.
 - **Bulk-reject via `rejected_source_keys`, not CSV rows.** POS junk
   and promotional lines that were rejected last run stay rejected
@@ -173,9 +173,9 @@ a **hard stop**. The user reviews the artifact and explicitly tells
 you to proceed. You do not save until they do.
 
 - After rendering the artifact, your next message ends with a short
-  prompt: *"Review the map above. Reply `save` (or `looks good`,
+  prompt: _"Review the map above. Reply `save` (or `looks good`,
   `proceed`, `publish`) to write to Firestore, or tell me what to
-  change."*
+  change."_
 - **Do NOT call `save_product_mappings_to_firebase` on the same turn
   as the artifact.** The artifact is for the user's eyes, not a
   self-triggering signal.
@@ -185,7 +185,7 @@ you to proceed. You do not save until they do.
   changes is not an approval — regenerate the artifact.
 - **Do NOT infer approval from your own confidence.** "I've validated
   the counts and everything looks right" is not a reason to save;
-  it is a reason to *ask*.
+  it is a reason to _ask_.
 - **Do NOT save partially "to make progress".** If the user hasn't
   approved yet, there is nothing to save.
 
@@ -224,13 +224,13 @@ Pick ONE canonical string per unique physical size and use it
 everywhere. Preferred form: number + unit, no space, lowercase.
 Preserve the customer's unit system — do not convert oz to grams.
 
-| Source variants                                | Canonical |
-| ---------------------------------------------- | --------- |
-| `32 oz`, `32oz`, `32 fl oz`, `32-FL-OZ`        | `32oz`    |
-| `2 lb`, `2LB`, `2 pound`, `2-lb`               | `2lb`     |
-| `500 ml`, `500ML`, `500-ml`                    | `500ml`   |
-| `12 ct`, `12-Pack`, `12 pack`, `Case of 12`    | `12pack`  |
-| `Single`, `1-pack`, `each`                     | *omit*    |
+| Source variants                             | Canonical |
+| ------------------------------------------- | --------- |
+| `32 oz`, `32oz`, `32 fl oz`, `32-FL-OZ`     | `32oz`    |
+| `2 lb`, `2LB`, `2 pound`, `2-lb`            | `2lb`     |
+| `500 ml`, `500ML`, `500-ml`                 | `500ml`   |
+| `12 ct`, `12-Pack`, `12 pack`, `Case of 12` | `12pack`  |
+| `Single`, `1-pack`, `each`                  | _omit_    |
 
 Only include `1pack` / `single` in the canonical string when the same
 product also exists as a multipack — otherwise it's noise.
@@ -280,7 +280,7 @@ The human-readable name of the canonical product. Pick, don't write.
 - **Fall back** to the shortest clean title across the group's source
   rows.
 - **Structure**, when the pieces are known: `Brand Product Flavor
-  Size` (e.g. `Acme Protein Powder Vanilla 2lb`). Do not add
+Size` (e.g. `Acme Protein Powder Vanilla 2lb`). Do not add
   marketing adjectives ("premium", "delicious") that are not present
   in any source row.
 - **Never** synthesize a title from parts if none of the source rows
@@ -301,7 +301,7 @@ The customer's canonical SKU for the product. **Reuse, never mint.**
 - **Fall back** to the DTC channel's SKU when no shared internal
   number exists.
 - **Set to null** when the customer has no consistent SKU across the
-  group. Null is *more useful* than a fabricated string — a null
+  group. Null is _more useful_ than a fabricated string — a null
   tells the operator "we need to pick one," a fabrication silently
   becomes truth.
 - Retailer item numbers, ASINs, opaque scan IDs, and UPCs are NOT
@@ -322,7 +322,7 @@ Short human-readable description. Pick from source or null.
 
 ### Attribute fields (`productFamily`, `productCategory`, `productFormat`, `sizeVariant`)
 
-These may be *derived* by cleaning/standardizing source values, but
+These may be _derived_ by cleaning/standardizing source values, but
 must be traceable to source signal. Examples:
 
 - `productFamily`: `Protein Powder` derived from source titles like
@@ -353,7 +353,7 @@ attribute is more useful than a fabricated one.
 - **`mappings`** — a CSV string of confirmed/rejected decisions.
   Line 1 is the header, one data line per row you're marking
   `confirmed` (or `rejected`, if the row has fields to spell out).
-- **`rejected_source_keys`** *(optional)* — a JSON array of sourceKey
+- **`rejected_source_keys`** _(optional)_ — a JSON array of sourceKey
   strings to mark `rejected` in bulk. Use this for POS junk,
   promotional lines, donations, samples — anything you're rejecting
   with no mapped fields to record. **Much cheaper than CSV rows**
@@ -371,32 +371,39 @@ On re-runs, most confirmed rows are unchanged. Emitting the full
 mapping for every one of them is a huge token cost you don't need to
 pay. The server implements **inheritance**:
 
-- If a row has `status = confirmed` and every other column is empty,
-  the server looks up the existing Firestore row for that sourceKey
-  and inherits `drivepointMappedId`, `drivepointMappedProductName`,
-  `drivepointMappedSku`, `productFamily`, `productCategory`,
-  `productFormat`, `sizeVariant`, and `productDescription` from it.
-- If a row has `status = confirmed` and any mapped-* / product-*
+- If a row has `status = confirmed`, every other column is empty,
+  and the row's `existing.status` was **`confirmed`** on the last
+  save, the server inherits `drivepointMappedId`,
+  `drivepointMappedProductName`, `drivepointMappedSku`,
+  `productFamily`, `productCategory`, `productFormat`, `sizeVariant`,
+  and `productDescription` from that previous row.
+- If a row has `status = confirmed` and any mapped-_ / product-_
   cell is non-empty, the server uses the values you supplied (the
-  full row wins — inheritance is triggered by *empty*, not by
-  *partial*).
+  full row wins — inheritance is triggered by _empty_, not by
+  _partial_).
 - If a row has `status = rejected`, no fields are needed — just the
   sourceKey. Put pure rejects in `rejected_source_keys` instead of
   the CSV.
-- If `existing` is `null` and you emit `sourceKey,confirmed` with no
-  fields, the row saves with all-null attributes — which is wrong.
-  **Always fill in fields for NEW confirmations.** Inheritance is
-  strictly for preserving prior state.
+- **If you emit `sourceKey,confirmed` with no fields and there is no
+  previously-confirmed ancestor** (either `existing` is `null` or
+  `existing.status` was `rejected` / `unmapped`), the server
+  **defensively coerces the row to `unmapped`** rather than saving an
+  all-null confirmed record. The count lands in
+  `invalidConfirmedCount` in the save response — treat a non-zero
+  value as a bug in your CSV: those rows needed full attribute
+  values. **Always fill in fields for NEW confirmations.**
+  Inheritance is strictly for preserving prior CONFIRMED state.
 
 Rule of thumb per row:
 
-| Situation                                              | Emit                                          |
-| ------------------------------------------------------ | --------------------------------------------- |
-| Re-run, previously confirmed, no changes               | `sourceKey,confirmed` (empty other columns)   |
-| Re-run, previously confirmed, some attribute changed   | Full row with the corrected values            |
-| Re-run, previously unmapped, now decided               | Full row with all decided values              |
-| First-run or brand-new sourceKey                       | Full row with all decided values              |
-| Row to reject (any run)                                | Put sourceKey in `rejected_source_keys` array |
+| Situation                                                | Emit                                          |
+| -------------------------------------------------------- | --------------------------------------------- |
+| Re-run, previously **confirmed**, no changes             | `sourceKey,confirmed` (empty other columns)   |
+| Re-run, previously **confirmed**, some attribute changed | Full row with the corrected values            |
+| Re-run, previously **unmapped**, now confirming          | **Full row** — inheritance won't fire         |
+| Re-run, previously **rejected**, now confirming          | **Full row** — inheritance won't fire         |
+| First-run or brand-new sourceKey                         | Full row with all decided values              |
+| Row to reject (any run)                                  | Put sourceKey in `rejected_source_keys` array |
 
 ### Columns (CSV)
 
@@ -682,11 +689,18 @@ above; save is step 9, and only after explicit approval.
   fields to spell out, put its sourceKey in `rejected_source_keys`
   instead. A row of `key,rejected,,,,,,,` is 40+ characters of
   filler for something that could be one string in a JSON array.
-- **Never rely on inheritance for a brand-new confirmation.** If
-  `existing` is `null` for a sourceKey, `sourceKey,confirmed` with
-  empty fields saves an all-null row — that's a bug. Fill in the
-  fields for new confirmations. Inheritance is strictly for
-  preserving prior state.
+- **Never rely on inheritance for a brand-new or previously-rejected
+  confirmation.** Inheritance only fires when `existing.status =
+confirmed`. If `existing` is `null`, or if `existing.status` is
+  `rejected` / `unmapped`, then `sourceKey,confirmed` with empty
+  fields has no valid ancestor to inherit from. The server
+  defensively coerces such rows to `unmapped` and reports them under
+  `invalidConfirmedCount` in the save response. A non-zero
+  `invalidConfirmedCount` means the CSV had confirmation shortcuts
+  for rows that needed full attribute values — supply the fields and
+  re-save if that count is unexpected. Fill in the fields for all
+  new confirmations; inheritance is strictly for preserving prior
+  confirmed state.
 - **Never call `save_product_mappings_to_firebase` without prior
   explicit user approval.** See "Approval gate — DO NOT SKIP". The
   artifact-and-immediately-save pattern is a protocol violation, no
