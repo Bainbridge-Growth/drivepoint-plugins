@@ -21,12 +21,15 @@ The MCP server exposes exactly three product-mapping tools:
   `existing` field: the last saved decision for that sourceKey (or
   `null` on first-run). The response's `existingMappingCount` tells
   you whether this is a re-run.
-- `save_product_mappings_to_firebase` — writes the current decision
-  set to the company's Firestore mapping document. Takes two inputs:
-  `mappings` (a CSV string of confirmed/rejected decisions) and
-  optional `rejected_source_keys` (a JSON array of sourceKeys to
-  reject in bulk). **Each call fully OVERWRITES the doc — submit the
-  complete decision set every time.**
+- `save_product_mappings_to_firebase` — **DELTA-MERGES** your changes
+  into the company's Firestore mapping document. Firestore stores
+  **decisions only** (`confirmed` + `rejected`); `unmapped` is
+  expressed by absence. Takes three inputs: `mappings` (a CSV of NEW
+  or CHANGED confirmations), optional `rejected_source_keys` (a JSON
+  array of sourceKeys to bulk-reject), and optional
+  `unmapped_source_keys` (a JSON array of sourceKeys to explicitly
+  demote back to unmapped). **Rows you don't mention keep their prior
+  state** — do NOT re-send unchanged confirmations.
 - `publish_product_mappings_to_bigquery` — reads the confirmed
   decisions out of Firestore and **fully OVERWRITES** the mapped-
   products catalog table in BigQuery.
@@ -74,14 +77,13 @@ On a re-run:
   have a reason to change one. Do not re-derive canonical ids or
   re-select names/SKUs for rows whose `existing.status = confirmed`
   and whose source fields haven't drifted meaningfully.
-- **Emit deltas, not the whole world.** In the save CSV, unchanged
-  confirmed rows should appear as `sourceKey,confirmed` with every
-  other column empty — the server inherits the previous mapped-_ /
-  product-_ values from Firestore. See the "Inheritance on re-runs"
-  subsection under "The save call" below.
-- **Bulk-reject via `rejected_source_keys`, not CSV rows.** POS junk
-  and promotional lines that were rejected last run stay rejected
-  cheaply by listing their sourceKeys in the array param.
+- **Save is a MERGE — send only what changed.** The `mappings` CSV
+  should contain ONLY new confirmations, confirmations you're
+  correcting, and rare rejections that need explicit fields.
+  Unchanged confirmations are omitted entirely; they keep their prior
+  state in Firestore automatically. Bulk rejects go through
+  `rejected_source_keys`. Rows you want to undecide go through
+  `unmapped_source_keys` (see "The save call").
 - **Focus your judgment on three groups:** (a) rows with
   `existing = null` (brand new since last run), (b) rows with
   `existing.status = unmapped` (previously flagged, still open),
@@ -90,7 +92,7 @@ On a re-run:
 
 On a first-run (all `existing = null`) the workflow is the same as it
 has always been — derive everything, decide everything, emit
-everything.
+everything. There's just no prior state to preserve yet.
 
 ---
 
@@ -123,7 +125,8 @@ Follow these steps in order. Never skip a step, never reorder them.
    description, attributes — from the source rows themselves, using
    the rules in "Choosing the mapped values". Never fabricate. On
    re-runs, if the existing values still fit, you don't need to
-   re-supply them — inheritance handles it (see "The save call").
+   re-supply them — merge semantics keep the prior Firestore row as-is
+   when you omit it from the CSV (see "The save call").
 6. **Resolve leftover rows** using the join-key ladder in Part 2:
    exact internal SKU, then UPC, then name semantics. Flag anything
    resolved by name semantics alone as `unmapped` (omit the patch).
@@ -134,10 +137,12 @@ Follow these steps in order. Never skip a step, never reorder them.
    the unchanged baseline.
 8. **STOP. Wait for explicit user approval.** See the "Approval gate"
    block below — this is a hard stop, not a soft one.
-9. **Call `save_product_mappings_to_firebase` ONCE**, passing the
-   complete decision set. See "The save call" for the two inputs
-   (CSV + optional reject list) and the inheritance rules that let
-   re-runs stay tiny. **Overwrites the Firestore doc.**
+9. **Call `save_product_mappings_to_firebase` ONCE**, passing only
+   the deltas. See "The save call" for the three inputs (CSV of
+   new/changed confirmations + optional bulk-reject list + optional
+   unmap list). **Merges into the Firestore doc.** On re-runs, this
+   is typically a small payload — a handful of new/changed rows, not
+   the whole roster.
 10. **Call `publish_product_mappings_to_bigquery` ONCE.** **Overwrites
     the BigQuery catalog table.** If this call fails after save, rerun
     publish — the Firestore doc is already correct, do not re-save.
@@ -348,88 +353,72 @@ attribute is more useful than a fabricated one.
 
 ## The save call
 
-`save_product_mappings_to_firebase` takes two inputs:
+`save_product_mappings_to_firebase` is a **delta merge**. Firestore
+stores only decisions (`confirmed` + `rejected`); `unmapped` is
+expressed by absence. Rows you don't mention keep their prior state.
 
-- **`mappings`** — a CSV string of confirmed/rejected decisions.
-  Line 1 is the header, one data line per row you're marking
-  `confirmed` (or `rejected`, if the row has fields to spell out).
+It takes three inputs:
+
+- **`mappings`** — a CSV of NEW or CHANGED confirmations (and rare
+  rejections that need explicit fields). Line 1 is the header; one
+  data line per row you're adding or correcting. **Every confirmation
+  MUST carry the full mapped-\* / product-\* fields.** There are no
+  "shortcut" rows — a confirmation with empty fields is dropped and
+  counted in `invalidConfirmedCount`. Omit this argument entirely
+  (or pass a header-only CSV) if this save is only demotions and
+  bulk rejects.
 - **`rejected_source_keys`** _(optional)_ — a JSON array of sourceKey
-  strings to mark `rejected` in bulk. Use this for POS junk,
-  promotional lines, donations, samples — anything you're rejecting
-  with no mapped fields to record. **Much cheaper than CSV rows**
-  because you skip the empty trailing columns. Do NOT also include
-  these sourceKeys in the CSV.
+  strings to mark `rejected` in bulk. Use for POS junk, promotional
+  lines, donations, samples — anything you're rejecting with no
+  mapped fields to record. Much cheaper than CSV rows. Do NOT also
+  include these sourceKeys in the CSV.
+- **`unmapped_source_keys`** _(optional)_ — a JSON array of sourceKey
+  strings to **demote** back to `unmapped`. Use when un-confirming or
+  un-rejecting a row you decided on previously. The server deletes
+  that decision from Firestore, and the row shows `status = unmapped`
+  on the next read. **Silent omission does NOT demote** — a row you
+  simply don't mention keeps its prior state. To remove a prior
+  decision, you must list the key here.
 
-Omit rows you're leaving unmapped entirely; the server records them
-as `unmapped` for you. Only `confirmed` rows are materialized into
-the BigQuery catalog; `unmapped` / `rejected` are saved for review
-but not published.
+### Merge semantics
 
-### Inheritance on re-runs — write attributes ONLY when they change
+| Situation                                     | Emit                                                            |
+| --------------------------------------------- | --------------------------------------------------------------- |
+| New confirmation (previously unmapped / new)  | Full CSV row with all decided values                            |
+| Changed confirmation (correcting an attribute) | Full CSV row with the corrected values                          |
+| Unchanged confirmation                         | **Nothing** — omit entirely; Firestore keeps the prior decision |
+| Bulk reject                                    | Add the sourceKey to `rejected_source_keys`                     |
+| CSV reject that needs explicit fields          | Full CSV row with `status = rejected`                           |
+| Undo a prior confirmation or rejection        | Add the sourceKey to `unmapped_source_keys`                     |
 
-On re-runs, most confirmed rows are unchanged. Emitting the full
-mapping for every one of them is a huge token cost you don't need to
-pay. The server implements **inheritance**:
-
-- If a row has `status = confirmed`, every other column is empty,
-  and the row's `existing.status` was **`confirmed`** on the last
-  save, the server inherits `drivepointMappedId`,
-  `drivepointMappedProductName`, `drivepointMappedSku`,
-  `productFamily`, `productCategory`, `productFormat`, `sizeVariant`,
-  and `productDescription` from that previous row.
-- If a row has `status = confirmed` and any mapped-_ / product-_
-  cell is non-empty, the server uses the values you supplied (the
-  full row wins — inheritance is triggered by _empty_, not by
-  _partial_).
-- If a row has `status = rejected`, no fields are needed — just the
-  sourceKey. Put pure rejects in `rejected_source_keys` instead of
-  the CSV.
-- **If you emit `sourceKey,confirmed` with no fields and there is no
-  previously-confirmed ancestor** (either `existing` is `null` or
-  `existing.status` was `rejected` / `unmapped`), the server
-  **defensively coerces the row to `unmapped`** rather than saving an
-  all-null confirmed record. The count lands in
-  `invalidConfirmedCount` in the save response — treat a non-zero
-  value as a bug in your CSV: those rows needed full attribute
-  values. **Always fill in fields for NEW confirmations.**
-  Inheritance is strictly for preserving prior CONFIRMED state.
-
-Rule of thumb per row:
-
-| Situation                                                | Emit                                          |
-| -------------------------------------------------------- | --------------------------------------------- |
-| Re-run, previously **confirmed**, no changes             | `sourceKey,confirmed` (empty other columns)   |
-| Re-run, previously **confirmed**, some attribute changed | Full row with the corrected values            |
-| Re-run, previously **unmapped**, now confirming          | **Full row** — inheritance won't fire         |
-| Re-run, previously **rejected**, now confirming          | **Full row** — inheritance won't fire         |
-| First-run or brand-new sourceKey                         | Full row with all decided values              |
-| Row to reject (any run)                                  | Put sourceKey in `rejected_source_keys` array |
+**On re-runs, a typical save is a handful of rows** — the new
+decisions since last time, plus any corrections. The vast majority
+of previously-confirmed / previously-rejected rows are untouched and
+stay as-is in Firestore.
 
 ### Columns (CSV)
 
 Pick whichever subset you need; always include `sourceKey` and
-`status`:
+`status`, and always fill in mapped-\* / product-\* fields on every
+`confirmed` row:
 
 - `sourceKey` — copy verbatim from the source row
   (`channel::stores::sku`, falling back to title). This is how the
-  server rejoins your row to the source row. Required in every line.
-- `status` — `confirmed` when you are sure; `rejected` to exclude
-  the row. Required in every line.
-- `drivepointMappedId` — derived per the rule above. Required for a
-  NEW confirmation (no prior mapping); leave empty on an unchanged
-  re-run confirmation to inherit.
+  server rejoins your row to the source row. Required.
+- `status` — `confirmed` or `rejected`. Required. (Demotions to
+  `unmapped` go through `unmapped_source_keys`, not the CSV.)
+- `drivepointMappedId` — derived per the rule above. Required on
+  every `confirmed` row.
 - `drivepointMappedProductName` — selected per "Choosing the mapped
-  values". Required for a new confirmation; leave empty on an
-  unchanged re-run confirmation to inherit.
-- `drivepointMappedSku` — selected per "Choosing the mapped values";
-  empty cell when unknown (or on inheritance).
-- `productFamily`, `productCategory`, `productFormat`, `sizeVariant`,
-  `productDescription` — per "Choosing the mapped values"; empty
-  cell when unknown (or on inheritance).
+  values". Required on every `confirmed` row.
+- `drivepointMappedSku`, `productFamily`, `productCategory`,
+  `productFormat`, `sizeVariant`, `productDescription` — per
+  "Choosing the mapped values"; empty cell when unknown.
 
-**An empty cell is null.** Two commas in a row (`,,`) is how you
-mark "unknown / not applicable" for a column — and also how you
-trigger inheritance on a re-run confirmation.
+**An empty cell is null.** Two commas in a row (`,,`) marks "unknown
+/ not applicable" for that column — but a `confirmed` row that has
+ALL mapped-\* / product-\* cells empty is treated as invalid (see
+`invalidConfirmedCount`) and dropped.
 
 **Never include `channel`, `stores`, `sku`, `title`, or `productType`
 columns.** The server rehydrates those from BigQuery via `sourceKey`;
@@ -444,21 +433,17 @@ so quote whenever a field could contain a delimiter. If you're
 serializing the CSV via a script, use a real CSV library (Python
 `csv`, Node `csv-stringify`) that handles this automatically.
 
-### Example
+### Example — a small re-run save
 
-A representative re-run save call — inheritance-shape rows for
-unchanged confirmations, one fresh confirmation with full fields,
-one confirmation with an attribute correction (new SKU), and a bulk
-reject list:
+Two new confirmations, one attribute correction, a bulk reject list,
+and one previously-confirmed row being undecided:
 
 **`mappings` (CSV):**
 
 ```csv
 sourceKey,status,drivepointMappedId,drivepointMappedProductName,drivepointMappedSku,productFamily,productCategory,productFormat,sizeVariant
-Shopify::Mad Rabbit::BALM-VAN,confirmed,,,,,,,
-Shopify::Mad Rabbit::BALM-VAN-P,confirmed,,,,,,,
-Shopify::Mad Rabbit::Vanilla Balm,confirmed,,,,,,,
 Shopify::Mad Rabbit::2PK-B-VAN,confirmed,tattoo-balm-vanilla-coconut-2pack,Tattoo Balm,2PK-B-VAN,Tattoo Balm,Targeted Tattoo Aftercare,Balm,2pack
+Shopify::Mad Rabbit::3PK-B-VAN,confirmed,tattoo-balm-vanilla-coconut-3pack,Tattoo Balm,3PK-B-VAN,Tattoo Balm,Targeted Tattoo Aftercare,Balm,3pack
 Shopify::Mad Rabbit::BALM-CUC,confirmed,tattoo-balm-cucumber,Tattoo Balm,BALM-CUC-V2,Tattoo Balm,Targeted Tattoo Aftercare,Balm,
 ```
 
@@ -468,28 +453,31 @@ Shopify::Mad Rabbit::BALM-CUC,confirmed,tattoo-balm-cucumber,Tattoo Balm,BALM-CU
 [
   "Shopify::Mad Rabbit::Charge for Premiere",
   "Shopify::Mad Rabbit::FLAT DONATION 5847",
-  "Shopify::Mad Rabbit::tester-product",
-  "Amazon::Mad Rabbit::UNKNOWN"
+  "Shopify::Mad Rabbit::tester-product"
 ]
+```
+
+**`unmapped_source_keys` (JSON array):**
+
+```json
+["Shopify::Mad Rabbit::LEGACY-SKU-42"]
 ```
 
 Reading this row-by-row:
 
-- The first three rows (`BALM-VAN`, `BALM-VAN-P`, `Vanilla Balm`) are
-  unchanged confirmations from the last save — the server inherits
-  `tattoo-balm-vanilla-coconut` / `Tattoo Balm` / `BALM-VAN` / … from
-  Firestore.
-- `2PK-B-VAN` is a fresh confirmation (or an override of an existing
-  one) — full attributes are supplied.
-- `BALM-CUC` corrects the master SKU from `BALM-CUC` to `BALM-CUC-V2`
-  — because non-empty fields are supplied, the row overrides the
-  inherited state.
-- The four sourceKeys in `rejected_source_keys` are marked
-  `rejected` server-side — no CSV rows needed, no empty trailing
-  commas, no wasted tokens.
+- `2PK-B-VAN` and `3PK-B-VAN` are fresh confirmations — full attributes.
+- `BALM-CUC` corrects the master SKU from `BALM-CUC` to `BALM-CUC-V2` —
+  full row so the correction is unambiguous.
+- The three `rejected_source_keys` become `rejected` decisions
+  server-side.
+- `LEGACY-SKU-42` was previously confirmed (or rejected) — listing it
+  in `unmapped_source_keys` deletes that decision.
+- **Every other previously-confirmed row in the roster is untouched
+  and stays confirmed** — that's the merge, and that's why the
+  payload can stay small.
 
-On a **first-run** (no `existing` on any record), all confirmations
-must be full rows — inheritance has nothing to inherit from.
+On a **first-run** the pattern is the same, just with more full rows
+in the CSV — there is no prior state to preserve.
 
 ---
 
@@ -653,9 +641,10 @@ above; save is step 9, and only after explicit approval.
   guess.
 - **Never let two rows share a `drivepointMappedId` but disagree on
   name/family/category/format/size.** Those are canonical attributes;
-  decide them once per canonical, then repeat verbatim (or lean on
-  inheritance on re-runs — an empty CSV cell inherits the previously
-  saved value, so unchanged aliases stay in lockstep for free).
+  decide them once per canonical, then repeat verbatim across every
+  alias in the CSV. On re-runs, unchanged aliases stay in Firestore
+  untouched — a merge, not an overwrite — so they stay in lockstep
+  for free without needing to re-emit them.
 - **Never collapse discriminating variants.** Different sizes,
   different pack counts, different flavors are DIFFERENT canonical
   products — even if the base name is identical. Splitting real
@@ -680,36 +669,32 @@ above; save is step 9, and only after explicit approval.
   double quote / newline with `"..."` and escape embedded quotes as
   `""`. Silent truncation on the first comma-containing row is the
   most common data-corruption bug in this workflow.
-- **Never re-emit full attribute values for an unchanged confirmed
-  row on a re-run.** Emit `sourceKey,confirmed` (empty other columns)
-  and let inheritance carry the prior state. Re-emitting the full
-  row is correct but wasteful — on a 300-row roster it costs 60-90
-  seconds of extra generation time for zero data change.
+- **Never re-emit unchanged confirmations on a re-run.** Save is a
+  merge — rows you don't mention keep their prior state in Firestore
+  automatically. Re-sending the full 500-row baseline every save
+  bloats the payload for zero benefit and costs 60-90 seconds of
+  generation time.
+- **Never emit a `confirmed` row with empty mapped-\* / product-\*
+  fields.** Every confirmation must carry its full attribute set. The
+  server drops fieldless confirmations and reports them under
+  `invalidConfirmedCount` — a non-zero value means you tried a
+  shortcut that no longer exists under merge semantics. Supply the
+  fields and re-save.
 - **Never CSV a pure reject.** If a row is being rejected with no
   fields to spell out, put its sourceKey in `rejected_source_keys`
   instead. A row of `key,rejected,,,,,,,` is 40+ characters of
   filler for something that could be one string in a JSON array.
-- **Never rely on inheritance for a brand-new or previously-rejected
-  confirmation.** Inheritance only fires when `existing.status =
-confirmed`. If `existing` is `null`, or if `existing.status` is
-  `rejected` / `unmapped`, then `sourceKey,confirmed` with empty
-  fields has no valid ancestor to inherit from. The server
-  defensively coerces such rows to `unmapped` and reports them under
-  `invalidConfirmedCount` in the save response. A non-zero
-  `invalidConfirmedCount` means the CSV had confirmation shortcuts
-  for rows that needed full attribute values — supply the fields and
-  re-save if that count is unexpected. Fill in the fields for all
-  new confirmations; inheritance is strictly for preserving prior
-  confirmed state.
+- **Never silently omit a row to try to undecide it.** Under merge
+  semantics, omission means "leave as-is." To demote a previously
+  confirmed or rejected row back to `unmapped`, list its sourceKey in
+  `unmapped_source_keys` — that's the only way the server knows to
+  delete the prior decision.
 - **Never call `save_product_mappings_to_firebase` without prior
   explicit user approval.** See "Approval gate — DO NOT SKIP". The
   artifact-and-immediately-save pattern is a protocol violation, no
   matter how confident you are in the mappings.
 - **Never silently map a bundle as a single simple unit.** Flag it
   and ask.
-- **Never save partially and expect the doc to merge.** Each call to
-  `save_product_mappings_to_firebase` fully OVERWRITES the previous
-  set. Submit the complete decision set every time.
 - **Never re-save just to retry publish.** If `publish` fails after a
   successful `save`, rerun `publish` only — Firestore already has the
   right state.
