@@ -273,9 +273,12 @@ If the scenario misses the target:
 
 Every completed scenario ships as a **React/Recharts artifact**
 (`application/vnd.ant.react`) unless the user explicitly asked for text
-only. Follow `artifact-style-guide.md` for tokens; the section below
-overrides it wherever the two disagree, because it is drawn from the
-production design.
+only. **`artifact-style-guide.md` governs every visual token** — brand
+colors, the `ArtifactHeader` lockup, card surfaces, fonts, and number
+formatting. Do not invent your own colors, marks, or surfaces here. The
+Figma reference above informs only the scenario-specific *layout* (the two
+screens below) and *series roles* (which line is baseline vs. scenario);
+everything you draw pulls its style from the artifact style guide.
 
 ### Which of the two layouts to build
 
@@ -298,18 +301,19 @@ Do not mix them. If unsure, default to the single-scenario preview.
 
 ### Shared chrome (both layouts)
 
-**1. Header lockup (`ArtifactHeader`).**
+**1. Header lockup.** Render the `ArtifactHeader` component from
+`artifact-style-guide.md` § "Brand lockup" as the first child — do not
+draw a custom or "circular" mark. It already carries the real Drivepoint
+mark + wordmark and the title/subtitle block, with colors and sizes fixed
+by the style guide.
 
-- Left: a small circular Drivepoint mark, then a two-line title block.
-  Title line is the experiment / scenario name (e.g. "Ad Spend and CAC ·
-  03/15/2025" or "`<KeyResult>` · Scenario Preview"); the subtitle line is
-  the plan name, horizon window, currency, and — in one phrase — the
-  levers you moved ("Opex cuts: 5 lines, Jun–Sep 2026").
-- The subtitle is muted slate (`#64748b`), the title near-black slate
-  (`#0f172a`), sizes per `artifact-style-guide.md`.
-- A "Drivepoint Intelligence" wordmark with a small **BETA** pill
-  (amber/yellow bg, e.g. `#fde68a` fill / `#92400e` text) appears above
-  the proposals block in the multi-scenario layout only.
+- `title` — the experiment / scenario name (e.g. "Ad Spend and CAC ·
+  03/15/2025" or "`<KeyResult>` · Scenario Preview").
+- `subtitle` — the plan name, horizon window, currency, and — in one
+  phrase — the levers you moved ("Opex cuts: 5 lines, Jun–Sep 2026").
+- In the multi-scenario layout only, add a "Drivepoint Intelligence"
+  wordmark with a small **BETA** pill (Drivepoint yellow `#FFDE6A` fill /
+  `#92400e` text) beside `ArtifactHeader`, above the proposals block.
 
 **2. Source footer.** Literal text:
 `Source: plan '<planName>' · Raptor preview (workbook not modified)`.
@@ -322,24 +326,24 @@ decimal; days to zero decimals). Color deltas with `text-emerald-600`
 alone. For negative baselines use the less-negative-is-better convention
 consistently.
 
-### Design tokens (read from the production design)
+### Series roles (from the brand palette)
 
-Use these unless `artifact-style-guide.md` specifies otherwise. They match
-the Figma reference so the artifact reads as the same product.
+`artifact-style-guide.md` § "Color tokens" is the palette. Do not add new
+hexes — map each scenario series onto the existing tokens:
 
-- **Baseline series line:** muted slate `#cbd5e1`, `strokeWidth={2}`,
-  `dot={false}`.
-- **Scenario / primary series line:** Drivepoint blue `#3b6fd6`,
+- **Baseline series line:** slate `#cbd5e1` (the muted / forecast token),
   `strokeWidth={2}`, `dot={false}`.
-- **Second comparison series (when two scenarios on one small chart):**
-  amber `#e8833a`.
-- **Target / "winning" region highlight** (scatter view): translucent
-  green rectangle, border `#16a34a`, fill `rgba(22,163,74,0.08)`.
-- **Grid:** `#e2e8f0`, `strokeDasharray="3 3"`. **Axis text / ticks:**
-  `#64748b`. **Card border:** `#e2e8f0`, radius `12px`, white fill, subtle
-  shadow. **Page bg behind cards:** `#f8fafc`.
-- **Fonts, spacing, and any component not listed here:** defer to
-  `artifact-style-guide.md`.
+- **Scenario / primary series line:** Drivepoint blue `#5b8dd8` (primary
+  series token), `strokeWidth={2}`, `dot={false}`.
+- **Second comparison series (two scenarios on one small chart):**
+  Drivepoint yellow `#E1BD3D` (second series token).
+- **Target / "winning" region highlight** (scatter view): the favorable
+  token — border `#22c55e`, fill `rgba(34,197,94,0.08)`.
+
+Grid, axes, cards, page background, fonts, and spacing are **not**
+redefined here — use them exactly as `artifact-style-guide.md` specifies
+(grid `#e2e8f0` `strokeDasharray="3 3"`, axis text `#64748b`, cards
+`border border-slate-200 rounded-lg shadow-sm` on `bg-white`).
 
 ### Layout A — single-scenario preview (compact)
 
@@ -399,7 +403,7 @@ to bottom exactly in this order. The Drivepoint logo sits top-right via
      <Line
        dataKey="scenario"
        name="Scenario"
-       stroke="#3b6fd6"
+       stroke="#5b8dd8"
        strokeWidth={2}
        dot={false}
      />
@@ -481,9 +485,9 @@ order:
    optimize `<lever>` based on the following trends and criteria.").
    Optionally a responsive grid of small "trend" cards (one per basis:
    Short-Term Growth, Medium-Term, Seasonality, Benchmarks, …), each a
-   titled mini `LineChart` (blue vs. amber, `dot={false}`, no legend,
-   tiny axes). Only include the trend cards you actually have data for —
-   do not fabricate bases.
+   titled mini `LineChart` (blue `#5b8dd8` vs. yellow `#E1BD3D`,
+   `dot={false}`, no legend, tiny axes). Only include the trend cards you
+   actually have data for — do not fabricate bases.
 3. **Comparison chart** — one chart comparing the candidate scenarios
    across the horizon:
    - Default: a multi-line `LineChart`, one line per scenario's `scenario`
