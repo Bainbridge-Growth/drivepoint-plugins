@@ -156,8 +156,8 @@ Follow these steps in order. Never skip a step, never reorder them.
    resolved by name semantics alone as `unmapped` (omit the patch).
 7. **Hold the per-sourceKey decision set in your head.** As you group,
    commit to one decision per source row — `confirmed` (with its
-   canonical), `rejected`, or `unmapped` — so the mapping is *already
-   done* before you build the artifact. For each canonical group, know
+   canonical), `rejected`, or `unmapped` — so the mapping is _already
+   done_ before you build the artifact. For each canonical group, know
    which sourceKeys belong to it and what the shared attributes are;
    for each reject, know its sourceKey. **Do NOT write this table out
    as scratch text** — on a 500+ row roster that's thousands of extra
@@ -426,14 +426,14 @@ It takes three inputs:
 
 ### Merge semantics
 
-| Situation                                     | Emit                                                            |
-| --------------------------------------------- | --------------------------------------------------------------- |
-| New confirmation (previously unmapped / new)  | Full CSV row with all decided values                            |
+| Situation                                      | Emit                                                            |
+| ---------------------------------------------- | --------------------------------------------------------------- |
+| New confirmation (previously unmapped / new)   | Full CSV row with all decided values                            |
 | Changed confirmation (correcting an attribute) | Full CSV row with the corrected values                          |
 | Unchanged confirmation                         | **Nothing** — omit entirely; Firestore keeps the prior decision |
 | Bulk reject                                    | Add the sourceKey to `rejected_source_keys`                     |
 | CSV reject that needs explicit fields          | Full CSV row with `status = rejected`                           |
-| Undo a prior confirmation or rejection        | Add the sourceKey to `unmapped_source_keys`                     |
+| Undo a prior confirmation or rejection         | Add the sourceKey to `unmapped_source_keys`                     |
 
 **On re-runs, a typical save is a handful of rows** — the new
 decisions since last time, plus any corrections. The vast majority
