@@ -347,9 +347,17 @@ This is the default output for every single-scenario "what if…?". Build it top
 to bottom exactly in this order. The Drivepoint logo sits top-right via
 `ArtifactHeader` (shared chrome).
 
+> **Everything below is a structure spec, not literal copy.** The example
+> wording ("Facebook Ad Spend", "EBITDA", "$4K", "20%") is illustrative — every
+> label, sentence, and number is derived from the actual driver you moved and
+> the actual target Key Result. Never hardcode "EBITDA" or "Facebook Ad Spend";
+> substitute the real `metricFriendlyName`s and values from the tool response.
+
 1. **Header lockup** (shared chrome above). The `ArtifactHeader` `title` is the
    **plain-English impact statement** — what the change did to the target Key
-   Result, in one line, with real numbers:
+   Result, in one line, with real numbers, composed from `{driver} {direction}
+{magnitude} {verb} {targetMetric} by {formatted delta}`. Example shape (not
+   literal):
 
    > "A 20% increase in Facebook Ad Spend increases EBITDA by $4K"
 
@@ -361,13 +369,15 @@ to bottom exactly in this order. The Drivepoint logo sits top-right via
    what changed and the headline result (the "so what"). Muted slate
    (`text-slate-600`), `text-sm`. This is prose, not a restatement of the tiles.
 3. **Three tiles** — 3 cards across (`sm:grid-cols-3`), each a bordered white
-   card with a small uppercase label and a large value:
+   card with a small uppercase label and a large value. The labels are dynamic
+   — use the real driver and Key Result names, not the example words:
    - **Input** — the driver change you applied (e.g. "Facebook Ad Spend +20%",
      or the before → after value), formatted per the driver's `dataType`.
-   - **EBITDA Output** — the target Key Result's scenario value at the horizon
-     end (label it with the actual metric name; "EBITDA" is the example).
-   - **EBITDA Change** — the delta vs. baseline: absolute **and** percent, both
-     signed, with `↑`/`↓` and the emerald/red rule above.
+   - **`<Target metric>` Output** — the target Key Result's scenario value at
+     the horizon end, labeled with that metric's real `metricFriendlyName`
+     ("EBITDA" in the example is just one possible target).
+   - **`<Target metric>` Change** — the delta vs. baseline: absolute **and**
+     percent, both signed, with `↑`/`↓` and the emerald/red rule above.
 4. **Baseline-vs-scenario `LineChart`** — the primary trend,
    `ResponsiveContainer width="100%" height={360}`. Baseline + scenario,
    Forecast periods only, aligned monthly:
