@@ -28,12 +28,12 @@ These override anything below if they conflict.
 2. **Say "model", not "plan".** In all user-facing prose call these workbooks
    **models** ("your live model", "this model"). Tool names and schema fields
    (`planId`, `list_company_plans`) keep their names — only your prose changes.
-3. **Assume the live model — silently.** When a company has multiple candidate
-   models, default to the root-path live model that has a good/recent sync
-   state (not a failed dated copy, not a backup). Do this silently: do NOT
-   announce that you found or identified the live model, and do NOT explain
-   your resolution logic. Never resolve a model by name alone. Only surface a
-   choice if there is a real, unresolved ambiguity the user must break.
+3. **Assume the live model — silently.** The live model is the plan whose
+   `isLive` flag is true in `list_company_plans` (it matches the company's
+   `liveSharepointPlanId`). Default to it silently: do NOT announce that you
+   found or identified the live model, and do NOT explain your resolution
+   logic. Never resolve a model by name alone. Only surface a choice if there
+   is a real, unresolved ambiguity (e.g. no plan is flagged `isLive`).
 4. **The output is always an artifact.** Every completed scenario ships as a
    React artifact built to the spec in Phase 5 and `artifact-style-guide.md`
    — never a bare text summary or a markdown table, unless the user explicitly
@@ -136,11 +136,11 @@ lever category to test.
 
 ### Phase 1 — Discover the plan
 
-1. `list_company_plans` — pick the right `planId`. Default silently to the
-   root-path live model with a good/recent sync `state` (prefer `active`);
-   ignore failed dated copies and backups. Do NOT announce that you found or
-   picked the live model, and never resolve by name alone. Only ask the user
-   if there is a genuine, unresolved ambiguity (see Operating defaults #3).
+1. `list_company_plans` — pick the right `planId`. Default silently to the plan
+   whose `isLive` flag is true (it matches the company's `liveSharepointPlanId`).
+   Do NOT announce that you found or picked the live model, and never resolve by
+   name alone. Only ask the user if no plan is flagged `isLive`, or there is a
+   genuine, unresolved ambiguity (see Operating defaults #3).
 2. `get_valid_plan_tabs` — returns the roll-forward tabs (the only tabs
    that carry Key Drivers / Key Results). Copy tab names verbatim,
    case-sensitive.
@@ -350,11 +350,13 @@ to bottom exactly in this order. The Drivepoint logo sits top-right via
 1. **Header lockup** (shared chrome above). The `ArtifactHeader` `title` is the
    **plain-English impact statement** — what the change did to the target Key
    Result, in one line, with real numbers:
+
    > "A 20% increase in Facebook Ad Spend increases EBITDA by $4K"
 
    Build it from the driver moved + the target metric's delta at the horizon
    end (direction word + formatted amount). The `subtitle` carries the model
    name, horizon window, currency, and lever phrase.
+
 2. **Exec summary** — a 2–3 line text block directly under the header saying
    what changed and the headline result (the "so what"). Muted slate
    (`text-slate-600`), `text-sm`. This is prose, not a restatement of the tiles.
@@ -424,8 +426,11 @@ to bottom exactly in this order. The Drivepoint logo sits top-right via
    is legible:
 
    ```jsx
-   const vals = rows.flatMap((r) => [r.baseline, r.scenario]).filter((n) => n != null);
-   const lo = Math.min(...vals), hi = Math.max(...vals);
+   const vals = rows
+     .flatMap((r) => [r.baseline, r.scenario])
+     .filter((n) => n != null);
+   const lo = Math.min(...vals),
+     hi = Math.max(...vals);
    const pad = (hi - lo) * 0.15 || Math.abs(hi) * 0.05 || 1;
    // <YAxis domain={[lo - pad, hi + pad]} ... />
    ```
@@ -657,11 +662,11 @@ Rules for write tools:
 - Copy `tab` verbatim from `get_valid_plan_tabs`; use the `rowNumber` from
   `search_plan_row` — never guess a row.
 
-| Tool | Modifies workbook? | Purpose |
-| ---- | ------------------ | ------- |
-| `search_plan_row` | No | Locate a row by label / id / marker. |
-| `add_plan_row` | Yes (confirm) | Insert a blank row above `rowNumber`, then write values. |
-| `mark_key_driver_or_result` | Yes (confirm) | Write the Key Driver / Key Result marker into column A (+ durable id in B). |
+| Tool                        | Modifies workbook? | Purpose                                                                     |
+| --------------------------- | ------------------ | --------------------------------------------------------------------------- |
+| `search_plan_row`           | No                 | Locate a row by label / id / marker.                                        |
+| `add_plan_row`              | Yes (confirm)      | Insert a blank row above `rowNumber`, then write values.                    |
+| `mark_key_driver_or_result` | Yes (confirm)      | Write the Key Driver / Key Result marker into column A (+ durable id in B). |
 
 ---
 
