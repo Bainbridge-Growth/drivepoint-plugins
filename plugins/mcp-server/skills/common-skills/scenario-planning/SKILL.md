@@ -15,6 +15,36 @@ governs the analysis loop only.
 
 ---
 
+## Operating defaults (read first)
+
+These override anything below if they conflict.
+
+1. **Always preview — never ask for permission to run.** When the user asks a
+   "what if…?" / scenario question, run `preview_plan_scenario` and return the
+   result. Do not ask "should I run a scenario / preview this?" — just do it.
+   The only thing you may confirm is a genuine ambiguity that changes the
+   numbers (sign convention on a negative baseline, or which lever to move
+   when the user named none). Never gate the preview itself behind a question.
+2. **Say "model", not "plan".** In all user-facing prose call these workbooks
+   **models** ("your live model", "this model"). Tool names and schema fields
+   (`planId`, `list_company_plans`) keep their names — only your prose changes.
+3. **Assume the live model — silently.** When a company has multiple candidate
+   models, default to the root-path live model that has a good/recent sync
+   state (not a failed dated copy, not a backup). Do this silently: do NOT
+   announce that you found or identified the live model, and do NOT explain
+   your resolution logic. Never resolve a model by name alone. Only surface a
+   choice if there is a real, unresolved ambiguity the user must break.
+4. **The output is always an artifact.** Every completed scenario ships as a
+   React artifact built to the spec in Phase 5 and `artifact-style-guide.md`
+   — never a bare text summary or a markdown table, unless the user explicitly
+   asks for text only.
+5. **Be explicit about drivers you skip.** Never silently drop a driver
+   because its Forecast values are NA/NaN. Tell the user, in prose, which rows
+   you used and which you skipped and why, and invite a correction (see Phase
+   3).
+
+---
+
 ## How the tool works (read this first)
 
 `preview_plan_scenario` takes **high-level rules, not per-period numbers.**
@@ -106,9 +136,11 @@ lever category to test.
 
 ### Phase 1 — Discover the plan
 
-1. `list_company_plans` — pick the right `planId`. Prefer plans whose
-   `state` is `active`. If multiple plans exist, name the one you chose
-   in your reply.
+1. `list_company_plans` — pick the right `planId`. Default silently to the
+   root-path live model with a good/recent sync `state` (prefer `active`);
+   ignore failed dated copies and backups. Do NOT announce that you found or
+   picked the live model, and never resolve by name alone. Only ask the user
+   if there is a genuine, unresolved ambiguity (see Operating defaults #3).
 2. `get_valid_plan_tabs` — returns the roll-forward tabs (the only tabs
    that carry Key Drivers / Key Results). Copy tab names verbatim,
    case-sensitive.
@@ -152,7 +184,12 @@ Call `get_plan_key_driver_values` for the shortlisted drivers, batched in a
 single call. You need this to:
 
 - **Confirm the driver is usable** — skip drivers whose Forecast values are
-  `null` or `NaN` (common in dev / copy plans). Note them in your reply.
+  `null` or `NaN` (common in dev / copy plans). **Never skip silently.** Tell
+  the user which rows you moved and which you left alone and why, and invite a
+  correction. Make the user aware, e.g.: "You only have one populated Ad Spend
+  row which is Facebook. There's others but they contain NA so I won't touch
+  them. If you believe that's a mistake please correct me." This is required
+  whenever a plausible driver is dropped for NA/NaN values — do not bury it.
 - **Read `dataType` so you pick the right `interval_type`.** A "10%
   increase" is `interval_type: "percent", value: 10` on _any_ driver. An
   absolute +5-point bump on a `percent_*` driver is
@@ -306,16 +343,30 @@ the Figma reference so the artifact reads as the same product.
 
 ### Layout A — single-scenario preview (compact)
 
-In order, top to bottom:
+This is the default output for every single-scenario "what if…?". Build it top
+to bottom exactly in this order. The Drivepoint logo sits top-right via
+`ArtifactHeader` (shared chrome).
 
-1. **Header lockup** (shared chrome above).
-2. **KPI card row** — 3 cards across (`sm:grid-cols-3`), each a bordered
-   white card:
-   - Baseline at horizon end (formatted per the metric's `dataType`).
-   - Scenario at horizon end (same formatting).
-   - Delta — absolute value **and** percent, both signed, with `↑`/`↓`
-     and the emerald/red rule above.
-3. **Two-series `LineChart`** — the primary trend,
+1. **Header lockup** (shared chrome above). The `ArtifactHeader` `title` is the
+   **plain-English impact statement** — what the change did to the target Key
+   Result, in one line, with real numbers:
+   > "A 20% increase in Facebook Ad Spend increases EBITDA by $4K"
+
+   Build it from the driver moved + the target metric's delta at the horizon
+   end (direction word + formatted amount). The `subtitle` carries the model
+   name, horizon window, currency, and lever phrase.
+2. **Exec summary** — a 2–3 line text block directly under the header saying
+   what changed and the headline result (the "so what"). Muted slate
+   (`text-slate-600`), `text-sm`. This is prose, not a restatement of the tiles.
+3. **Three tiles** — 3 cards across (`sm:grid-cols-3`), each a bordered white
+   card with a small uppercase label and a large value:
+   - **Input** — the driver change you applied (e.g. "Facebook Ad Spend +20%",
+     or the before → after value), formatted per the driver's `dataType`.
+   - **EBITDA Output** — the target Key Result's scenario value at the horizon
+     end (label it with the actual metric name; "EBITDA" is the example).
+   - **EBITDA Change** — the delta vs. baseline: absolute **and** percent, both
+     signed, with `↑`/`↓` and the emerald/red rule above.
+4. **Baseline-vs-scenario `LineChart`** — the primary trend,
    `ResponsiveContainer width="100%" height={360}`. Baseline + scenario,
    Forecast periods only, aligned monthly:
 
@@ -366,19 +417,43 @@ In order, top to bottom:
      .sort((a, b) => a.date.localeCompare(b.date));
    ```
 
-4. **Driver-change table** — the edits that produced the scenario, built
+   **Make the change visible.** A common failure is a chart where "nothing
+   looks like it changed" because the two lines are visually identical against
+   a tall, zero-anchored axis. Do NOT force the Y axis to start at 0. Compute a
+   focused domain around the two series so the gap between baseline and scenario
+   is legible:
+
+   ```jsx
+   const vals = rows.flatMap((r) => [r.baseline, r.scenario]).filter((n) => n != null);
+   const lo = Math.min(...vals), hi = Math.max(...vals);
+   const pad = (hi - lo) * 0.15 || Math.abs(hi) * 0.05 || 1;
+   // <YAxis domain={[lo - pad, hi + pad]} ... />
+   ```
+
+   If the two series are still nearly indistinguishable at this zoom (a very
+   small relative delta), add a companion **delta series** (scenario − baseline)
+   as a second small chart or a secondary axis so the movement is unmistakable,
+   and say in prose that the effect is small.
+
+5. **Driver-change table** — the edits that produced the scenario, built
    directly from `appliedChanges`. One row per driver; columns: metric name
    (`metricFriendlyName`), months edited (compact range from the entry's
    `values` dates, "Jun–Sep 2026"), before / after (from each entry's
    `values`, formatted per that driver's own `dataType`), monthly delta.
    Do not recompute these — they are the exact values the server sent to
    Raptor.
-5. **Additional Key Results chart** — only if the user cares about more
+6. **Additional Key Results chart** — only if the user cares about more
    than one output (e.g. Cash _and_ EBITDA): one more `LineChart` per
    metric, using the same `baseline`/`scenario` join. Never stack
    different currencies or dimensionally different metrics on one axis —
    one chart per metric.
-6. **Source footer** (shared chrome).
+7. **Recommendation** — a 2–3 sentence closing block (bordered card or
+   muted callout) giving your judgment: is this the highest-leverage move to
+   hit the user's goal, or would another lever/scenario do more? Name the
+   concrete alternative(s) worth running next (e.g. "cutting blended CAC 10%
+   moves EBITDA ~3x more than this ad-spend bump — want me to run it?"). Base
+   this on the magnitudes you actually observed, not generic advice.
+8. **Source footer** (shared chrome).
 
 ### Layout B — multi-scenario comparison (full)
 
@@ -547,8 +622,46 @@ Things that go wrong when the loop is not followed. Do not do these.
 | 3     | `get_plan_key_driver_values`        | Sanity-check drivers (NaN / dataType / rough magnitude) — not transcribed.                      |
 | 4     | `preview_plan_scenario` (rules)     | Expand your rules across the window → Raptor; returns `baseline`, `scenario`, `appliedChanges`. |
 
-All tools are read-only from the plan's perspective — nothing here mutates
-the SmartModel workbook.
+All tools above are read-only from the model's perspective — nothing in the
+scenario-preview loop mutates the workbook.
+
+---
+
+## Editing a model (write tools)
+
+Separate from the read-only preview loop, three tools **modify the live model
+workbook** on SharePoint. Use them only when the user explicitly asks to change
+the model (add a line item, mark a row as a driver/result) — never as part of a
+"what if…?" preview.
+
+- `search_plan_row` — read-only. Find the row number for a label / id on a tab
+  (matches column C friendly name and/or column B id and/or column A marker).
+  Always run this first to get the exact `rowNumber`.
+- `add_plan_row` — inserts a **blank row at `rowNumber` first** (existing rows
+  shift down), then writes `cells` (keyed by column letter: A = marker, B =
+  durable id, C = friendly name, K onward = the monthly spine). Requires
+  `confirm: true`; without it you get a preview.
+- `mark_key_driver_or_result` — marks a row as a Key Driver or Key Result. The
+  marker is always written to **column A** (that is the single set/enable
+  action — there is no separate step); a durable id is generated into column B
+  if missing. Requires `confirm: true`.
+
+Workflow: `search_plan_row` → (optional) `add_plan_row` → `mark_key_driver_or_result`.
+
+Rules for write tools:
+
+- These **modify the workbook** (unlike preview). Show the user what you will
+  change and get their go-ahead, then call with `confirm: true`.
+- After marking a row, its `{tab, id}` becomes usable by
+  `list_plan_key_drivers_and_results` and the preview loop.
+- Copy `tab` verbatim from `get_valid_plan_tabs`; use the `rowNumber` from
+  `search_plan_row` — never guess a row.
+
+| Tool | Modifies workbook? | Purpose |
+| ---- | ------------------ | ------- |
+| `search_plan_row` | No | Locate a row by label / id / marker. |
+| `add_plan_row` | Yes (confirm) | Insert a blank row above `rowNumber`, then write values. |
+| `mark_key_driver_or_result` | Yes (confirm) | Write the Key Driver / Key Result marker into column A (+ durable id in B). |
 
 ---
 
@@ -558,9 +671,9 @@ the SmartModel workbook.
   it delivered against the target.
 - Every driver number is formatted per its `dataType` (currency with the
   plan's currency, percent to one decimal, days to zero decimals).
-- Every result number keeps the plan's currency and shows the horizon
+- Every result number keeps the model's currency and shows the horizon
   month explicitly.
-- Include the plan name (from `list_company_plans`) and last-booked-month
+- Include the model name (from `list_company_plans`) and last-booked-month
   context in the source-context line at the top, per
   `report-creation-guide.md` § "Source-context line".
 - If the scenario reveals a going-concern issue (deeply negative cash,
