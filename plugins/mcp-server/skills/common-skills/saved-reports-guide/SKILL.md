@@ -1,9 +1,9 @@
 # Saved Reports Guide
 
 How to build, preview, save, and edit a **saved report** in Drivepoint — a
-data-backed HTML report that lives in the Drivepoint app itself, at
-`https://app.drivepoint.io/<company>/reports`, and re-renders with live data
-every time someone opens it.
+data-backed report that lives in the Drivepoint app itself, at
+`https://app.drivepoint.io/<company>/reports`, and renders from a structured
+report definition.
 
 This is different from an in-chat artifact (see `report-creation-guide.md`):
 an artifact answers today's question in this conversation; a saved report is
@@ -14,11 +14,22 @@ page," or "edit the retention scorecard," this guide applies.
 
 ---
 
+## Golden rules (read first)
+
+- **Never call `save_report` unless the user explicitly asks to save.** A
+  preview is not permission to save. Wait for a clear instruction, and let the
+  user pick **save as new** (create) or **update** (overwrite an existing
+  definition by `report_id`).
+- **Always show a preview as an auto-opened JSX artifact** built to the
+  `artifact-style-guide`, before any save.
+
 ## What a saved report is
 
 A versioned, tenant-scoped **report definition**: named SELECT-only SQL
-queries plus an HTML template plus metadata. It is data, not code — saving
-one requires no deploy, and it appears in the app's Reports list immediately.
+queries plus a structured `report` object plus metadata. It is data, not code
+— saving one requires no deploy, and it appears in the app's Reports list
+immediately. There is no HTML template: the app renders the `report` object
+with built-in components.
 
 ```json
 {
@@ -26,7 +37,15 @@ one requires no deploy, and it appears in the app's Reports list immediately.
   "description": "Net sales, orders, and AOV by week and channel.",
   "report_type": "sales-pulse",
   "queries": [{"key": "rows", "query": "SELECT ... FROM {ENV}_dwh_mart. ..."}],
-  "template": "<style>...</style><div class=\"rp-root\">... ${$.rows.length} ...</div>",
+  "report": {
+    "header": {"title": "Weekly DTC Sales Pulse", "subtitle": "Last 12 weeks", "generatedAt": "2026-01-31T00:00:00Z"},
+    "blocks": [
+      {"type": "text", "text": {"title": "Overview", "body": "Two sentences of plain-language context for the period."}},
+      {"type": "kpiGroup", "kpis": [{"label": "Net sales", "value": 9880021, "format": "currency", "highlight": true}]},
+      {"type": "chart", "chart": {"chartType": "bar", "xKey": "week", "series": [{"key": "netSales", "label": "Net sales"}], "valueFormat": "currency", "data": [{"week": "W1", "netSales": 812345}]}},
+      {"type": "table", "table": {"columns": [{"key": "week", "label": "Week"}, {"key": "netSales", "label": "Net sales", "format": "currency", "emphasize": true}], "rows": [{"week": "W1", "netSales": 812345}]}}
+    ]
+  },
   "context": {"weeks": 12},
   "status": "active"
 }
@@ -41,8 +60,8 @@ rolled back — but treat saves as real: preview first, always.
 | Tool | What it does |
 |---|---|
 | `list_reports` | Summaries of the company's saved definitions |
-| `get_report` | One full definition (queries + template + context) |
-| `preview_report` | Runs a saved definition's queries — or draft `queries` you pass — against the company's live warehouse and returns the rows keyed exactly as the template will see them |
+| `get_report` | One full definition (queries + `report` object + context) |
+| `preview_report` | Runs a saved definition's queries — or draft `queries` you pass — against the company's live warehouse and returns the rows keyed by each query's `key` |
 | `save_report` | Creates a definition, or updates one when `report_id` is passed |
 
 ## The authoring loop
@@ -52,102 +71,96 @@ rolled back — but treat saves as real: preview first, always.
    names.
 2. **Draft the queries.** SELECT-only. Reference datasets with the `{ENV}_`
    prefix token (e.g. `{ENV}_dwh_mart.orders`) — it is substituted per
-   environment at render time. Parameterize with `${$CONTEXT.<param>}` tokens
-   and put defaults for every param in `context`. Keep result sets small and
-   aggregated: the template receives raw rows.
-3. **Preview.** `preview_report` with the draft `queries`. Confirm every key
-   returns rows, the numbers are sane (spot-check against a known figure),
-   and nothing is truncated. Fix and re-preview until clean.
-4. **Build the template.** See the template contract below. Render it
-   yourself against the preview rows to check the output reads correctly.
-5. **Save.** `save_report`. Report back the title and the app path
-   `/:company/reports/html/<id>` (the report also appears in the Reports
-   list). If save is rejected for the author role, hand the definition to a
-   Drivepoint admin instead of retrying.
+   environment. Parameterize with `${$CONTEXT.<param>}` tokens and put
+   defaults for every param in `context`. Keep result sets small and
+   aggregated.
+3. **Preview the data.** `preview_report` with the draft `queries`. Confirm
+   every key returns rows, the numbers are sane (spot-check against a known
+   figure), and nothing is truncated. Fix and re-preview until clean.
+4. **Build the report.** Turn the previewed rows into `report.blocks` (see the
+   report contract below). The values are baked into the blocks — the app does
+   not re-run your SQL at render time.
+5. **Show a preview artifact — always.** Render the report as an in-chat
+   **JSX/React artifact** that follows the `artifact-style-guide` skill, and
+   **auto-open** it so the user sees it immediately. This is the review step:
+   the artifact must mirror what the saved report will look like (same header,
+   same blocks, same numbers). Never describe the report only in text; never
+   substitute a preview for a save.
+6. **Stop and wait for an explicit save instruction.** Do **not** call
+   `save_report` on your own — not after a preview, not because the data looks
+   good, not to "finish the task". Saving is a deliberate user action. Only
+   call `save_report` when the user explicitly asks, and let them choose:
+   - **"save as new"** (or "create") → call `save_report` **without**
+     `report_id` (creates a new definition).
+   - **"update"** (or "save over the existing one") → call `save_report`
+     **with** the `report_id` of the definition being edited.
+
+   If it is ambiguous which they mean, ask. After a save, report the title and
+   the app path `/:company/reports/mcp/<id>`. If the save is rejected for the
+   author role, hand the definition to a Drivepoint admin instead of retrying.
 
 **Editing** is the same loop starting from `get_report`: fetch, change the
-queries and/or template, `preview_report`, then `save_report` with the
-`report_id`. Never save an edit you have not previewed.
+queries and/or the `report` blocks, `preview_report`, show the updated preview
+artifact, then wait for the user to say "update" (or "save as new") before
+calling `save_report`. Never save an edit the user has not previewed and
+explicitly approved.
 
-## Template contract
+## Report contract
 
-The template is rendered as a **JavaScript template literal** in the app.
-`${...}` expressions can read:
+`report` is `{header, blocks}`. No HTML, no scripts — just structured data the
+app maps to components.
 
-- `$[key]` — each query's rows, under the query's `key` (a single query with
-  key `"rows"` reads as `$.rows`). Rows are plain objects keyed by the SELECT
-  column names.
-- `$.company` — `.name`, `.id` of the tenant.
-- `$.context` — the merged context params.
-- `$.generatedAt` — ISO timestamp of the render.
+**header** — `{title, subtitle?, eyebrow?, generatedAt?}`. `generatedAt` is an
+ISO timestamp, rendered as an "Updated <date>" line.
 
-Rules that keep templates robust:
+**blocks** — an ordered array rendered top to bottom. Each block is one of four
+types:
 
-- **Inline everything.** One self-contained fragment: a `<style>` block plus
-  markup. No external scripts; no `<html>`/`<head>`/`<body>` wrapper — the
-  fragment is injected into the app page.
-- **Namespace CSS classes** with a report-specific prefix (`.sc-`, `.rp-`)
-  so styles cannot leak into the app.
-- **Compute inside one IIFE.** Do the grouping/derivation in a single
-  `${(function () { ... return html; })()}` block that builds the HTML with
-  string concatenation. Guard the empty case first and return a friendly
-  "no data yet" panel.
-- **Format defensively.** `Number(...)` every value before math;
-  `toLocaleString` for counts; explicit rounding for percents.
-- **Drivepoint brand**: Manrope for headings, Roboto for body, the dp-design
-  light palette (ink `#191815`, muted `#7a7774`, accent `#76a4ea`, borders
-  `#ecebe9`). No em dashes in copy.
+- **`kpiGroup`** — a row of KPI cards.
+  `{"type": "kpiGroup", "kpis": [{...}]}` where each kpi is
+  `{label, value, format?, note?, highlight?, delta?}`. `value` is a string or
+  number; `format` is one of `number | currency | percent | text`; `delta` is
+  `{value, goodDirection?}` where `value` is fractional (0.12 renders as +12%)
+  and `goodDirection` (`up` | `down`, default `up`) colors it.
+- **`chart`** — `{"type": "chart", "chart": {...}}` where chart is
+  `{chartType, title?, data, xKey, series, stacked?, valueFormat?, height?, colors?}`.
+  `chartType` is `line | bar | area | pie | doughnut`; `data` is the array of
+  row objects to plot; `xKey` is the field for the x-axis (or slice label for
+  pie/doughnut); `series` is `[{key, label?, color?}]` (pie/doughnut use the
+  first series as the value); `valueFormat` formats the axis/tooltips.
+- **`table`** — `{"type": "table", "table": {...}}` where table is
+  `{title?, columns, rows, total?}`. Each column is
+  `{key, label, align?, format?, emphasize?}` (`align` defaults to right for
+  numeric formats, else left; `emphasize` bolds the column). `rows` are objects
+  keyed by column `key`; `total` is an optional bold footer row keyed the same.
+- **`text`** — `{"type": "text", "text": {title?, body}}` where `body` is a
+  single string or an array of strings (each rendered as its own paragraph).
+  Use it for a short overview at the top or a "what stands out" takeaways
+  section. Prefer real `text` blocks over faking prose with a one-column table.
 
-A minimal template that follows every rule above (namespaced style block,
-one IIFE, empty-state guard, defensive formatting):
+Rules that keep reports clean:
 
-```html
-<style>
-.sp-root { font-family:"Roboto",sans-serif; color:#191815; padding:24px 0; }
-.sp-title { font-family:"Manrope",sans-serif; font-weight:700; font-size:26px; }
-.sp-tbl { width:100%; border-collapse:collapse; font-size:13.5px; }
-.sp-tbl th, .sp-tbl td { padding:9px 14px; border-bottom:1px solid #ecebe9; text-align:right; }
-.sp-tbl th:first-child, .sp-tbl td:first-child { text-align:left; }
-</style>
-<div class="sp-root">
-  <h1 class="sp-title">Sales Pulse</h1>
-  ${(function () {
-    var rows = Array.isArray($.rows) ? $.rows : [];
-    if (!rows.length) { return "<p>No sales data yet for this period.</p>"; }
-    var fmt = function (v) { return Math.round(Number(v)).toLocaleString("en-US"); };
-    var html = "<table class='sp-tbl'><thead><tr><th>Month</th><th>Channel</th><th>Orders</th><th>Net sales</th></tr></thead><tbody>";
-    rows.forEach(function (r) {
-      html += "<tr><td>" + r.month + "</td><td>" + r.channel + "</td><td>" + fmt(r.orders) + "</td><td>" + fmt(r.net_sales) + "</td></tr>";
-    });
-    return html + "</tbody></table>";
-  })()}
-</div>
-```
-
-Scale the same shape up for richer reports: KPI card rows, per-section
-tables, comparison layouts. The section design rules in
-`report-creation-guide.md` (source-mart routing, comparisons, commentary
-discipline, pre-publish cross-checks) apply to saved reports too — the
-output medium changes, the analytical discipline does not. To match an
-existing house style, `list_reports` + `get_report` any definition already
-saved for the tenant and mirror its structure.
-
-## Rendering a saved report in-chat
-
-To show a saved report to the user in the conversation: `get_report` +
-`preview_report`, then interpolate the rows into the template exactly as the
-app would (same `$` globals). The result should match what the user sees in
-the app pixel-for-pixel modulo fonts.
+- **Bake real numbers in.** Put previewed values directly into `kpis`,
+  `chart.data`, and `table.rows`. Round and pre-format in SQL or when building
+  the blocks; do not ship raw, unrounded floats.
+- **Pick the right block.** KPIs for headline metrics, chart for trend/mix,
+  table for detail, text for narrative. A typical report is: a short `text`
+  overview, a `kpiGroup`, one or two charts, a detail `table`, and a closing
+  `text` takeaways block.
+- **Drivepoint house style.** Concise, plain language. **No em dashes** in any
+  copy (titles, labels, body) — use commas, periods, or "to" for ranges.
 
 ## Governance (do not work around)
 
 - Queries run only in the company's own warehouse project and only against
   the allowed datasets; `save_report` dry-runs every query and rejects
-  anything else. If a dataset you need is blocked, say so — do not smuggle
-  data in through the template.
+  anything else. If a dataset you need is blocked, say so.
 - Saves are versioned and audited (who, when, what changed). Use
   `status: "archived"` to retire a report; do not overwrite a report with an
-  empty template to "delete" it.
+  empty `report` to "delete" it.
+- A save is always user-initiated. Do not auto-save, save "to be helpful", or
+  re-save on your own after an edit. Preview, then wait for an explicit "save
+  as new" or "update".
 - One tenant per definition. For the same report across tenants, save the
   same definition per company (keep `report_type` identical so instances stay
   linked).
