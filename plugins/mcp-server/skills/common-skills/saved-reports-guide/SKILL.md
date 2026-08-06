@@ -81,8 +81,9 @@ rolled back — but treat saves as real: preview first, always.
 1. **Discover the data.** Use `list_datasets` / `list_tables` / `get_schema`
    and the `data-dictionary` / `sample-queries` skills. Never guess column
    names.
-2. **Draft one query per block.** SELECT-only. Reference datasets with the
-   `{ENV}_` prefix token (e.g. `{ENV}_dwh_mart.orders`) — it is substituted per
+2. **Draft one query per data block** (text-only blocks need none, and a
+   text-only report needs no queries at all). SELECT-only. Reference datasets
+   with the `{ENV}_` prefix token (e.g. `{ENV}_dwh_mart.orders`) — substituted per
    environment. Parameterize with `${$CONTEXT.<param>}` tokens and put defaults
    for every param in `context`. Each query should SELECT **exactly** the
    columns and rows its block renders: a `kpiGroup` query returns a **single
@@ -119,9 +120,14 @@ rolled back — but treat saves as real: preview first, always.
    - **"update"** (or "save over the existing one") → call `save_report`
      **with** the `report_id` of the definition being edited.
 
-   If it is ambiguous which they mean, ask. After a save, report the title and
-   the app path `/:company/reports/mcp/<id>`. If the save is rejected for the
-   author role, hand the definition to a Drivepoint admin instead of retrying.
+   If it is ambiguous which they mean, ask. **Don't re-run the queries to
+   save.** You already previewed the data in step 3; if the queries and `report`
+   are unchanged, call `save_report` directly — it dry-run-validates every query
+   itself, so a fresh `preview_report` at save time is wasted warehouse work.
+   After a save, give the user a **clickable link** to the report in chat, e.g.
+   `[<title>](https://app.drivepoint.io/<company>/reports/mcp/<id>)`, using the
+   returned id. If the save is rejected for the author role, hand the definition
+   to a Drivepoint admin instead of retrying.
 
 **Editing** is the same loop starting from `get_report`: fetch, change the
 queries and/or the `report` blocks, `preview_report`, show the updated preview
@@ -149,7 +155,8 @@ types:
   `{column, goodDirection?}` where `column` holds a fractional change (0.12
   renders as +12%) and `goodDirection` (`up` | `down`, default `up`) colors it.
 - **`chart`** — `{"type": "chart", "chart": {...}}` where chart is
-  `{chartType, title?, query, xKey, series, stacked?, valueFormat?, height?, colors?}`.
+  `{chartType, title?, subtitle?, query, xKey, series, stacked?, valueFormat?, height?, colors?}`.
+  `subtitle` is a small caption under the title (period or a one-line takeaway).
   `chartType` is `line | bar | area | pie | doughnut`; `query` is the key of the
   query whose rows are plotted; `xKey` is the field for the x-axis (or slice
   label for pie/doughnut); `series` is `[{key, label?, color?}]` naming columns
@@ -157,11 +164,14 @@ types:
   formats the axis/tooltips.
 - **`table`** — `{"type": "table", "table": {...}}` where table is
   `{title?, query, columns, totalQuery?}`. `query` is the key of the query whose
-  rows fill the table. Each column is `{key, label, align?, format?, emphasize?}`
-  (`align` defaults to right for numeric formats, else left; `emphasize` bolds
-  the column); each `key` names a column in the query's rows. `totalQuery` is an
-  optional key of a query whose first row renders as a bold footer, keyed the
-  same as `columns`.
+  rows fill the table. Each column is
+  `{key, label, align?, format?, emphasize?, chart?}` (`align` defaults to right
+  for numeric formats, else left; `emphasize` bolds the column); each `key` names
+  a column in the query's rows. `totalQuery` is an optional key of a query whose
+  first row renders as a bold footer, keyed the same as `columns`. A column with
+  `chart: {type?: line|bar|area, color?}` renders each cell as a **sparkline** —
+  for that column the query must return an **array of numbers per row** (e.g.
+  `ARRAY_AGG(net_sales ORDER BY month) AS trend`), one array per table row.
 - **`text`** — `{"type": "text", "text": {title?, body}}` where `body` is a
   single string or an array of strings (each rendered as its own paragraph).
   Use it for a short overview at the top or a "what stands out" takeaways
@@ -188,10 +198,14 @@ Rules that keep reports clean:
   exact column keys the block uses, and return only the rows that block needs.
   A `kpiGroup` query returns a single row; chart/table queries return the plot
   or detail rows. Do not over-fetch or reshape client-side.
-- **Pick the right block.** KPIs for headline metrics, chart for trend/mix,
-  table for detail, text for narrative. A typical report is: a short `text`
-  overview, a `kpiGroup`, one or two charts, a detail `table`, and a closing
-  `text` takeaways block.
+- **Blocks are optional — compose to the ask.** No block type is required.
+  Include only what the data and the user's request call for: a report can be a
+  single `table`, KPIs only, a chart plus takeaways, or `text`-only (which needs
+  no `queries`). Let the request and the data drive the shape, not a template.
+  As a rule of thumb, KPIs suit headline metrics, charts suit trend/mix, tables
+  suit detail, and text suits narrative; a fuller report often runs `text`
+  overview → `kpiGroup` → chart(s) → detail `table` → `text` takeaways, but drop
+  anything that doesn't serve the question.
 - **Drivepoint house style.** Concise, plain language. **No em dashes** in any
   copy (titles, labels, body) — use commas, periods, or "to" for ranges.
 
