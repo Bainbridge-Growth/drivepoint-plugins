@@ -22,6 +22,10 @@ page," or "edit the retention scorecard," this guide applies.
   definition by `report_id`).
 - **Always show a preview as an auto-opened JSX artifact** built to the
   `artifact-style-guide`, before any save.
+- **Reports are query-driven, not baked.** A block never carries data; it
+  names a query (by `key`) and the app runs that query at **view time**, so the
+  report stays live against the warehouse. Write **one focused query per
+  block**.
 
 ## What a saved report is
 
@@ -29,21 +33,29 @@ A versioned, tenant-scoped **report definition**: named SELECT-only SQL
 queries plus a structured `report` object plus metadata. It is data, not code
 — saving one requires no deploy, and it appears in the app's Reports list
 immediately. There is no HTML template: the app renders the `report` object
-with built-in components.
+with built-in components, running each block's query when the page is viewed.
 
 ```json
 {
   "title": "Weekly DTC Sales Pulse",
-  "description": "Net sales, orders, and AOV by week and channel.",
+  "description": "Net sales, orders, and AOV by week.",
   "report_type": "sales-pulse",
-  "queries": [{"key": "rows", "query": "SELECT ... FROM {ENV}_dwh_mart. ..."}],
+  "queries": [
+    {"key": "headline", "query": "SELECT net_sales AS netSales, orders, aov, net_sales_wow AS netSalesWow FROM {ENV}_dwh_mart.sales_pulse_summary WHERE weeks = ${$CONTEXT.weeks}"},
+    {"key": "weekly", "query": "SELECT week, net_sales AS netSales FROM {ENV}_dwh_mart.sales_pulse_weekly ORDER BY week"},
+    {"key": "weeklyTotal", "query": "SELECT 'Total' AS week, SUM(net_sales) AS netSales FROM {ENV}_dwh_mart.sales_pulse_weekly"}
+  ],
   "report": {
     "header": {"title": "Weekly DTC Sales Pulse", "subtitle": "Last 12 weeks", "generatedAt": "2026-01-31T00:00:00Z"},
     "blocks": [
       {"type": "text", "text": {"title": "Overview", "body": "Two sentences of plain-language context for the period."}},
-      {"type": "kpiGroup", "kpis": [{"label": "Net sales", "value": 9880021, "format": "currency", "highlight": true}]},
-      {"type": "chart", "chart": {"chartType": "bar", "xKey": "week", "series": [{"key": "netSales", "label": "Net sales"}], "valueFormat": "currency", "data": [{"week": "W1", "netSales": 812345}]}},
-      {"type": "table", "table": {"columns": [{"key": "week", "label": "Week"}, {"key": "netSales", "label": "Net sales", "format": "currency", "emphasize": true}], "rows": [{"week": "W1", "netSales": 812345}]}}
+      {"type": "kpiGroup", "query": "headline", "kpis": [
+        {"label": "Net sales", "column": "netSales", "format": "currency", "highlight": true, "delta": {"column": "netSalesWow", "goodDirection": "up"}},
+        {"label": "Orders", "column": "orders", "format": "number"},
+        {"label": "AOV", "column": "aov", "format": "currency"}
+      ]},
+      {"type": "chart", "chart": {"chartType": "bar", "query": "weekly", "xKey": "week", "series": [{"key": "netSales", "label": "Net sales"}], "valueFormat": "currency"}},
+      {"type": "table", "table": {"query": "weekly", "totalQuery": "weeklyTotal", "columns": [{"key": "week", "label": "Week"}, {"key": "netSales", "label": "Net sales", "format": "currency", "emphasize": true}]}}
     ]
   },
   "context": {"weeks": 12},
@@ -61,7 +73,7 @@ rolled back — but treat saves as real: preview first, always.
 |---|---|
 | `list_reports` | Summaries of the company's saved definitions |
 | `get_report` | One full definition (queries + `report` object + context) |
-| `preview_report` | Runs a saved definition's queries — or draft `queries` you pass — against the company's live warehouse and returns the rows keyed by each query's `key` |
+| `preview_report` | Runs a saved definition's queries — or draft `queries` you pass — against the company's live warehouse and returns the rows keyed by each query's `key` (the same rows the view endpoint feeds to each block) |
 | `save_report` | Creates a definition, or updates one when `report_id` is passed |
 
 ## The authoring loop
@@ -69,23 +81,35 @@ rolled back — but treat saves as real: preview first, always.
 1. **Discover the data.** Use `list_datasets` / `list_tables` / `get_schema`
    and the `data-dictionary` / `sample-queries` skills. Never guess column
    names.
-2. **Draft the queries.** SELECT-only. Reference datasets with the `{ENV}_`
-   prefix token (e.g. `{ENV}_dwh_mart.orders`) — it is substituted per
-   environment. Parameterize with `${$CONTEXT.<param>}` tokens and put
-   defaults for every param in `context`. Keep result sets small and
-   aggregated.
+2. **Draft one query per block.** SELECT-only. Reference datasets with the
+   `{ENV}_` prefix token (e.g. `{ENV}_dwh_mart.orders`) — it is substituted per
+   environment. Parameterize with `${$CONTEXT.<param>}` tokens and put defaults
+   for every param in `context`. Each query should SELECT **exactly** the
+   columns and rows its block renders: a `kpiGroup` query returns a **single
+   row** with one column per KPI (and per delta); chart/table queries return
+   the rows to plot or list. Do the rounding, aliasing, and formatting in SQL.
 3. **Preview the data.** `preview_report` with the draft `queries`. Confirm
-   every key returns rows, the numbers are sane (spot-check against a known
-   figure), and nothing is truncated. Fix and re-preview until clean.
-4. **Build the report.** Turn the previewed rows into `report.blocks` (see the
-   report contract below). The values are baked into the blocks — the app does
-   not re-run your SQL at render time.
+   every key returns rows, the shape matches the block that will consume it
+   (KPI row has the right columns; chart/table rows have `xKey`/column keys),
+   the numbers are sane (spot-check against a known figure), and nothing is
+   truncated. Fix and re-preview until clean.
+4. **Build the report.** Wire each block to a query by `key` — do **not** copy
+   rows into the blocks:
+   - `kpiGroup` → set the block's `query`, and give each kpi a `column` (and
+     `delta.column`) naming a field in that query's single row.
+   - `chart` → set `chart.query`, plus `xKey` and `series[].key` naming columns
+     in that query's rows.
+   - `table` → set `table.query`, list `columns` (each `key` a column in the
+     query's rows), and optionally `table.totalQuery` for a footer row.
+   The app runs these queries at view time, so the report always reflects the
+   latest data.
 5. **Show a preview artifact — always.** Render the report as an in-chat
-   **JSX/React artifact** that follows the `artifact-style-guide` skill, and
-   **auto-open** it so the user sees it immediately. This is the review step:
-   the artifact must mirror what the saved report will look like (same header,
-   same blocks, same numbers). Never describe the report only in text; never
-   substitute a preview for a save.
+   **JSX/React artifact** that follows the `artifact-style-guide` skill, using
+   the previewed rows, and **auto-open** it so the user sees it immediately.
+   This is the review step: the artifact must mirror what the saved report will
+   look like (same header, same blocks, same numbers the live queries return).
+   Never describe the report only in text; never substitute a preview for a
+   save.
 6. **Stop and wait for an explicit save instruction.** Do **not** call
    `save_report` on your own — not after a preview, not because the data looks
    good, not to "finish the task". Saving is a deliberate user action. Only
@@ -107,8 +131,9 @@ explicitly approved.
 
 ## Report contract
 
-`report` is `{header, blocks}`. No HTML, no scripts — just structured data the
-app maps to components.
+`report` is `{header, blocks}`. No HTML, no scripts, no baked data — just
+structured data the app maps to components, with each data block naming the
+query whose rows it renders.
 
 **header** — `{title, subtitle?, eyebrow?, generatedAt?}`. `generatedAt` is an
 ISO timestamp, rendered as an "Updated <date>" line.
@@ -117,22 +142,26 @@ ISO timestamp, rendered as an "Updated <date>" line.
 types:
 
 - **`kpiGroup`** — a row of KPI cards.
-  `{"type": "kpiGroup", "kpis": [{...}]}` where each kpi is
-  `{label, value, format?, note?, highlight?, delta?}`. `value` is a string or
-  number; `format` is one of `number | currency | percent | text`; `delta` is
-  `{value, goodDirection?}` where `value` is fractional (0.12 renders as +12%)
-  and `goodDirection` (`up` | `down`, default `up`) colors it.
+  `{"type": "kpiGroup", "query": "<key>", "kpis": [{...}]}`. The named query
+  returns **one row**; each kpi is `{label, column, format?, note?, highlight?,
+  delta?}`. `column` names the field in that row to read the value from;
+  `format` is one of `number | currency | percent | text`; `delta` is
+  `{column, goodDirection?}` where `column` holds a fractional change (0.12
+  renders as +12%) and `goodDirection` (`up` | `down`, default `up`) colors it.
 - **`chart`** — `{"type": "chart", "chart": {...}}` where chart is
-  `{chartType, title?, data, xKey, series, stacked?, valueFormat?, height?, colors?}`.
-  `chartType` is `line | bar | area | pie | doughnut`; `data` is the array of
-  row objects to plot; `xKey` is the field for the x-axis (or slice label for
-  pie/doughnut); `series` is `[{key, label?, color?}]` (pie/doughnut use the
-  first series as the value); `valueFormat` formats the axis/tooltips.
+  `{chartType, title?, query, xKey, series, stacked?, valueFormat?, height?, colors?}`.
+  `chartType` is `line | bar | area | pie | doughnut`; `query` is the key of the
+  query whose rows are plotted; `xKey` is the field for the x-axis (or slice
+  label for pie/doughnut); `series` is `[{key, label?, color?}]` naming columns
+  to plot (pie/doughnut use the first series as the value); `valueFormat`
+  formats the axis/tooltips.
 - **`table`** — `{"type": "table", "table": {...}}` where table is
-  `{title?, columns, rows, total?}`. Each column is
-  `{key, label, align?, format?, emphasize?}` (`align` defaults to right for
-  numeric formats, else left; `emphasize` bolds the column). `rows` are objects
-  keyed by column `key`; `total` is an optional bold footer row keyed the same.
+  `{title?, query, columns, totalQuery?}`. `query` is the key of the query whose
+  rows fill the table. Each column is `{key, label, align?, format?, emphasize?}`
+  (`align` defaults to right for numeric formats, else left; `emphasize` bolds
+  the column); each `key` names a column in the query's rows. `totalQuery` is an
+  optional key of a query whose first row renders as a bold footer, keyed the
+  same as `columns`.
 - **`text`** — `{"type": "text", "text": {title?, body}}` where `body` is a
   single string or an array of strings (each rendered as its own paragraph).
   Use it for a short overview at the top or a "what stands out" takeaways
@@ -140,9 +169,10 @@ types:
 
 Rules that keep reports clean:
 
-- **Bake real numbers in.** Put previewed values directly into `kpis`,
-  `chart.data`, and `table.rows`. Round and pre-format in SQL or when building
-  the blocks; do not ship raw, unrounded floats.
+- **One focused query per block.** Shape the data in SQL — round, alias to the
+  exact column keys the block uses, and return only the rows that block needs.
+  A `kpiGroup` query returns a single row; chart/table queries return the plot
+  or detail rows. Do not over-fetch or reshape client-side.
 - **Pick the right block.** KPIs for headline metrics, chart for trend/mix,
   table for detail, text for narrative. A typical report is: a short `text`
   overview, a `kpiGroup`, one or two charts, a detail `table`, and a closing
@@ -154,7 +184,10 @@ Rules that keep reports clean:
 
 - Queries run only in the company's own warehouse project and only against
   the allowed datasets; `save_report` dry-runs every query and rejects
-  anything else. If a dataset you need is blocked, say so.
+  anything that is not a same-project SELECT. If a dataset you need is blocked,
+  say so.
+- Every query key a block references must exist in `queries`; a definition that
+  points a block at an unknown key is rejected on save.
 - Saves are versioned and audited (who, when, what changed). Use
   `status: "archived"` to retire a report; do not overwrite a report with an
   empty `report` to "delete" it.
