@@ -165,13 +165,18 @@ types:
 - **`table`** — `{"type": "table", "table": {...}}` where table is
   `{title?, query, columns, totalQuery?}`. `query` is the key of the query whose
   rows fill the table. Each column is
-  `{key, label, align?, format?, emphasize?, chart?}` (`align` defaults to right
-  for numeric formats, else left; `emphasize` bolds the column); each `key` names
-  a column in the query's rows. `totalQuery` is an optional key of a query whose
-  first row renders as a bold footer, keyed the same as `columns`. A column with
-  `chart: {type?: line|bar|area, color?}` renders each cell as a **sparkline** —
-  for that column the query must return an **array of numbers per row** (e.g.
-  `ARRAY_AGG(net_sales ORDER BY month) AS trend`), one array per table row.
+  `{key, label, align?, format?, emphasize?, chart?, bar?}` (`align` defaults to
+  right for numeric formats, else left; `emphasize` bolds the column); each `key`
+  names a column in the query's rows. `totalQuery` is an optional key of a query
+  whose first row renders as a bold footer, keyed the same as `columns`. Two
+  in-cell visual options (use at most one per column):
+  - `chart: {type?: line|bar|area, color?}` renders each cell as a **sparkline** —
+    for that column the query must return an **array of numbers per row** (e.g.
+    `ARRAY_AGG(net_sales ORDER BY month) AS trend`), one array per table row.
+  - `bar: {color?, max?}` renders each cell as an in-cell **horizontal data bar**
+    from a **single numeric value per row** (e.g. `pct_of_total` shown as a
+    proportional bar). `max` is the value that fills the bar (defaults to `1` for
+    `percent` format, else the column's max). Use this for share-of-total columns.
 - **`text`** — `{"type": "text", "text": {title?, body}}` where `body` is a
   single string or an array of strings (each rendered as its own paragraph).
   Use it for a short overview at the top or a "what stands out" takeaways
