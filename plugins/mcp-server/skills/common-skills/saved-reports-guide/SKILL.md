@@ -166,6 +166,21 @@ types:
   single string or an array of strings (each rendered as its own paragraph).
   Use it for a short overview at the top or a "what stands out" takeaways
   section. Prefer real `text` blocks over faking prose with a one-column table.
+  Text is not re-derived from data, so **never type live numbers into prose** —
+  they go stale. Instead:
+  - **Embed value tokens.** Write `{{queryKey.column}}` or
+    `{{queryKey.column:format}}` (format: `number | currency | percent`) inside
+    the body; the app substitutes the value from that query's **first row** at
+    view time. e.g. `Net sales reached {{headline.netSales:currency}} on
+    {{headline.orders:number}} orders.` Point a token at a single-row query so
+    "first row" is unambiguous.
+  - **Date qualitative analysis.** Trend reads and standouts ("peaked in late
+    summer", "the standout SKU") are reasoning a token can't express and become
+    a point-in-time snapshot. Frame them as of the report's `generatedAt`
+    (e.g. a "Highlights (as of <generatedAt>)" title) so viewers know they are a
+    snapshot, and refresh them on a later edit.
+  - **Keep framing evergreen.** Overview/context prose (what the report covers,
+    window, methodology) should carry no baked figures so it stays true.
 
 Rules that keep reports clean:
 
