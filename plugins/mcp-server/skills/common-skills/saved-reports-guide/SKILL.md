@@ -170,9 +170,12 @@ types:
   names a column in the query's rows. `totalQuery` is an optional key of a query
   whose first row renders as a bold footer, keyed the same as `columns`. Two
   in-cell visual options (use at most one per column):
-  - `chart: {type?: line|bar|area, color?}` renders each cell as a **sparkline** —
-    for that column the query must return an **array of numbers per row** (e.g.
-    `ARRAY_AGG(net_sales ORDER BY month) AS trend`), one array per table row.
+  - `chart: {type?: line|bar|area, color?, series?}` renders each cell as a
+    **sparkline**. Single series: the query returns this column as an **array of
+    numbers per row** (e.g. `ARRAY_AGG(net_sales ORDER BY month) AS trend`). For
+    **multi-series** (overlaid lines, grouped bars, stacked areas), return one
+    array per series field and list them in `series: [{key, color?, label?}]` —
+    each `key` names a row field holding its own array; all share one cell.
   - `bar: {color?, max?}` renders each cell as an in-cell **horizontal data bar**
     from a **single numeric value per row** (e.g. `pct_of_total` shown as a
     proportional bar). `max` is the value that fills the bar (defaults to `1` for
