@@ -1,0 +1,1 @@
+How to reason through an analytical question before querying — reframe a vague ask, enumerate hypotheses, and pick the cheapest differentiating query. Read before any non-trivial or causal analysis (e.g. "how are we doing?", "why is X down?").

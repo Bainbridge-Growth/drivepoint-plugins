@@ -1,0 +1,1 @@
+How to author, preview, save, and edit a durable report that lives in the Drivepoint app (list_reports / get_report / preview_report / save_report). Read before creating or editing a saved report — e.g. "save this to Drivepoint", "add it to my reports page", "edit the retention scorecard".

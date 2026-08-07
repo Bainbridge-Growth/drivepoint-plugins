@@ -1,0 +1,1 @@
+How to build a multi-section IN-CHAT report/analysis (review, dashboard, deep-dive, P&L, cohort). Read before producing any report, chart, or table shown in chat — even a quick one. For a report that lives in the Drivepoint app, use saved-reports-guide instead.

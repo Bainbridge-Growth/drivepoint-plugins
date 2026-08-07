@@ -1,0 +1,1 @@
+Catalog of the stock report bundles that ship to every customer, with app deep-links. Read before building a report to check for an existing template that matches the intent and to link the user to the canonical experience.
