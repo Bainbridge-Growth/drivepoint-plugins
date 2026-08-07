@@ -20,13 +20,20 @@ page," or "edit the retention scorecard," this guide applies.
   preview is not permission to save. Wait for a clear instruction, and let the
   user pick **save as new** (create) or **update** (overwrite an existing
   definition by `report_id`).
-- **The preview artifact and the saved definition are the same object.** Build
-  the full `report` ({header, blocks}) first, then — before any save — **always**
-  render an auto-opened JSX artifact (per `artifact-style-guide`) directly from
-  that object, every block in order, and pass that exact object to `save_report`
-  unchanged. Never hand-author the artifact separately, and never add, drop, or
-  reword a block (text/framing and chart `orientation` included) between preview
-  and save. If anything changes after previewing, re-render and re-preview.
+- **The artifact, the definition, and what gets saved are one object.** Build the
+  full `report` ({header, blocks}) first; render an auto-opened JSX artifact (per
+  `artifact-style-guide`) directly from it, every block in order; and pass that
+  exact object to `save_report` unchanged. Never add, drop, or reword a block
+  (text/framing and chart `orientation` included) between preview and save — if
+  anything changes, it's a new draft: re-render and re-preview.
+- **Decide once, then author the definition once — don't double-build.** The moment
+  there's a save signal ("save this", "add to my reports page", a recurring team
+  page), skip building a throwaway free-form `report-creation-guide` artifact and go
+  straight to the definition object; every artifact renders from it. Render **once
+  per state**: an **"Unsaved draft"** badge before saving, then re-render the same
+  object as **"Saved"** after (or just confirm with the link). `preview_report`
+  fills live rows and validates — it is not a second authoring pass or a reason to
+  rebuild.
 - **Reports are query-driven, not baked.** A block never carries data; it
   names a query (by `key`) and the app runs that query at **view time**, so the
   report stays live against the warehouse. Write **one focused query per

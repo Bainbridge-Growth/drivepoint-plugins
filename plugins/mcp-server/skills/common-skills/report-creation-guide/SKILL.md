@@ -11,17 +11,25 @@ guide as well — this file extends it, it does not replace it.
 
 This guide produces an **in-chat artifact**. If the user wants the report to
 live in their Drivepoint app — "save this to Drivepoint," "add it to my
-reports page," a recurring page the whole team opens — build a **saved
-report definition** instead: see `saved-reports-guide.md`
-(list_reports / get_report / preview_report / save_report).
+reports page," a recurring page the whole team opens — that's a **saved report
+definition**, not this: switch to `saved-reports-guide.md`
+(list_reports / get_report / preview_report / save_report) and author the
+definition object as the single artifact, rendering the JSX *from* it.
 
-**Parity on promotion:** once the user asks to save, the artifact you show is
-no longer this hand-built one — re-render it *from the saved definition*,
-block-for-block, with the status badge (per `saved-reports-guide.md`). Keep
-the in-chat artifact within what a saved report can render so the two match:
-saved charts support combos and dual-axis (`series[].type`, `series[].yAxis`),
-but not every free-form artifact flourish. Don't draw something here you can't
-reproduce there.
+**Decide this up front and build only once.** Don't hand-build a free-form
+artifact here and then reconstruct it as a definition after the user says "save"
+— that's throwaway work that drifts (different chart shapes, numbers, missing
+blocks), the exact mismatch the badge is meant to catch. Only build the hand
+artifact here for a one-shot in-chat answer that is **not** going to be saved.
+
+**Parity on promotion:** if you did build the hand artifact and the user then asks
+to save, the artifact you show is no longer this hand-built one — re-render it
+*from the saved definition*, block-for-block, with the status badge (per
+`saved-reports-guide.md`), and render once per state (draft → saved), not
+repeatedly. Keep the in-chat artifact within what a saved report can render so the
+two match: saved charts support combos and dual-axis (`series[].type`,
+`series[].yAxis`), but not every free-form artifact flourish. Don't draw something
+here you can't reproduce there.
 
 ---
 
