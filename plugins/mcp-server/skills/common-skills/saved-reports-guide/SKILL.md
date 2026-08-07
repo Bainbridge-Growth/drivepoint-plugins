@@ -20,8 +20,13 @@ page," or "edit the retention scorecard," this guide applies.
   preview is not permission to save. Wait for a clear instruction, and let the
   user pick **save as new** (create) or **update** (overwrite an existing
   definition by `report_id`).
-- **Always show a preview as an auto-opened JSX artifact** built to the
-  `artifact-style-guide`, before any save.
+- **The preview artifact and the saved definition are the same object.** Build
+  the full `report` ({header, blocks}) first, then — before any save — **always**
+  render an auto-opened JSX artifact (per `artifact-style-guide`) directly from
+  that object, every block in order, and pass that exact object to `save_report`
+  unchanged. Never hand-author the artifact separately, and never add, drop, or
+  reword a block (text/framing and chart `orientation` included) between preview
+  and save. If anything changes after previewing, re-render and re-preview.
 - **Reports are query-driven, not baked.** A block never carries data; it
   names a query (by `key`) and the app runs that query at **view time**, so the
   report stays live against the warehouse. Write **one focused query per
@@ -104,13 +109,19 @@ rolled back — but treat saves as real: preview first, always.
      query's rows), and optionally `table.totalQuery` for a footer row.
    The app runs these queries at view time, so the report always reflects the
    latest data.
-5. **Show a preview artifact — always.** Render the report as an in-chat
-   **JSX/React artifact** that follows the `artifact-style-guide` skill, using
-   the previewed rows, and **auto-open** it so the user sees it immediately.
-   This is the review step: the artifact must mirror what the saved report will
-   look like (same header, same blocks, same numbers the live queries return).
-   Never describe the report only in text; never substitute a preview for a
-   save.
+5. **Show a preview artifact — always, rendered from the definition.** Render
+   the report as an in-chat **JSX/React artifact** that follows the
+   `artifact-style-guide` skill by walking the `report` object you built in
+   step 4 — **every block, in the same order** — filling data blocks with the
+   previewed rows and resolving text `{{token}}`s. **Auto-open** it. The
+   definition is the single source of truth, so the artifact must be a
+   one-to-one rendering of it: same header, same block list / order / types
+   (KPIs, charts, tables, **and every text/framing block**), same chart types
+   and `orientation`, same numbers the live queries return. Before saving, diff
+   the artifact against the definition block-for-block; if they differ, the
+   artifact is wrong (or you edited the definition after building it) — fix and
+   re-render. Never describe the report only in text; never substitute a preview
+   for a save.
 6. **Stop and wait for an explicit save instruction.** Do **not** call
    `save_report` on your own — not after a preview, not because the data looks
    good, not to "finish the task". Saving is a deliberate user action. Only
@@ -124,6 +135,10 @@ rolled back — but treat saves as real: preview first, always.
    save.** You already previewed the data in step 3; if the queries and `report`
    are unchanged, call `save_report` directly — it dry-run-validates every query
    itself, so a fresh `preview_report` at save time is wasted warehouse work.
+   Save the **exact** `report` object you rendered the artifact from — do not add,
+   drop, or reword blocks (or flip a chart's `orientation`, or slip in extra
+   framing text) at save time. If you change anything, it's a new draft:
+   re-render the artifact and let the user see it before saving.
    After a save, give the user a **clickable link** to the report in chat, e.g.
    `[<title>](https://app.drivepoint.io/<company>/reports/mcp/<id>)`, using the
    returned id. If the save is rejected for the author role, hand the definition
@@ -155,13 +170,15 @@ types:
   `{column, goodDirection?}` where `column` holds a fractional change (0.12
   renders as +12%) and `goodDirection` (`up` | `down`, default `up`) colors it.
 - **`chart`** — `{"type": "chart", "chart": {...}}` where chart is
-  `{chartType, title?, subtitle?, query, xKey, series, stacked?, valueFormat?, height?, colors?}`.
+  `{chartType, title?, subtitle?, query, xKey, series, stacked?, orientation?, valueFormat?, height?, colors?}`.
   `subtitle` is a small caption under the title (period or a one-line takeaway).
   `chartType` is `line | bar | area | pie | doughnut`; `query` is the key of the
   query whose rows are plotted; `xKey` is the field for the x-axis (or slice
   label for pie/doughnut); `series` is `[{key, label?, color?}]` naming columns
-  to plot (pie/doughnut use the first series as the value); `valueFormat`
-  formats the axis/tooltips.
+  to plot (pie/doughnut use the first series as the value); `stacked` stacks the
+  series; `orientation` is `vertical` (default) or `horizontal` — pair
+  `orientation: "horizontal"` with `stacked: true` for a horizontal stacked bar;
+  `valueFormat` formats the axis/tooltips.
 - **`table`** — `{"type": "table", "table": {...}}` where table is
   `{title?, subtitle?, query, columns, totalQuery?}` (`subtitle` is a small caption
   under the title, e.g. the period or a one-line takeaway). `query` is the key of
@@ -203,10 +220,9 @@ types:
 
 Rules that keep reports clean:
 
-- **One focused query per block.** Shape the data in SQL — round, alias to the
-  exact column keys the block uses, and return only the rows that block needs.
-  A `kpiGroup` query returns a single row; chart/table queries return the plot
-  or detail rows. Do not over-fetch or reshape client-side.
+- **One focused query per block.** Shape data in SQL (round, alias to the exact
+  column keys the block uses, return only the rows it needs); do not over-fetch
+  or reshape client-side.
 - **Blocks are optional — compose to the ask.** No block type is required.
   Include only what the data and the user's request call for: a report can be a
   single `table`, KPIs only, a chart plus takeaways, or `text`-only (which needs
@@ -229,9 +245,8 @@ Rules that keep reports clean:
 - Saves are versioned and audited (who, when, what changed). Use
   `status: "archived"` to retire a report; do not overwrite a report with an
   empty `report` to "delete" it.
-- A save is always user-initiated. Do not auto-save, save "to be helpful", or
-  re-save on your own after an edit. Preview, then wait for an explicit "save
-  as new" or "update".
+- A save is always user-initiated (see Golden rules). Do not auto-save, save
+  "to be helpful", or re-save on your own after an edit.
 - One tenant per definition. For the same report across tenants, save the
   same definition per company (keep `report_type` identical so instances stay
   linked).
