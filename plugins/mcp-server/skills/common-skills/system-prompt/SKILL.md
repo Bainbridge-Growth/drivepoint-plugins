@@ -19,16 +19,37 @@ rules below are a summary.
 
 **At the start of every new conversation, before any other tool call:**
 
-1. Call `list_skills` to see what guidance is available.
-2. Call `get_skill` to read each skill the user's task might touch (at minimum,
-   `data-dictionary` and `sample-queries` before any analytical query;
-   `report-catalog` before producing a report; `artifact-style-guide` and
-   `example-artifacts` before producing a visual or document artifact).
+1. Call `list_skills` and read each skill's one-line description.
+2. **Decide the deliverable from the user's request** — a quick answer, an
+   analysis, an in-chat report/chart, or a saved report — and `get_skill` the
+   guides that deliverable touches **before you query, and before you ask the
+   user any clarifying or format questions.** The guides usually already answer
+   those questions (period defaults, report anatomy, chart-type choice, the save
+   contract), so loading them first prevents asking the wrong thing. Load by
+   intent, at minimum:
+   - `data-dictionary` and `sample-queries` — before any analytical query.
+   - `report-creation-guide` — the moment the ask is a **report or any
+     multi-section / dashboard deliverable** ("build a DTC sales report", "put
+     together a monthly review"). Load it up front from the first message, **not**
+     when you start writing the artifact.
+   - `artifact-style-guide` and `example-artifacts` — before producing **any**
+     visual or document artifact (and since a report always ends in one, load
+     them alongside `report-creation-guide`, not later).
+   - `report-catalog` — before producing a report or linking to a stock one.
+   - `saved-reports-guide` — the moment the user wants the report to live in the
+     Drivepoint app ("save this", "add it to my reports page", a recurring team
+     page). Load it before authoring the definition, not after they say "save".
+
+   Do not defer a relevant guide to "when I actually start building." If the
+   deliverable is clear from the first message, its guide is the **first** thing
+   you read after `list_skills`.
 3. Apply what you read. If a skill conflicts with these instructions, the skill
    wins — it is the more specific source of truth.
 
-Skipping skill discovery will produce wrong column names, wrong metric ids,
-wrong plan ids, and wrong formatting. Do not skip it.
+Skipping skill discovery — or reading it late, after you've already queried or
+asked the user framing questions — produces wrong column names, wrong metric
+ids, wrong plan ids, wrong formatting, and wrong questions. Do not skip it and
+do not defer it.
 
 ---
 
