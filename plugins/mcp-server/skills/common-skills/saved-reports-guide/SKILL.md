@@ -53,24 +53,77 @@ with built-in components, running each block's query when the page is viewed.
   "description": "Net sales, orders, and AOV by week.",
   "report_type": "sales-pulse",
   "queries": [
-    {"key": "headline", "query": "SELECT net_sales AS netSales, orders, aov, net_sales_wow AS netSalesWow FROM {ENV}_dwh_mart.sales_pulse_summary WHERE weeks = ${$CONTEXT.weeks}"},
-    {"key": "weekly", "query": "SELECT week, net_sales AS netSales FROM {ENV}_dwh_mart.sales_pulse_weekly ORDER BY week"},
-    {"key": "weeklyTotal", "query": "SELECT 'Total' AS week, SUM(net_sales) AS netSales FROM {ENV}_dwh_mart.sales_pulse_weekly"}
+    {
+      "key": "headline",
+      "query": "SELECT net_sales AS netSales, orders, aov, net_sales_wow AS netSalesWow FROM {ENV}_dwh_mart.sales_pulse_summary WHERE weeks = ${$CONTEXT.weeks}"
+    },
+    {
+      "key": "weekly",
+      "query": "SELECT week, net_sales AS netSales FROM {ENV}_dwh_mart.sales_pulse_weekly ORDER BY week"
+    },
+    {
+      "key": "weeklyTotal",
+      "query": "SELECT 'Total' AS week, SUM(net_sales) AS netSales FROM {ENV}_dwh_mart.sales_pulse_weekly"
+    }
   ],
   "report": {
-    "header": {"title": "Weekly DTC Sales Pulse", "subtitle": "Last 12 weeks", "generatedAt": "2026-01-31T00:00:00Z"},
+    "header": {
+      "title": "Weekly DTC Sales Pulse",
+      "subtitle": "Last 12 weeks",
+      "generatedAt": "2026-01-31T00:00:00Z"
+    },
     "blocks": [
-      {"type": "text", "text": {"title": "Overview", "body": "Two sentences of plain-language context for the period."}},
-      {"type": "kpiGroup", "query": "headline", "kpis": [
-        {"label": "Net sales", "column": "netSales", "format": "currency", "highlight": true, "delta": {"column": "netSalesWow", "goodDirection": "up"}},
-        {"label": "Orders", "column": "orders", "format": "number"},
-        {"label": "AOV", "column": "aov", "format": "currency"}
-      ]},
-      {"type": "chart", "chart": {"chartType": "bar", "query": "weekly", "xKey": "week", "series": [{"key": "netSales", "label": "Net sales"}], "valueFormat": "currency"}},
-      {"type": "table", "table": {"query": "weekly", "totalQuery": "weeklyTotal", "columns": [{"key": "week", "label": "Week"}, {"key": "netSales", "label": "Net sales", "format": "currency", "emphasize": true}]}}
+      {
+        "type": "text",
+        "text": {
+          "title": "Overview",
+          "body": "Two sentences of plain-language context for the period."
+        }
+      },
+      {
+        "type": "kpiGroup",
+        "query": "headline",
+        "kpis": [
+          {
+            "label": "Net sales",
+            "column": "netSales",
+            "format": "currency",
+            "highlight": true,
+            "delta": { "column": "netSalesWow", "goodDirection": "up" }
+          },
+          { "label": "Orders", "column": "orders", "format": "number" },
+          { "label": "AOV", "column": "aov", "format": "currency" }
+        ]
+      },
+      {
+        "type": "chart",
+        "chart": {
+          "chartType": "bar",
+          "query": "weekly",
+          "xKey": "week",
+          "series": [{ "key": "netSales", "label": "Net sales" }],
+          "valueFormat": "currency"
+        }
+      },
+      {
+        "type": "table",
+        "table": {
+          "query": "weekly",
+          "totalQuery": "weeklyTotal",
+          "columns": [
+            { "key": "week", "label": "Week" },
+            {
+              "key": "netSales",
+              "label": "Net sales",
+              "format": "currency",
+              "emphasize": true
+            }
+          ]
+        }
+      }
     ]
   },
-  "context": {"weeks": 12},
+  "context": { "weeks": 12 },
   "status": "active"
 }
 ```
@@ -81,12 +134,12 @@ rolled back — but treat saves as real: preview first, always.
 
 ## The four tools
 
-| Tool | What it does |
-|---|---|
-| `list_reports` | Summaries of the company's saved definitions |
-| `get_report` | One full definition (queries + `report` object + context) |
+| Tool             | What it does                                                                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_reports`   | Summaries of the company's saved definitions                                                                                                                                                                  |
+| `get_report`     | One full definition (queries + `report` object + context)                                                                                                                                                     |
 | `preview_report` | Runs a saved definition's queries — or draft `queries` you pass — against the company's live warehouse and returns the rows keyed by each query's `key` (the same rows the view endpoint feeds to each block) |
-| `save_report` | Creates a definition, or updates one when `report_id` is passed |
+| `save_report`    | Creates a definition, or updates one when `report_id` is passed                                                                                                                                               |
 
 ## The authoring loop
 
@@ -114,8 +167,8 @@ rolled back — but treat saves as real: preview first, always.
      in that query's rows.
    - `table` → set `table.query`, list `columns` (each `key` a column in the
      query's rows), and optionally `table.totalQuery` for a footer row.
-   The app runs these queries at view time, so the report always reflects the
-   latest data.
+     The app runs these queries at view time, so the report always reflects the
+     latest data.
 5. **Show a preview artifact — always, rendered from the definition.** Render
    the report as an in-chat **JSX/React artifact** that follows the
    `artifact-style-guide` skill by walking the `report` object you built in
@@ -143,8 +196,8 @@ rolled back — but treat saves as real: preview first, always.
      **with** the `report_id` of the definition being edited.
 
    Phrase the choice as one plain question that names the report by **title**,
-   e.g. *"Want me to update the **Cash Inflow Report**, or save this as a new
-   report?"* — do **not** surface the `report_id` or other internal fields.
+   e.g. _"Want me to update the **Cash Inflow Report**, or save this as a new
+   report?"_ — do **not** surface the `report_id` or other internal fields.
 
    Always pass a short `change_summary` describing what this save changed or
    added (e.g. `"Added a channel-split bar chart and a % of total data bar."`).
@@ -193,7 +246,7 @@ types:
 - **`kpiGroup`** — a row of KPI cards.
   `{"type": "kpiGroup", "query": "<key>", "kpis": [{...}]}`. The named query
   returns **one row**; each kpi is `{label, column, format?, note?, highlight?,
-  delta?}`. `column` names the field in that row to read the value from;
+delta?}`. `column` names the field in that row to read the value from;
   `format` is one of `number | currency | percent | text`; `delta` is
   `{column, goodDirection?}` where `column` holds a fractional change (0.12
   renders as +12%) and `goodDirection` (`up` | `down`, default `up`) colors it.
@@ -236,7 +289,7 @@ types:
     `{{queryKey.column:format}}` (format: `number | currency | percent`) inside
     the body; the app substitutes the value from that query's **first row** at
     view time. e.g. `Net sales reached {{headline.netSales:currency}} on
-    {{headline.orders:number}} orders.` Point a token at a single-row query so
+{{headline.orders:number}} orders.` Point a token at a single-row query so
     "first row" is unambiguous.
   - **Date qualitative analysis.** Trend reads and standouts ("peaked in late
     summer", "the standout SKU") are reasoning a token can't express and become
