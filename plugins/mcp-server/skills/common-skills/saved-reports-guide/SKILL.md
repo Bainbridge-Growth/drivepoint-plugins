@@ -2,7 +2,7 @@
 
 How to build, preview, save, and edit a **saved report** in Drivepoint — a
 data-backed report that lives in the Drivepoint app itself, at
-`https://app.drivepoint.io/<company>/reports`, and renders from a structured
+`{{app_base_url}}/<company>/reports`, and renders from a structured
 report definition.
 
 This is different from an in-chat artifact (see `report-creation-guide.md`):
@@ -31,6 +31,13 @@ page," or "edit the retention scorecard," this guide applies.
   names a query (by `key`) and the app runs that query at **view time**, so the
   report stays live against the warehouse. Write **one focused query per
   block**.
+- **Talk to the user, not to the machine.** Refer to a report by its **title**,
+  never its `report_id` or other internal ids/fields — the user neither needs
+  nor recognizes them. Keep messages short and outcome-focused: don't recite a
+  blow-by-blow of every block you changed, don't narrate `report_id`s, statuses,
+  query keys, or the save mechanics. The artifact already shows the result; a
+  one-line recap is plenty. When you must ask whether to overwrite or create,
+  make it a single plain question naming the report by title (see step 6).
 
 ## What a saved report is
 
@@ -135,6 +142,10 @@ rolled back — but treat saves as real: preview first, always.
    - **"update"** (or "save over the existing one") → call `save_report`
      **with** the `report_id` of the definition being edited.
 
+   Phrase the choice as one plain question that names the report by **title**,
+   e.g. *"Want me to update the **Cash Inflow Report**, or save this as a new
+   report?"* — do **not** surface the `report_id` or other internal fields.
+
    Always pass a short `change_summary` describing what this save changed or
    added (e.g. `"Added a channel-split bar chart and a % of total data bar."`).
    It's shown in the report's version history so a reader can scan who changed
@@ -150,9 +161,12 @@ rolled back — but treat saves as real: preview first, always.
    framing text) at save time. If you change anything, it's a new draft:
    re-render the artifact and let the user see it before saving.
    After a save, give the user a **clickable link** to the report in chat, e.g.
-   `[<title>](https://app.drivepoint.io/<company>/reports/mcp/<id>)`, using the
-   returned id. If the save is rejected for the author role, hand the definition
-   to a Drivepoint admin instead of retrying.
+   `[<title>]({{app_base_url}}/<company>/reports/mcp/<id>)`, using the returned
+   id. **Always build the link from `{{app_base_url}}`** (this skill is served
+   per-environment, so that token already resolves to the right host — `app` in
+   production, `app-staging` on staging, `app-local` locally); never hardcode
+   `app.drivepoint.io`. If the save is rejected for the author role, hand the
+   definition to a Drivepoint admin instead of retrying.
 
 **Editing** (any request to update or change an existing report) is the same
 loop starting from `get_report`: fetch the definition and **always render its
