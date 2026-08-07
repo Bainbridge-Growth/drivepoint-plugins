@@ -256,10 +256,14 @@ delta?}`. `column` names the field in that row to read the value from;
   `chartType` is `line | bar | area | pie | doughnut` and is the default type
   for every series; `query` is the key of the query whose rows are plotted;
   `xKey` is the field for the x-axis (or slice label for pie/doughnut); `series`
-  is `[{key, label?, color?, type?}]` naming columns to plot (pie/doughnut use
+  is `[{key, label?, color?, type?, yAxis?}]` naming columns to plot (pie/doughnut use
   the first series as the value). For a **combo chart**, give series their own
   `type` (`line | bar | area`) — e.g. two `bar` series plus one `line` on shared
-  axes; a series without `type` falls back to `chartType`. `stacked` stacks the
+  axes; a series without `type` falls back to `chartType`. For a **dual-axis
+  chart** (two measures on different scales, e.g. net sales in $ and order counts),
+  set `yAxis: "right"` on the series that belongs on the secondary axis (default
+  `"left"`) — typically paired with a `type` so it reads as bars-on-left +
+  line-on-right; dual-axis applies to vertical charts only. `stacked` stacks the
   series; `orientation` is `vertical` (default) or `horizontal` — pair
   `orientation: "horizontal"` with `stacked: true` for a horizontal stacked bar;
   `valueFormat` formats the axis/tooltips.

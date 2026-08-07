@@ -15,6 +15,14 @@ reports page," a recurring page the whole team opens — build a **saved
 report definition** instead: see `saved-reports-guide.md`
 (list_reports / get_report / preview_report / save_report).
 
+**Parity on promotion:** once the user asks to save, the artifact you show is
+no longer this hand-built one — re-render it *from the saved definition*,
+block-for-block, with the status badge (per `saved-reports-guide.md`). Keep
+the in-chat artifact within what a saved report can render so the two match:
+saved charts support combos and dual-axis (`series[].type`, `series[].yAxis`),
+but not every free-form artifact flourish. Don't draw something here you can't
+reproduce there.
+
 ---
 
 ## When the answer is a report
