@@ -25,11 +25,12 @@ artifact here for a one-shot in-chat answer that is **not** going to be saved.
 **Parity on promotion:** if you did build the hand artifact and the user then asks
 to save, the artifact you show is no longer this hand-built one — re-render it
 *from the saved definition*, block-for-block, with the status badge (per
-`saved-reports-guide.md`), and render once per state (draft → saved), not
-repeatedly. Keep the in-chat artifact within what a saved report can render so the
-two match: saved charts support combos and dual-axis (`series[].type`,
-`series[].yAxis`), but not every free-form artifact flourish. Don't draw something
-here you can't reproduce there.
+`saved-reports-guide.md`). Keep **one artifact per report and update it in place**
+as the state changes (draft → saved); don't emit a new artifact each render. Keep
+the in-chat artifact within what a saved report can render so the two match: saved
+charts support combos and dual-axis (`series[].type`, `series[].yAxis`), but not
+every free-form artifact flourish. Don't draw something here you can't reproduce
+there.
 
 ---
 

@@ -34,6 +34,12 @@ page," or "edit the retention scorecard," this guide applies.
   object as **"Saved"** after (or just confirm with the link). `preview_report`
   fills live rows and validates — it is not a second authoring pass or a reason to
   rebuild.
+- **One artifact per report — update it in place.** Keep a single artifact for a
+  report and **update** it as its state changes (draft → saved, and on later edits);
+  do not emit a new artifact each render. Reusing the same artifact keeps the thread
+  clean (one obvious "live" version) and is faster and cheaper than regenerating.
+  Create a **new** artifact only for a genuinely different report — e.g. a "save as
+  new" that makes a separate definition.
 - **Reports are query-driven, not baked.** A block never carries data; it
   names a query (by `key`) and the app runs that query at **view time**, so the
   report stays live against the warehouse. Write **one focused query per
@@ -190,9 +196,10 @@ rolled back — but treat saves as real: preview first, always.
    re-render. Show a small **status badge** at the top of the artifact so the
    user can always tell what they are looking at: **"Unsaved draft"** whenever
    there are changes not yet saved (including a brand-new report), and
-   **"Saved"** once the artifact matches the saved definition (re-render with the
-   saved state after a successful `save_report`). Never describe the report only
-   in text; never substitute a preview for a save.
+   **"Saved"** once the artifact matches the saved definition. Flip the badge by
+   **updating this same artifact in place** — after a successful `save_report`,
+   update it to "Saved" rather than emitting a new one. Never describe the report
+   only in text; never substitute a preview for a save.
 6. **Stop and wait for an explicit save instruction.** Do **not** call
    `save_report` on your own — not after a preview, not because the data looks
    good, not to "finish the task". Saving is a deliberate user action. Only
@@ -232,11 +239,12 @@ rolled back — but treat saves as real: preview first, always.
 loop starting from `get_report`: fetch the definition and **always render its
 current state as a JSX artifact first** (marked **"Saved"**), so the user sees
 what exists before anything changes. Then make the requested changes,
-`preview_report`, and re-render the updated artifact (marked **"Unsaved
-draft"**). Only after the user has seen that updated preview, **explicitly ask
-whether to update this report (save over it, using its `report_id`) or save it
-as a new one** — never assume which. Never save an edit the user has not
-previewed and explicitly approved.
+`preview_report`, and **update that same artifact in place** to the changed
+state (marked **"Unsaved draft"**) — don't open a second artifact for the edit.
+Only after the user has seen that updated preview, **explicitly ask whether to
+update this report (save over it, using its `report_id`) or save it as a new
+one** — never assume which. (A "save as new" is the one case that starts a fresh
+artifact.) Never save an edit the user has not previewed and explicitly approved.
 
 ## Report contract
 
