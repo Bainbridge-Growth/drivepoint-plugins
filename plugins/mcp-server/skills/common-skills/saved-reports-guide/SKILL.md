@@ -120,8 +120,12 @@ rolled back — but treat saves as real: preview first, always.
    and `orientation`, same numbers the live queries return. Before saving, diff
    the artifact against the definition block-for-block; if they differ, the
    artifact is wrong (or you edited the definition after building it) — fix and
-   re-render. Never describe the report only in text; never substitute a preview
-   for a save.
+   re-render. Show a small **status badge** at the top of the artifact so the
+   user can always tell what they are looking at: **"Unsaved draft"** whenever
+   there are changes not yet saved (including a brand-new report), and
+   **"Saved"** once the artifact matches the saved definition (re-render with the
+   saved state after a successful `save_report`). Never describe the report only
+   in text; never substitute a preview for a save.
 6. **Stop and wait for an explicit save instruction.** Do **not** call
    `save_report` on your own — not after a preview, not because the data looks
    good, not to "finish the task". Saving is a deliberate user action. Only
@@ -144,11 +148,15 @@ rolled back — but treat saves as real: preview first, always.
    returned id. If the save is rejected for the author role, hand the definition
    to a Drivepoint admin instead of retrying.
 
-**Editing** is the same loop starting from `get_report`: fetch, change the
-queries and/or the `report` blocks, `preview_report`, show the updated preview
-artifact, then wait for the user to say "update" (or "save as new") before
-calling `save_report`. Never save an edit the user has not previewed and
-explicitly approved.
+**Editing** (any request to update or change an existing report) is the same
+loop starting from `get_report`: fetch the definition and **always render its
+current state as a JSX artifact first** (marked **"Saved"**), so the user sees
+what exists before anything changes. Then make the requested changes,
+`preview_report`, and re-render the updated artifact (marked **"Unsaved
+draft"**). Only after the user has seen that updated preview, **explicitly ask
+whether to update this report (save over it, using its `report_id`) or save it
+as a new one** — never assume which. Never save an edit the user has not
+previewed and explicitly approved.
 
 ## Report contract
 
