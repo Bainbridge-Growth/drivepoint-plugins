@@ -1,0 +1,1 @@
+Visual and brand rules for building React (Recharts + Tailwind) artifacts, plus chart-type selection and number formatting. Read before producing ANY chart, visualization, dashboard, or visual artifact — do not fall back to markdown tables.
