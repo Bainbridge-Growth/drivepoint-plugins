@@ -30,10 +30,12 @@ page," or "edit the retention scorecard," this guide applies.
   there's a save signal ("save this", "add to my reports page", a recurring team
   page), skip building a throwaway free-form `report-creation-guide` artifact and go
   straight to the definition object; every artifact renders from it. Render **once
-  per state**: an **"Unsaved draft"** badge before saving, then re-render the same
-  object as **"Saved"** after (or just confirm with the link). `preview_report`
-  fills live rows and validates — it is not a second authoring pass or a reason to
-  rebuild.
+  per state**, and **keep the badge in sync with reality at all times**: an
+  **"Unsaved draft"** badge whenever the artifact differs from what's saved, and —
+  after a successful save — **always** update that same artifact's badge to
+  **"Saved"**. The chat link is *in addition to* the badge flip, never instead of
+  it. `preview_report` fills live rows and validates — it is not a second authoring
+  pass or a reason to rebuild.
 - **One artifact per report — update it in place.** Keep a single artifact for a
   report and **update** it as its state changes (draft → saved, and on later edits);
   do not emit a new artifact each render. Reusing the same artifact keeps the thread
@@ -64,7 +66,6 @@ with built-in components, running each block's query when the page is viewed.
 {
   "title": "Weekly DTC Sales Pulse",
   "description": "Net sales, orders, and AOV by week.",
-  "report_type": "sales-pulse",
   "queries": [
     {
       "key": "headline",
@@ -245,6 +246,8 @@ Only after the user has seen that updated preview, **explicitly ask whether to
 update this report (save over it, using its `report_id`) or save it as a new
 one** — never assume which. (A "save as new" is the one case that starts a fresh
 artifact.) Never save an edit the user has not previewed and explicitly approved.
+Once the save succeeds, flip that same artifact's badge back to **"Saved"** so it
+never sits on a stale state.
 
 ## Report contract
 
@@ -351,5 +354,4 @@ Rules that keep reports clean:
 - A save is always user-initiated (see Golden rules). Do not auto-save, save
   "to be helpful", or re-save on your own after an edit.
 - One tenant per definition. For the same report across tenants, save the
-  same definition per company (keep `report_type` identical so instances stay
-  linked).
+  same definition per company.
