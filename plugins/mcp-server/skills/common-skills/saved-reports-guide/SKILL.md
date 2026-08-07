@@ -2,7 +2,7 @@
 
 How to build, preview, save, and edit a **saved report** in Drivepoint — a
 data-backed report that lives in the Drivepoint app itself, at
-`https://app.drivepoint.io/<company>/reports`, and renders from a structured
+`{{app_base_url}}/<company>/reports`, and renders from a structured
 report definition.
 
 This is different from an in-chat artifact (see `report-creation-guide.md`):
@@ -31,6 +31,13 @@ page," or "edit the retention scorecard," this guide applies.
   names a query (by `key`) and the app runs that query at **view time**, so the
   report stays live against the warehouse. Write **one focused query per
   block**.
+- **Talk to the user, not to the machine.** Refer to a report by its **title**,
+  never its `report_id` or other internal ids/fields — the user neither needs
+  nor recognizes them. Keep messages short and outcome-focused: don't recite a
+  blow-by-blow of every block you changed, don't narrate `report_id`s, statuses,
+  query keys, or the save mechanics. The artifact already shows the result; a
+  one-line recap is plenty. When you must ask whether to overwrite or create,
+  make it a single plain question naming the report by title (see step 6).
 
 ## What a saved report is
 
@@ -120,8 +127,17 @@ rolled back — but treat saves as real: preview first, always.
    and `orientation`, same numbers the live queries return. Before saving, diff
    the artifact against the definition block-for-block; if they differ, the
    artifact is wrong (or you edited the definition after building it) — fix and
+<<<<<<< HEAD
    re-render. Never describe the report only in text; never substitute a preview
    for a save.
+=======
+   re-render. Show a small **status badge** at the top of the artifact so the
+   user can always tell what they are looking at: **"Unsaved draft"** whenever
+   there are changes not yet saved (including a brand-new report), and
+   **"Saved"** once the artifact matches the saved definition (re-render with the
+   saved state after a successful `save_report`). Never describe the report only
+   in text; never substitute a preview for a save.
+>>>>>>> development
 6. **Stop and wait for an explicit save instruction.** Do **not** call
    `save_report` on your own — not after a preview, not because the data looks
    good, not to "finish the task". Saving is a deliberate user action. Only
@@ -130,6 +146,16 @@ rolled back — but treat saves as real: preview first, always.
      `report_id` (creates a new definition).
    - **"update"** (or "save over the existing one") → call `save_report`
      **with** the `report_id` of the definition being edited.
+
+   Phrase the choice as one plain question that names the report by **title**,
+   e.g. *"Want me to update the **Cash Inflow Report**, or save this as a new
+   report?"* — do **not** surface the `report_id` or other internal fields.
+
+   Always pass a short `change_summary` describing what this save changed or
+   added (e.g. `"Added a channel-split bar chart and a % of total data bar."`).
+   It's shown in the report's version history so a reader can scan who changed
+   what, when. On a brand-new report it defaults to "Report was created", so you
+   only need it on updates.
 
    If it is ambiguous which they mean, ask. **Don't re-run the queries to
    save.** You already previewed the data in step 3; if the queries and `report`
@@ -140,15 +166,22 @@ rolled back — but treat saves as real: preview first, always.
    framing text) at save time. If you change anything, it's a new draft:
    re-render the artifact and let the user see it before saving.
    After a save, give the user a **clickable link** to the report in chat, e.g.
-   `[<title>](https://app.drivepoint.io/<company>/reports/mcp/<id>)`, using the
-   returned id. If the save is rejected for the author role, hand the definition
-   to a Drivepoint admin instead of retrying.
+   `[<title>]({{app_base_url}}/<company>/reports/mcp/<id>)`, using the returned
+   id. **Always build the link from `{{app_base_url}}`** (this skill is served
+   per-environment, so that token already resolves to the right host — `app` in
+   production, `app-staging` on staging, `app-local` locally); never hardcode
+   `app.drivepoint.io`. If the save is rejected for the author role, hand the
+   definition to a Drivepoint admin instead of retrying.
 
-**Editing** is the same loop starting from `get_report`: fetch, change the
-queries and/or the `report` blocks, `preview_report`, show the updated preview
-artifact, then wait for the user to say "update" (or "save as new") before
-calling `save_report`. Never save an edit the user has not previewed and
-explicitly approved.
+**Editing** (any request to update or change an existing report) is the same
+loop starting from `get_report`: fetch the definition and **always render its
+current state as a JSX artifact first** (marked **"Saved"**), so the user sees
+what exists before anything changes. Then make the requested changes,
+`preview_report`, and re-render the updated artifact (marked **"Unsaved
+draft"**). Only after the user has seen that updated preview, **explicitly ask
+whether to update this report (save over it, using its `report_id`) or save it
+as a new one** — never assume which. Never save an edit the user has not
+previewed and explicitly approved.
 
 ## Report contract
 
