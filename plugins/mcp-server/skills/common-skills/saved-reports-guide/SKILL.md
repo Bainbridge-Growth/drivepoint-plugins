@@ -163,8 +163,9 @@ types:
   to plot (pie/doughnut use the first series as the value); `valueFormat`
   formats the axis/tooltips.
 - **`table`** — `{"type": "table", "table": {...}}` where table is
-  `{title?, query, columns, totalQuery?}`. `query` is the key of the query whose
-  rows fill the table. Each column is
+  `{title?, subtitle?, query, columns, totalQuery?}` (`subtitle` is a small caption
+  under the title, e.g. the period or a one-line takeaway). `query` is the key of
+  the query whose rows fill the table. Each column is
   `{key, label, align?, format?, emphasize?, chart?, bar?}` (`align` defaults to
   right for numeric formats, else left; `emphasize` bolds the column); each `key`
   names a column in the query's rows. `totalQuery` is an optional key of a query
