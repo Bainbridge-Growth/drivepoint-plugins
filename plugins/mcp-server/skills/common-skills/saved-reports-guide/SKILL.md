@@ -180,17 +180,12 @@ rolled back — but treat saves as real: preview first, always.
    and `orientation`, same numbers the live queries return. Before saving, diff
    the artifact against the definition block-for-block; if they differ, the
    artifact is wrong (or you edited the definition after building it) — fix and
-<<<<<<< HEAD
-   re-render. Never describe the report only in text; never substitute a preview
-   for a save.
-=======
    re-render. Show a small **status badge** at the top of the artifact so the
    user can always tell what they are looking at: **"Unsaved draft"** whenever
    there are changes not yet saved (including a brand-new report), and
    **"Saved"** once the artifact matches the saved definition (re-render with the
    saved state after a successful `save_report`). Never describe the report only
    in text; never substitute a preview for a save.
->>>>>>> development
 6. **Stop and wait for an explicit save instruction.** Do **not** call
    `save_report` on your own — not after a preview, not because the data looks
    good, not to "finish the task". Saving is a deliberate user action. Only
@@ -258,10 +253,13 @@ delta?}`. `column` names the field in that row to read the value from;
 - **`chart`** — `{"type": "chart", "chart": {...}}` where chart is
   `{chartType, title?, subtitle?, query, xKey, series, stacked?, orientation?, valueFormat?, height?, colors?}`.
   `subtitle` is a small caption under the title (period or a one-line takeaway).
-  `chartType` is `line | bar | area | pie | doughnut`; `query` is the key of the
-  query whose rows are plotted; `xKey` is the field for the x-axis (or slice
-  label for pie/doughnut); `series` is `[{key, label?, color?}]` naming columns
-  to plot (pie/doughnut use the first series as the value); `stacked` stacks the
+  `chartType` is `line | bar | area | pie | doughnut` and is the default type
+  for every series; `query` is the key of the query whose rows are plotted;
+  `xKey` is the field for the x-axis (or slice label for pie/doughnut); `series`
+  is `[{key, label?, color?, type?}]` naming columns to plot (pie/doughnut use
+  the first series as the value). For a **combo chart**, give series their own
+  `type` (`line | bar | area`) — e.g. two `bar` series plus one `line` on shared
+  axes; a series without `type` falls back to `chartType`. `stacked` stacks the
   series; `orientation` is `vertical` (default) or `horizontal` — pair
   `orientation: "horizontal"` with `stacked: true` for a horizontal stacked bar;
   `valueFormat` formats the axis/tooltips.
