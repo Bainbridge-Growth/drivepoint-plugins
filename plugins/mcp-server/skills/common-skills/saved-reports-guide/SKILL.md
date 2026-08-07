@@ -135,6 +135,12 @@ rolled back — but treat saves as real: preview first, always.
    - **"update"** (or "save over the existing one") → call `save_report`
      **with** the `report_id` of the definition being edited.
 
+   Always pass a short `change_summary` describing what this save changed or
+   added (e.g. `"Added a channel-split bar chart and a % of total data bar."`).
+   It's shown in the report's version history so a reader can scan who changed
+   what, when. On a brand-new report it defaults to "Report was created", so you
+   only need it on updates.
+
    If it is ambiguous which they mean, ask. **Don't re-run the queries to
    save.** You already previewed the data in step 3; if the queries and `report`
    are unchanged, call `save_report` directly — it dry-run-validates every query
