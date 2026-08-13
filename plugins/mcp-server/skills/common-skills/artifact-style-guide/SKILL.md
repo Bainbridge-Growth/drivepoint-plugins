@@ -418,6 +418,15 @@ Never use:
   customer-built compact shell + Example 8 in `example-artifacts.md`.
 - Dashboards: card grid for KPIs across the top (2–4 columns on desktop,
   stack on narrow), main chart below, supporting table at the bottom.
+- Scenario previews (canonical): impact-statement header (logo top-right via
+  `ArtifactHeader`) → 2–3 line exec summary → a 3-tile KPI row (Input,
+  Output, Change) → baseline-vs-scenario line chart → 2–3 sentence
+  recommendation → source footer. A scenario answer is **always** this
+  artifact, never a bare text summary or markdown table. The header title is
+  the plain-English impact ("A 20% increase in Facebook Ad Spend increases
+  EBITDA by $4K"); the "Change" tile shows a signed delta with `↑`/`↓` and the
+  emerald/red rule. Full spec and the "make the change visible" Y-axis rule
+  live in the `scenario-planning` skill (§ Phase 5, Layout A).
 - Chart container: `<ResponsiveContainer width="100%" height={360}>`
   (≥320, ≤480 in practice). Prefer slightly tighter heights on compact
   shells when the chart is secondary to a guide body.

@@ -1,0 +1,1 @@
+How to map/reconcile products across channels and over time (SKU crosswalk / entity resolution) with the product-mapping tools. Read whenever the user asks to map, reconcile, deduplicate, or crosswalk products/SKUs, or match one channel's catalog to another.

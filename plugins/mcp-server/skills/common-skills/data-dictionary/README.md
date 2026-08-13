@@ -1,0 +1,1 @@
+The schema contract for the warehouse marts (tables, grain, metric conventions, cost notes, and discovery-query patterns). Read before writing ANY SQL against `dwh_mart`, so you use the correct tables, columns, and metric ids.

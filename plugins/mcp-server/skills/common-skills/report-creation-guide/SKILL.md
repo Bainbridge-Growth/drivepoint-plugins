@@ -9,6 +9,38 @@ For single-chart output, see `artifact-style-guide.md`. For visual tokens,
 chart-type selection, and number formatting, follow the artifact style
 guide as well — this file extends it, it does not replace it.
 
+This guide produces an **in-chat artifact**. If the user wants the report to
+live in their Drivepoint app — "save this to Drivepoint," "add it to my
+reports page," a recurring page the whole team opens — that's a **saved report
+definition**, not this: switch to `saved-reports-guide.md`
+(list_reports / get_report / preview_report / save_report) and author the
+definition object as the single artifact, rendering the JSX *from* it.
+
+**Decide this up front and build only once.** Don't hand-build a free-form
+artifact here and then reconstruct it as a definition after the user says "save"
+— that's throwaway work that drifts (different chart shapes, numbers, missing
+blocks), the exact mismatch the badge is meant to catch. Only build the hand
+artifact here for a one-shot in-chat answer that is **not** going to be saved.
+
+**Always show the state badge — from the first render.** Every report artifact,
+in-chat or saved, carries a status badge near the title so a report is **never**
+shown without one. It reads **"Unsaved draft"** until the report has been saved to
+the app — so a brand-new report shows the badge on its very first render (before
+any save), and a purely in-chat report that isn't saved stays **"Unsaved draft"** —
+and **"Saved"** once the artifact matches a stored definition (see
+`saved-reports-guide.md`). The badge's presence is not conditional on a prior save;
+only its text changes.
+
+**Parity on promotion:** if you did build the hand artifact and the user then asks
+to save, the artifact you show is no longer this hand-built one — re-render it
+*from the saved definition*, block-for-block, keeping the **same** badge (it just
+flips **"Unsaved draft"** → **"Saved"** on a successful save). Keep **one artifact
+per report and update it in place** as the state changes; don't emit a new artifact
+each render. Keep the in-chat artifact within what a saved report can render so the
+two match: saved charts support combos and dual-axis (`series[].type`,
+`series[].yAxis`), but not every free-form artifact flourish. Don't draw something
+here you can't reproduce there.
+
 ---
 
 ## When the answer is a report
@@ -33,14 +65,17 @@ SQL, or one artifact. Don't pad a small question into a long deliverable.
 ## Anatomy
 
 A report has these sections, in this order. Every section is optional
-except title and source-context line — include a section only when the
-data justifies it.
+except title, source-context line, and the status badge — include any other
+section only when the data justifies it.
 
-1. **Title + compact header** — render via `CompactHeader` (see
-   `artifact-style-guide.md` § "Customer-built compact header"). `kind` is
-   the artifact type (e.g. "Monthly business review"); `period` is the
-   date band; `title` is the customer or report name; `subtitle` carries
-   the source-context line. No lockup in the header.
+1. **Title + lockup + status badge** — render via the `ArtifactHeader`
+   component (see `artifact-style-guide.md` § "Brand lockup"). Title is
+   `<noun> · <period>` — e.g. "Monthly Business Review · Mar 2026", "DTC
+   Sales · Last 12 Months". The Drivepoint mark + wordmark sit top-right;
+   title and source-context line stack top-left. A **status badge** sits by
+   the title on every render (**"Unsaved draft"** until saved, **"Saved"**
+   once it matches a stored definition) — see the "Always show the state
+   badge" rule above; it is never omitted.
 2. **Source-context line** — one sentence with the date range, plan name
    (if SmartModel data is used), channel / segment filter, currency, and
    the last booked month if any actuals are involved. Same content as the

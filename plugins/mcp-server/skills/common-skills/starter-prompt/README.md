@@ -1,0 +1,1 @@
+A copy-paste first-turn message END USERS can send to get oriented in a new conversation. Reference material about onboarding UX only — it is not agent rules, so you normally do not need to get_skill this.

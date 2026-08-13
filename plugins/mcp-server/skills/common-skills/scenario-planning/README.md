@@ -1,0 +1,1 @@
+How to answer "what if…?" / "what should I change to hit X?" questions against a customer's SmartModel plan via the scenario tools (never modifies the workbook). Read for any scenario, lever, or goal-seek ask — cash runway, margin, opex, ad-spend/CAC, working capital.

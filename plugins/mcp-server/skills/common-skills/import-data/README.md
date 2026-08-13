@@ -1,0 +1,1 @@
+How to run a data-import definition (Shopify, Amazon, TikTok, Cin7, finance, custom pulls) into a plan's Excel workbook via the import tools. Read whenever the user asks to import, refresh, pull, or sync data into a plan/tab, or names a stock import.
