@@ -68,7 +68,7 @@ A report has these sections, in this order. Every section is optional
 except title, source-context line, and the status badge — include any other
 section only when the data justifies it.
 
-1. **Title + lockup + status badge** — render via the `ArtifactHeader`
+1. **Title + lockup + status badge** — render via the `CompactHeader`
    component (see `artifact-style-guide.md` § "Brand lockup"). Title is
    `<noun> · <period>` — e.g. "Monthly Business Review · Mar 2026", "DTC
    Sales · Last 12 Months". The Drivepoint mark + wordmark sit top-right;
