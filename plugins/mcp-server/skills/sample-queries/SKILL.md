@@ -1,3 +1,8 @@
+---
+name: sample-queries
+description: Twelve battle-tested GoogleSQL patterns for the questions a CPG finance person asks most against a Drivepoint mart - metric, channel, currency and plan discovery, monthly net sales by channel, top products at line-item grain, returns rate, new versus returning customer split, geography, discount-code effectiveness, the monthly P&L summary, recomputed YTD margin, and actuals versus forecast for one metric and plan. Adapt these templates instead of writing a query from scratch. Every literal is a placeholder that must be replaced before the query runs.
+---
+
 # Sample Queries
 
 12 battle-tested SQL patterns covering the most common questions a CPG

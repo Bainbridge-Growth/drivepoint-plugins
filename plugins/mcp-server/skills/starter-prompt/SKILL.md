@@ -1,3 +1,8 @@
+---
+name: starter-prompt
+description: The paste-in first-turn message for a brand-new Drivepoint analytics conversation, asking for a lay of the land before any specific question - ecommerce date range, channels and currencies, SmartModel actuals range and per-plan coverage, and data freshness. Use when a user is starting fresh, asks how to begin, or wants an orientation summary of what data is present. This is a user message to paste, not reference material to load into project knowledge.
+---
+
 # Drivepoint Analytics — Starter Prompt
 
 Paste the message below as your first turn in a new Project conversation.

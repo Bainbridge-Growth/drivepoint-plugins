@@ -1,3 +1,8 @@
+---
+name: scenario-planning
+description: How to answer what-if and what-would-it-take questions against a customer's SmartModel plan with preview_plan_scenario, which takes high-level Key Driver rules rather than per-period numbers and never modifies the workbook. Use for cash extensions, margin plays, opex cuts, working-capital sweeps, ad-spend or CAC reshaping, and wholesale door expansion - anything that reduces to editing Key Drivers and reading the effect on Key Results. Covers rule anatomy and the five-phase loop from framing the goal through discovering the plan, enumerating drivers and results, sanity-checking the drivers you will move, running one batched call, and rendering the comparison as a chart artifact.
+---
+
 # Scenario Planning — SmartModel Key Drivers
 
 How to answer any "what if…?" / "what should I change to hit X?" question

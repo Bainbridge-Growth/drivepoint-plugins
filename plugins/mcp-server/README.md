@@ -46,7 +46,26 @@ MCP-specific skills live in `skills/<name>/SKILL.md`:
   another name. Includes a "never strand the user" behavioral protocol, a
   ~70-row alias map, and a CPG finance primer (gross-to-net, contribution-margin
   tiers, trade spend/deductions, channel economics, working capital).
+- **`system-prompt`** — project instructions for the analytics assistant: hard
+  rules, aggregation rules, ecommerce and SmartModel footguns, cost limits.
+- **`data-dictionary`** — the mart contract: tables, grain, materialization,
+  metric taxonomy, canonical statement rollups, per-session footguns.
+- **`sample-queries`** — 12 GoogleSQL templates for the most common questions.
+- **`analysis-skills-guide`** — how to frame, decompose, and sanity-check an
+  analytical question before and while writing SQL.
+- **`report-creation-guide`** — anatomy and source-mart routing for
+  multi-section reports.
+- **`report-catalog`** — stock report bundles and their tenant-prefixed URLs.
+- **`artifact-style-guide`** — visual rules for React artifacts (brand lockup,
+  tokens, number formatting, chart selection).
+- **`example-artifacts`** — three working artifact templates to pattern-match.
+- **`scenario-planning`** — the Key Driver what-if loop via
+  `preview_plan_scenario`.
+- **`import-data`** — running an import definition into a plan's workbook.
+- **`product-mapping`** — cross-channel product reconciliation and how to
+  record the decisions.
+- **`starter-prompt`** — the paste-in first turn for a new conversation.
 
-> **Delivery.** This is a marketplace **plugin** skill (Claude Code / Desktop).
-> How it loads into other Drivepoint surfaces depends on each surface's skill
+> **Delivery.** These are marketplace **plugin** skills (Claude Code / Desktop).
+> How they load into other Drivepoint surfaces depends on each surface's skill
 > configuration.

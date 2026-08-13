@@ -1,3 +1,8 @@
+---
+name: data-dictionary
+description: The generic contract for a Drivepoint customer's BigQuery mart - the ecommerce order-level and line-item-level tables, the smartmodel, smartmodel_actuals and smartmodel_actuals_vs_forecast marts, their grain and materialization, the metric taxonomy and domain prefixes, the canonical income statement, balance sheet and cash flow rollups, and the footguns hit every session. Read before any analytical query, when choosing which mart answers a question, when resolving a metric_id, and when a query scans more bytes or fans out to more rows than expected.
+---
+
 # Drivepoint Data Dictionary
 
 Generic contract for `{{env_prefix}}_dwh_mart`. Describes the shape every

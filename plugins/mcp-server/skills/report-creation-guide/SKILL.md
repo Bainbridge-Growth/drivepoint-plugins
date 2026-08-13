@@ -1,3 +1,8 @@
+---
+name: report-creation-guide
+description: How to construct a multi-section Drivepoint report - a structured deliverable answering a recurring business question such as a monthly review, sales deep-dive, P&L summary, cohort health, or actuals versus forecast - rather than a one-shot visualization. Use when the user asks for a review, dashboard, summary, deep dive, deck, or overview, names a time window without a specific question, or expands an earlier answer until it has report shape. Covers report anatomy, routing each section to the right source mart, section choice by data shape, period defaults, comparisons, commentary, and pre-publish cross-checks. Extends the artifact-style-guide skill rather than replacing it.
+---
+
 # Report Creation Guide
 
 How to construct a multi-section report. A report is a structured
