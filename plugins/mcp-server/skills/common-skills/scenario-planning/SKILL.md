@@ -350,7 +350,7 @@ redefined here — use them exactly as `artifact-style-guide.md` specifies
 
 This is the default output for every single-scenario "what if…?". Build it top
 to bottom exactly in this order. The Drivepoint logo sits top-right via
-`ArtifactHeader` (shared chrome).
+`CompactHeader` (shared chrome).
 
 > **Everything below is a structure spec, not literal copy.** The example
 > wording ("Facebook Ad Spend", "EBITDA", "$4K", "20%") is illustrative — every
@@ -358,7 +358,7 @@ to bottom exactly in this order. The Drivepoint logo sits top-right via
 > the actual target Key Result. Never hardcode "EBITDA" or "Facebook Ad Spend";
 > substitute the real `metricFriendlyName`s and values from the tool response.
 
-1. **Header lockup** (shared chrome above). The `ArtifactHeader` `title` is the
+1. **Header lockup** (shared chrome above). The `CompactHeader` `title` is the
    **plain-English impact statement** — what the change did to the target Key
    Result, in one line, with real numbers, composed from `{driver} {direction}
 {magnitude} {verb} {targetMetric} by {formatted delta}`. Example shape (not
