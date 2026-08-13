@@ -1,8 +1,9 @@
 # Sample Queries
 
-12 battle-tested SQL patterns covering the most common questions a CPG
+14 battle-tested SQL patterns covering the most common questions a CPG
 finance person asks. Every literal is a `<placeholder>` — replace before
 running. Every example assumes `{{env_prefix}}_dwh_mart` is the active dataset.
+§§13–14 apply only to brands with a retail feed (`retail_*` marts).
 
 Use these as templates. Adapt; don't fabricate from scratch.
 
@@ -306,3 +307,56 @@ not that the forecast was zero. `variance_pct` is NULL when forecast was
 zero (via `SAFE_DIVIDE`). `plan_data_type` is the forecast plan's
 self-label at freeze time — use `actual_value IS NOT NULL` if you need to
 know whether the live model has booked an actual for that month.
+
+---
+
+## 13. Retail weekly sell-through by retailer (retail feed only)
+
+**User asks:** "How are we selling through at [retailer] over the last N weeks?"
+
+```sql
+SELECT retail_week_ending_date,
+       SUM(units_sold)  AS units,
+       SUM(gross_sales) AS gross_sales
+FROM `{{env_prefix}}_dwh_mart.retail_pos_sales_retailer_week`
+WHERE source_name = '<muffin|alloy>'          -- pick ONE feed; both can exist per retailer/week
+  AND retailer_id = '<retailer_id>'           -- discover via SELECT DISTINCT retailer_id, retailer_name
+  AND retail_week_ending_date >= DATE_SUB(CURRENT_DATE(), INTERVAL <N> WEEK)
+GROUP BY 1
+ORDER BY 1
+```
+
+**Notes:** `source_name` is `muffin` (store-level POS) or `alloy` (retailer-level
+syndicated) — **never SUM across both or you double-count sell-through.** This
+table is partitioned by `retail_week_ending_date` and clustered by
+`source_name, retailer_id`, so all three filters cut bytes. State "data through"
+from `MAX(data_complete_through_date)`, not the max week — the latest week may be
+partially loaded. For store-level detail use `retail_pos_sales_location_week`
+(Muffin only); for months use `retail_pos_sales_retailer_month`.
+
+---
+
+## 14. Retail distribution / out-of-stock, latest week (retail feed only)
+
+**User asks:** "What's our in-stock rate / store distribution at [retailer]?"
+
+```sql
+SELECT retailer_id, retailer_name,
+       SUM(stores_carrying) AS stores_carrying,
+       SUM(stores_in_stock) AS stores_in_stock,
+       SAFE_DIVIDE(SUM(stores_in_stock), SUM(stores_carrying)) AS in_stock_rate
+FROM `{{env_prefix}}_dwh_mart.retail_inventory_snapshot_retailer_week`
+WHERE source_name = 'alloy'                    -- stores_* / distribution is Alloy-native
+  AND retail_week_ending_date = (
+    SELECT MAX(retail_week_ending_date)
+    FROM `{{env_prefix}}_dwh_mart.retail_inventory_snapshot_retailer_week`
+    WHERE source_name = 'alloy')
+GROUP BY 1, 2
+ORDER BY in_stock_rate
+```
+
+**Notes:** Inventory is a **snapshot** — never SUM `on_hand_*` or `stores_*`
+across periods; take the latest week (or average deliberately). Recompute
+in-stock rate as `stores_in_stock / stores_carrying` — **do not aggregate
+`source_in_stock_pct`** (Alloy-native ratio, traceability only). `stores_*`,
+`on_order_*`, `in_transit_*` are Alloy-native and NULL on Muffin rows.
