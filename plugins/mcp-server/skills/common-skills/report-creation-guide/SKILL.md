@@ -321,8 +321,9 @@ before showing the report — do not ship with a caveat.
 9. **Numbers tie.** If the report has both a KPI strip total and a
    breakdown, the breakdown sums to the KPI value (within rounding).
    Reconcile or remove one.
-10. **Brand lockup is present.** The report's first child renders the
-    `ArtifactHeader` component (Drivepoint mark + wordmark).
+10. **Compact header is present.** The report's first child renders
+    `CompactHeader` (no lockup in the header); it closes with
+    `BuiltWithFooter`.
 
 ---
 

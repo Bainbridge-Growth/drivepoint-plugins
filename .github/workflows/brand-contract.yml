@@ -1,0 +1,27 @@
+name: brand-contract
+
+on:
+  pull_request:
+    paths:
+      - "plugins/**"
+      - ".github/workflows/brand-contract.yml"
+      - "scripts/check_brand_contract.py"
+      - "scripts/test_brand_contract.py"
+
+jobs:
+  brand-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Unit tests
+        run: python3 scripts/test_brand_contract.py -v
+
+      - name: Brand contract check
+        run: python3 scripts/check_brand_contract.py

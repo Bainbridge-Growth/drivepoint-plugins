@@ -13,6 +13,10 @@ system so this file is self-contained.
   the supporting SQL.
 - A result with >5 rows or ≥2 dimensions → suggest or produce a
   visualization.
+- A structured reference or instruction document with **no charts and no
+  numeric series** (e.g. model update guide, workbook field map) → React
+  artifact using Example 8 in `example-artifacts.md`. If the answer has
+  numbers to chart or table, use `report-creation-guide.md` instead.
 
 When in doubt, produce the artifact AND show the SQL underneath.
 
@@ -33,41 +37,64 @@ Do not load Google Fonts, CDN scripts, or any external resource.
 
 ---
 
-## Brand lockup
+## Two tiers
 
-Every React artifact opens with the Drivepoint lockup — mark + wordmark —
-paired with the title block. Use the `ArtifactHeader` component below as
-the first child of the outer container. Do not draw a custom title row.
+| Tier | Who builds it | Chrome |
+|---|---|---|
+| **Sent docs** | Drivepoint → customer (showcase, renewal, monthly, kickoff) | Full lockup masthead via `ArtifactHeader` + `ArtifactPage` + `SignatureFooter` |
+| **Customer-built** | Customer's own Claude session (this connector) | Compact header + `BuiltWithFooter` — **no lockup in the header**, Drivepoint-only (no client accent colors) |
+
+This skill's MCP path is **customer-built**. Sent-doc chrome stays documented
+below so the components stay in one place; do not use it for connector
+artifacts. Attribution on customer-built work comes from the chart palette
+and the muted status pair (`#2f7d54` / `#b0472f`), plus the small footer —
+not from co-brand accents or a masthead lockup.
+
+---
+
+## Brand lockup (sent docs only)
+
+Sent docs open with the Drivepoint lockup on the **left**, optional
+customer co-brand and meta, then the title block below a 1px hairline.
+Use `ArtifactHeader` as the first child. Do not place the lockup on the
+right. Do not compose `DrivepointMark` beside a separate wordmark SVG.
+
+**Customer-built artifacts do not use this masthead** — use `CompactHeader`
+instead (next section).
 
 ### Sizing
 
-- Mark: 24px square.
-- Wordmark: 16px tall.
-- These defaults balance against a `text-lg` title. Do not enlarge.
+- Complete lockup (`DrivepointLockup`): height **27px** (viewBox `0 0 144 32`).
+  Width scales from the viewBox. Do not enlarge.
+- Mark alone (`DrivepointMark`): 13px in `BuiltWithFooter`; 24px for
+  favicons / SVG-failure fallback only. Never pair it with typed
+  "Drivepoint" as a header stand-in.
 
 ### Surface
 
-The wordmark below is dark text for light backgrounds, which is the only
-surface artifacts use today (`bg-white`, transparent). If a dark surface
-is ever introduced, the wordmark must be swapped for the inverse variant
-— out of scope here, flag and stop.
+The lockup below is the dark-text / light-background variant
+(`bg-white`, transparent). If a dark surface is ever introduced, flag and
+stop — an inverse lockup is out of scope here.
 
 ### Components
 
 Path data is character-exact from the Drivepoint brand source. Do not
 modify, reorder, or re-pretty-print the path strings — one stray
-character breaks the brand color split. After pasting, render the
-lockup once standalone and eyeball it against a known-good reference
-before propagating to a full artifact.
+character breaks the brand color split.
 
-If the SVG fails to render cleanly, **do not ship broken artwork** —
-fall back to the text-only string `Drivepoint` in
-`text-slate-900 font-semibold tracking-tight` as the wordmark and omit
-the mark.
+If the lockup SVG fails to render cleanly, **do not ship broken artwork** —
+fall back to `DrivepointMark` alone (24px square). Never render the
+Drivepoint logotype as typed text in any font, and never pair the mark
+with typed "Drivepoint".
+
+On sent docs, `customer` and `meta` are optional.
 
 ```jsx
+// Brand-locked: CI checks these against brand-contract.json. Brand changes
+// come from the brand-core token set (drivepoint-internal-plugins), not from
+// editing these lines.
 const DrivepointMark = ({ size = 24 }) => (
-  <svg width={size} height={size} viewBox="0 0 1000 1000" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <svg width={size} height={size} viewBox="0 0 1000 1000" fill="none" aria-hidden="true" focusable="false">
     <path d="M759.561 156.165L501.552 95.4526L294.435 46.7212L102.114 197.892L309.242 246.623L567.373 307.235L567.362 307.246L759.561 156.176V156.165Z" fill="#76A4EA"/>
     <path d="M759.583 156.173L757.621 421.22L756.059 634.001L563.738 785.171L565.311 572.391L567.384 307.255L567.362 307.244L759.561 156.173H759.583Z" fill="#5B8DD8"/>
     <path d="M893.874 324.268L635.865 263.556L428.748 214.825L236.427 365.995L443.555 414.727L701.675 475.339V475.35L893.874 324.279V324.268Z" fill="#FFDE6A"/>
@@ -75,81 +102,230 @@ const DrivepointMark = ({ size = 24 }) => (
   </svg>
 );
 
-const DrivepointWordmark = ({ height = 16 }) => (
-  <svg height={height} viewBox="0 0 144 45" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-    <path d="M8.8045 32.073H0.700928V11.4859H8.8045C12.0295 11.4859 14.6485 12.4324 16.6616 14.3255C18.6952 16.2185 19.712 18.7083 19.712 21.7949C19.712 24.8814 18.7054 27.3712 16.6924 29.2643C14.6793 31.1367 12.05 32.073 8.8045 32.073ZM8.8045 28.2148C10.7765 28.2148 12.3376 27.5975 13.4879 26.3629C14.6588 25.1283 15.2442 23.6056 15.2442 21.7949C15.2442 19.9018 14.6793 18.3585 13.5496 17.1651C12.4198 15.951 10.8381 15.344 8.8045 15.344H5.07624V28.2148H8.8045Z" fill="#333333"/>
-    <path d="M26.6377 32.073H22.7246V17.1651H26.6377V19.2022C27.1923 18.5026 27.901 17.9264 28.7637 17.4737C29.6265 17.021 30.4995 16.7947 31.3828 16.7947V20.622C31.1157 20.5602 30.7563 20.5294 30.3044 20.5294C29.647 20.5294 28.9486 20.694 28.2091 21.0232C27.4696 21.3525 26.9458 21.7537 26.6377 22.227V32.073Z" fill="#333333"/>
-    <path d="M35.7689 15.5601C35.1321 15.5601 34.5775 15.3337 34.1051 14.881C33.6532 14.4078 33.4272 13.8522 33.4272 13.2143C33.4272 12.5764 33.6532 12.0311 34.1051 11.5785C34.5775 11.1258 35.1321 10.8994 35.7689 10.8994C36.4262 10.8994 36.9809 11.1258 37.4328 11.5785C37.8847 12.0311 38.1106 12.5764 38.1106 13.2143C38.1106 13.8522 37.8847 14.4078 37.4328 14.881C36.9809 15.3337 36.4262 15.5601 35.7689 15.5601ZM37.7409 32.073H33.8278V17.1651H37.7409V32.073Z" fill="#333333"/>
-    <path d="M49.6938 32.073H45.4726L39.495 17.1651H43.6855L47.5678 27.5358L51.4501 17.1651H55.6714L49.6938 32.073Z" fill="#333333"/>
-    <path d="M64.4126 32.4434C62.112 32.4434 60.2119 31.7232 58.7124 30.2828C57.2128 28.8424 56.4631 26.9494 56.4631 24.6036C56.4631 22.4019 57.182 20.55 58.6199 19.0478C60.0784 17.5457 61.9271 16.7947 64.1661 16.7947C66.3846 16.7947 68.1819 17.556 69.5582 19.0787C70.9345 20.5808 71.6226 22.5562 71.6226 25.0048V25.8691H60.5611C60.6843 26.8568 61.126 27.6798 61.886 28.3383C62.646 28.9968 63.632 29.326 64.844 29.326C65.5013 29.326 66.21 29.1922 66.97 28.9247C67.7506 28.6572 68.3668 28.2971 68.8187 27.8445L70.5442 30.3754C69.0447 31.7541 67.0008 32.4434 64.4126 32.4434ZM67.8327 23.2147C67.7711 22.371 67.4322 21.6097 66.8159 20.9306C66.2202 20.2516 65.337 19.9121 64.1661 19.9121C63.0569 19.9121 62.1941 20.2516 61.5779 20.9306C60.9616 21.5891 60.6022 22.3504 60.4995 23.2147H67.8327Z" fill="#333333"/>
-    <path d="M82.9533 32.4434C81.084 32.4434 79.5537 31.682 78.3623 30.1594V37.7522H74.4491V17.1651H78.3623V19.0478C79.5331 17.5457 81.0635 16.7947 82.9533 16.7947C84.9047 16.7947 86.4864 17.4943 87.6983 18.8935C88.9308 20.2722 89.5471 22.1755 89.5471 24.6036C89.5471 27.0317 88.9308 28.9453 87.6983 30.3445C86.4864 31.7438 84.9047 32.4434 82.9533 32.4434ZM81.7208 28.9556C82.8506 28.9556 83.7544 28.5544 84.4323 27.7519C85.1307 26.9494 85.4799 25.8999 85.4799 24.6036C85.4799 23.3278 85.1307 22.2887 84.4323 21.4862C83.7544 20.6837 82.8506 20.2825 81.7208 20.2825C81.084 20.2825 80.4472 20.4471 79.8104 20.7763C79.1737 21.1055 78.6909 21.5068 78.3623 21.98V27.258C78.6909 27.7313 79.1737 28.1325 79.8104 28.4618C80.4678 28.791 81.1046 28.9556 81.7208 28.9556Z" fill="#333333"/>
-    <path d="M105.046 30.1902C103.608 31.6923 101.698 32.4434 99.3147 32.4434C96.9319 32.4434 95.0216 31.6923 93.5837 30.1902C92.1663 28.6675 91.4576 26.8053 91.4576 24.6036C91.4576 22.4019 92.1663 20.55 93.5837 19.0478C95.0216 17.5457 96.9319 16.7947 99.3147 16.7947C101.698 16.7947 103.608 17.5457 105.046 19.0478C106.484 20.55 107.203 22.4019 107.203 24.6036C107.203 26.8053 106.484 28.6675 105.046 30.1902ZM96.5416 27.721C97.2195 28.5441 98.1439 28.9556 99.3147 28.9556C100.486 28.9556 101.41 28.5441 102.088 27.721C102.786 26.8773 103.135 25.8382 103.135 24.6036C103.135 23.3896 102.786 22.371 102.088 21.5479C101.41 20.7043 100.486 20.2825 99.3147 20.2825C98.1439 20.2825 97.2195 20.7043 96.5416 21.5479C95.8638 22.371 95.5248 23.3896 95.5248 24.6036C95.5248 25.8382 95.8638 26.8773 96.5416 27.721Z" fill="#333333"/>
-    <path d="M112.047 15.5601C111.41 15.5601 110.855 15.3337 110.383 14.881C109.931 14.4078 109.705 13.8522 109.705 13.2143C109.705 12.5764 109.931 12.0311 110.383 11.5785C110.855 11.1258 111.41 10.8994 112.047 10.8994C112.704 10.8994 113.259 11.1258 113.711 11.5785C114.163 12.0311 114.389 12.5764 114.389 13.2143C114.389 13.8522 114.163 14.4078 113.711 14.881C113.259 15.3337 112.704 15.5601 112.047 15.5601ZM114.019 32.073H110.106V17.1651H114.019V32.073Z" fill="#333333"/>
-    <path d="M131.857 32.073H127.944V23.0603C127.944 21.2084 127.03 20.2825 125.201 20.2825C123.784 20.2825 122.654 20.8689 121.812 22.0418V32.073H117.899V17.1651H121.812V19.1096C123.106 17.5663 124.842 16.7947 127.019 16.7947C128.622 16.7947 129.823 17.2165 130.624 18.0602C131.446 18.9038 131.857 20.0664 131.857 21.5479V32.073Z" fill="#333333"/>
-    <path d="M140.734 32.4434C139.358 32.4434 138.31 32.0936 137.591 31.394C136.872 30.6943 136.513 29.6861 136.513 28.3692V20.5911H134.048V17.1651H136.513V13.0908H140.457V17.1651H143.476V20.5911H140.457V27.3197C140.457 27.793 140.58 28.184 140.826 28.4926C141.073 28.8013 141.401 28.9556 141.812 28.9556C142.429 28.9556 142.88 28.8116 143.168 28.5235L144 31.4866C143.281 32.1244 142.192 32.4434 140.734 32.4434Z" fill="#333333"/>
-  </svg>
+const DP_TEXT_PRIMARY = '#191815';
+const DP_TEXT_MUTED = '#716e6b';
+const DP_BORDER_SUBTLE = '#ecebe9';
+const DP_CUSTOMER_PX = 16;
+const DP_FONT_STACK = 'ui-sans-serif, system-ui, sans-serif';
+
+const DrivepointLockup = ({ height = 27 }) => {
+  const width = Math.round(height * 144 / 32);
+  return (
+    <svg width={width} height={height} viewBox="0 0 144 32" fill="none" aria-hidden="true" focusable="false">
+      <path d="M23.1668 3.86317L14.0752 1.72014L6.77692 0L0 5.33607L7.29867 7.05621L16.3946 9.19572L16.3942 9.19611L23.1668 3.86356V3.86317Z" fill="#76A4EA"/>
+      <path d="M23.1676 3.86353L23.0985 13.2192L23.0434 20.73L16.2665 26.0661L16.3219 18.5553L16.395 9.19646L16.3942 9.19607L23.1668 3.86353H23.1676Z" fill="#5B8DD8"/>
+      <path d="M27.8996 9.79698L18.808 7.65395L11.5097 5.93381L4.73279 11.2699L12.0315 12.99L21.127 15.1295V15.1299L27.8996 9.79737V9.79698Z" fill="#FFDE6A"/>
+      <path d="M27.9 9.79742L27.8313 19.1535L27.7758 26.6639L20.9989 32L21.0547 24.4892L21.1274 15.1304L21.127 15.13L27.8996 9.79742H27.9Z" fill="#E1BD3D"/>
+      <path d="M47.6231 22.864H41.8463V8.18798H47.6231C49.9221 8.18798 51.7892 8.86274 53.2242 10.2123C54.6739 11.5618 55.3987 13.3367 55.3987 15.537C55.3987 17.7373 54.6812 19.5122 53.2462 20.8617C51.8111 22.1965 49.9368 22.864 47.6231 22.864ZM47.6231 20.1136C49.0289 20.1136 50.1418 19.6735 50.9618 18.7934C51.7965 17.9133 52.2138 16.8278 52.2138 15.537C52.2138 14.1875 51.8111 13.0873 51.0057 12.2365C50.2004 11.3711 49.0728 10.9384 47.6231 10.9384H44.9653V20.1136H47.6231Z" fill="#333333"/>
+      <path d="M60.3359 22.864H57.5463V12.2365H60.3359V13.6887C60.7313 13.19 61.2365 12.7793 61.8515 12.4566C62.4665 12.1339 63.0889 11.9725 63.7185 11.9725V14.7009C63.5282 14.6569 63.2719 14.6349 62.9497 14.6349C62.4812 14.6349 61.9833 14.7522 61.4561 14.9869C60.929 15.2216 60.5555 15.5076 60.3359 15.845V22.864Z" fill="#333333"/>
+      <path d="M66.8453 11.0924C66.3913 11.0924 65.996 10.931 65.6592 10.6083C65.337 10.2709 65.1759 9.87488 65.1759 9.42015C65.1759 8.96542 65.337 8.5767 65.6592 8.25399C65.996 7.93128 66.3913 7.76993 66.8453 7.76993C67.3139 7.76993 67.7092 7.93128 68.0314 8.25399C68.3535 8.5767 68.5146 8.96542 68.5146 9.42015C68.5146 9.87488 68.3535 10.2709 68.0314 10.6083C67.7092 10.931 67.3139 11.0924 66.8453 11.0924ZM68.251 22.864H65.4615V12.2365H68.251V22.864Z" fill="#333333"/>
+      <path d="M76.7719 22.864H73.7627L69.5015 12.2365H72.4887L75.2563 19.6295L78.0239 12.2365H81.0331L76.7719 22.864Z" fill="#333333"/>
+      <path d="M87.2645 23.128C85.6245 23.128 84.27 22.6146 83.201 21.5878C82.132 20.561 81.5975 19.2115 81.5975 17.5392C81.5975 15.9697 82.1101 14.6495 83.1351 13.5787C84.1748 12.5079 85.4927 11.9725 87.0888 11.9725C88.6703 11.9725 89.9516 12.5152 90.9327 13.6007C91.9138 14.6715 92.4043 16.0797 92.4043 17.8253V18.4414H84.5189C84.6068 19.1455 84.9216 19.7322 85.4634 20.2016C86.0052 20.671 86.7081 20.9057 87.572 20.9057C88.0406 20.9057 88.5458 20.8104 89.0876 20.6197C89.6441 20.429 90.0834 20.1723 90.4055 19.8496L91.6356 21.6538C90.5666 22.6366 89.1096 23.128 87.2645 23.128ZM89.7026 16.5491C89.6587 15.9477 89.4171 15.405 88.9778 14.9209C88.5531 14.4368 87.9235 14.1948 87.0888 14.1948C86.2981 14.1948 85.683 14.4368 85.2437 14.9209C84.8044 15.3903 84.5482 15.933 84.475 16.5491H89.7026Z" fill="#333333"/>
+      <path d="M100.482 23.128C99.1491 23.128 98.0582 22.5853 97.2089 21.4998V26.9125H94.4193V12.2365H97.2089V13.5787C98.0435 12.5079 99.1345 11.9725 100.482 11.9725C101.873 11.9725 103 12.4712 103.864 13.4687C104.743 14.4515 105.182 15.8083 105.182 17.5392C105.182 19.2701 104.743 20.6343 103.864 21.6318C103 22.6293 101.873 23.128 100.482 23.128ZM99.603 20.6417C100.408 20.6417 101.053 20.3556 101.536 19.7835C102.034 19.2115 102.283 18.4634 102.283 17.5392C102.283 16.6298 102.034 15.889 101.536 15.3169C101.053 14.7449 100.408 14.4588 99.603 14.4588C99.1491 14.4588 98.6952 14.5762 98.2412 14.8109C97.7873 15.0456 97.4431 15.3316 97.2089 15.669V19.4315C97.4431 19.7689 97.7873 20.0549 98.2412 20.2896C98.7098 20.5243 99.1637 20.6417 99.603 20.6417Z" fill="#333333"/>
+      <path d="M116.231 21.5218C115.206 22.5926 113.844 23.128 112.145 23.128C110.447 23.128 109.085 22.5926 108.06 21.5218C107.049 20.4363 106.544 19.1088 106.544 17.5392C106.544 15.9697 107.049 14.6495 108.06 13.5787C109.085 12.5079 110.447 11.9725 112.145 11.9725C113.844 11.9725 115.206 12.5079 116.231 13.5787C117.256 14.6495 117.768 15.9697 117.768 17.5392C117.768 19.1088 117.256 20.4363 116.231 21.5218ZM110.168 19.7615C110.652 20.3483 111.311 20.6417 112.145 20.6417C112.98 20.6417 113.639 20.3483 114.122 19.7615C114.62 19.1601 114.869 18.4194 114.869 17.5392C114.869 16.6738 114.62 15.9477 114.122 15.361C113.639 14.7595 112.98 14.4588 112.145 14.4588C111.311 14.4588 110.652 14.7595 110.168 15.361C109.685 15.9477 109.444 16.6738 109.444 17.5392C109.444 18.4194 109.685 19.1601 110.168 19.7615Z" fill="#333333"/>
+      <path d="M121.222 11.0924C120.768 11.0924 120.372 10.931 120.036 10.6083C119.713 10.2709 119.552 9.87488 119.552 9.42015C119.552 8.96542 119.713 8.5767 120.036 8.25399C120.372 7.93128 120.768 7.76993 121.222 7.76993C121.69 7.76993 122.086 7.93128 122.408 8.25399C122.73 8.5767 122.891 8.96542 122.891 9.42015C122.891 9.87488 122.73 10.2709 122.408 10.6083C122.086 10.931 121.69 11.0924 121.222 11.0924ZM122.627 22.864H119.838V12.2365H122.627V22.864Z" fill="#333333"/>
+      <path d="M135.344 22.864H132.554V16.4391C132.554 15.1189 131.902 14.4588 130.599 14.4588C129.589 14.4588 128.783 14.8769 128.183 15.713V22.864H125.393V12.2365H128.183V13.6227C129.106 12.5226 130.343 11.9725 131.895 11.9725C133.037 11.9725 133.894 12.2732 134.465 12.8746C135.051 13.476 135.344 14.3048 135.344 15.361V22.864Z" fill="#333333"/>
+      <path d="M141.672 23.128C140.691 23.128 139.944 22.8786 139.431 22.3799C138.919 21.8812 138.663 21.1624 138.663 20.2236V14.6789H136.905V12.2365H138.663V9.33214H141.474V12.2365H143.627V14.6789H141.474V19.4755C141.474 19.8129 141.562 20.0916 141.738 20.3116C141.913 20.5316 142.148 20.6417 142.441 20.6417C142.88 20.6417 143.202 20.539 143.407 20.3336L144 22.4459C143.488 22.9006 142.711 23.128 141.672 23.128Z" fill="#333333"/>
+    </svg>
+  );
+};
+
+const DP_BLUE_2 = '#76a4ea';
+const DP_YELLOW_CTA = '#f6ce42';
+const DP_BG_WARM = '#f7f4f1';
+const DP_BG_NEAR_WHITE = '#fefefe';
+
+// Customer/× nudged -0.3px so alphabetic baseline meets logotype baseline at 0.7125×H.
+const ArtifactHeader = ({ title, subtitle, customer, meta, kicker }) => (
+  <header className="mb-4" style={{ fontFamily: DP_FONT_STACK }}>
+    <div className="flex flex-wrap sm:flex-nowrap items-start sm:items-center justify-between gap-x-4 gap-y-2 pb-3" style={{ borderBottom: `1px solid ${DP_BORDER_SUBTLE}` }}>
+      <div className="flex items-center gap-2.5 min-w-0 max-w-full">
+        <div className="shrink-0 leading-none" role="img" aria-label="Drivepoint">
+          <DrivepointLockup height={27} />
+        </div>
+        {customer ? (
+          <>
+            <span className="font-normal text-[15px] leading-none" style={{ color: DP_TEXT_MUTED, transform: `translateY(-0.3px)` }} aria-hidden="true">×</span>
+            <span className="min-w-0 truncate font-semibold tracking-tight leading-none" style={{ color: DP_TEXT_PRIMARY, fontFamily: DP_FONT_STACK, fontSize: DP_CUSTOMER_PX, transform: `translateY(-0.3px)` }}>{customer}</span>
+          </>
+        ) : null}
+      </div>
+      {meta ? (
+        <div className="w-full sm:w-auto text-[11px] font-normal text-left sm:text-right whitespace-normal sm:whitespace-nowrap shrink-0 leading-snug" style={{ color: DP_TEXT_MUTED, fontFamily: DP_FONT_STACK }}>{meta}</div>
+      ) : null}
+    </div>
+    {kicker ? (
+      <div className="text-[12px] font-semibold uppercase tracking-[0.06em] mt-8 mb-2.5" style={{ color: DP_TEXT_PRIMARY, fontFamily: DP_FONT_STACK }}>{kicker}</div>
+    ) : null}
+    {title ? (
+      <h1 className="text-[38px] font-bold leading-tight tracking-tight m-0" style={{ color: DP_TEXT_PRIMARY, fontFamily: DP_FONT_STACK, letterSpacing: "-1px" }}>{title}</h1>
+    ) : null}
+    {kicker ? (
+      <div aria-hidden="true" className="rounded-sm my-3.5" style={{ width: 58, height: 3, background: `linear-gradient(90deg, ${DP_BLUE_2}, ${DP_YELLOW_CTA})` }} />
+    ) : null}
+    {subtitle ? (
+      <div className="text-base m-0" style={{ color: DP_TEXT_MUTED, fontFamily: DP_FONT_STACK }}>{subtitle}</div>
+      ) : null}
+    </header>
 );
 
-const ArtifactHeader = ({ title, subtitle }) => (
-  <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-    <div className="min-w-0">
-      <div className="text-lg font-semibold text-slate-900 mb-1">{title}</div>
-      <div className="text-sm text-slate-500">{subtitle}</div>
-    </div>
-    <div className="flex items-center gap-2 shrink-0" role="img" aria-label="Drivepoint">
-      <DrivepointMark />
-      <DrivepointWordmark />
+const ArtifactPage = ({ children, width = 920 }) => (
+  <div className="min-h-full py-8 px-4" style={{ background: DP_BG_WARM }}>
+    <div className="mx-auto box-border rounded-xl px-4 py-6 sm:px-8 sm:py-10 lg:px-16 lg:py-14" style={{ width, maxWidth: "100%", background: DP_BG_NEAR_WHITE, boxShadow: "0 6px 30px rgba(25, 24, 21, 0.07)" }}>
+      {children}
     </div>
   </div>
 );
+
+const ArtifactSection = ({ title, children }) => (
+  <section className="mt-11">
+    <h2 className="text-[17px] font-bold m-0 mb-1 pb-1.5 border-b" style={{ color: DP_TEXT_PRIMARY, fontFamily: DP_FONT_STACK, borderColor: DP_BORDER_SUBTLE, letterSpacing: "-0.01em" }}>{title}</h2>
+    {children}
+  </section>
+);
+
+const SignatureFooter = ({ sourceLine }) => (
+  <footer className="flex flex-wrap items-start sm:items-center gap-3 mt-8 pt-3" style={{ borderTop: "1px solid #ecebe9" }}>
+    <div className="shrink-0 leading-none" style={{ opacity: 0.38 }} role="img" aria-label="Drivepoint">
+      <DrivepointLockup height={18} />
+    </div>
+    <span className="min-w-0 flex-1 text-[10.5px] break-words" style={{ color: DP_TEXT_PRIMARY, opacity: 0.62, fontFamily: DP_FONT_STACK, overflowWrap: "anywhere" }}>{sourceLine}</span>
+  </footer>
+);
+
+// --- Customer-built compact chrome (this connector's default) ---
+// No lockup / logomark in the header. Period fills the top-right.
+// Footer is the one Drivepoint brand slot.
+const CompactHeader = ({ kind, period, title, subtitle }) => (
+  <header className="mb-4" style={{ fontFamily: DP_FONT_STACK }}>
+    <div className="flex items-baseline justify-between gap-3 pb-[11px]" style={{ borderBottom: `1px solid ${DP_BORDER_SUBTLE}` }}>
+      <div className="text-[10.5px] font-bold uppercase tracking-[0.11em]" style={{ color: DP_TEXT_PRIMARY }}>{kind}</div>
+      {period ? (
+        <div className="text-[10.5px] font-bold uppercase tracking-[0.11em] tabular-nums shrink-0" style={{ color: DP_TEXT_MUTED }}>{period}</div>
+      ) : null}
+    </div>
+    {title ? (
+      <h1 className="text-[17px] font-bold leading-tight m-0 mt-4 mb-0.5" style={{ color: DP_TEXT_PRIMARY }}>{title}</h1>
+    ) : null}
+    {subtitle ? (
+      <div className="text-xs m-0 mb-[18px]" style={{ color: DP_TEXT_MUTED }}>{subtitle}</div>
+      ) : null}
+    </header>
+);
+
+const BuiltWithFooter = ({ generated }) => (
+  <footer className="flex items-center justify-between gap-3 mt-6" style={{ fontFamily: DP_FONT_STACK, fontSize: '10.5px', color: DP_TEXT_MUTED }}>
+    <div className="flex items-center gap-1.5 min-w-0">
+      <span className="shrink-0 leading-none opacity-70" aria-hidden="true">
+        <DrivepointMark size={13} />
+      </span>
+      <span>Built with Drivepoint</span>
+    </div>
+    {generated ? <div className="shrink-0 tabular-nums">Generated {generated}</div> : null}
+  </footer>
+);
 ```
 
-`flex-wrap` + `gap-3` lets the lockup drop below the title block on narrow
-viewports without colliding. `min-w-0` on the title block lets long
-titles truncate or wrap rather than push the lockup off-screen.
+Sent-doc brand row: 1px `#ecebe9` hairline under the lockup; optional
+`customer` with a `×` connector; optional `meta` on the right.
+
+### Customer-built compact header
+
+Default for this connector. Match the D2.1 pattern:
+
+1. **Metadata band** — artifact type small-caps left in **ink** (`DP_TEXT_PRIMARY`,
+   e.g. `MODEL UPDATE GUIDE`); period small-caps right stays **muted**
+   (`DP_TEXT_MUTED`, e.g. `JULY 2026`); hairline beneath. Type leads, period
+   stays quiet. **No lockup, no logomark, no client mark** in the header.
+2. **Title block** — title (customer or artifact name) at 17px bold + one-line
+   muted subtitle. Data is the hero; type stays restrained.
+3. **Footer** — `BuiltWithFooter`: 13px mark + "Built with Drivepoint" left,
+   "Generated \<date\>" muted right.
+
+**Small-artifact collapse:** single-answer / daily-flash cards may omit the
+title block and keep only the metadata band (kind + period). In that state,
+`kind` names the metric or answer (for example, "Net sales"), never a generic
+container such as "Single answer" or "Daily flash." Bare chrome (no header at
+all) is a degradation path, not a target.
+
+**Do not** invent client accent colors on customer-built artifacts.
+Drivepoint-only: neutrals, `DP_CHART_SERIES`, and the warm status pair.
 
 ---
 
 ## Color tokens
 
-Primary:
-- `#5b8dd8` — Drivepoint blue (primary series)
-- `#76A4EA` — light blue (secondary)
-- `#FFDE6A` — Drivepoint yellow (accent)
-- `#E1BD3D` — dark yellow (secondary accent)
+### Brand surfaces (never a chart series hue)
 
-Series order (use in this sequence when mapping channels or categories):
-1. `#5b8dd8`
-2. `#E1BD3D`
-3. `#76A4EA`
-4. `#64748b`
-5. `#94a3b8`
-6. `#cbd5e1`
+- `#5b8dd8` — deep blue / logo path accent
+- `#76A4EA` / `#76a4ea` — light logo path / decorative gradient accent.
+  Never use it for text on a light artifact surface.
+- `#f6ce42` — primary CTA / action fill (gradient bar end; not a chart series color)
+- `#FFDE6A` — Drivepoint yellow (logo / accent)
+- `#E1BD3D` — dark yellow (logo path)
+- Neutrals: `#191815` text primary · `#716e6b` muted · `#ecebe9` hairline ·
+  `#f9f8f6` / `#f7f4f1` / `#fefefe` surfaces
 
-Semantic:
-- Positive / favorable: `#22c55e`
-- Negative / unfavorable: `#ef4444`
-- Neutral / zero: `#94a3b8`
-- Forecast (when contrasted with actual): `#cbd5e1` (lighter than the
-  actual-series color, with reduced opacity or a dashed stroke)
+A chart hue never appears on a branding surface — no purple gradients, pink
+accents, or cyan chrome.
 
-Surface:
-- Background: transparent (inherit from Claude UI)
-- Card background: `#ffffff` with `border border-slate-200 rounded-lg shadow-sm`
-- Body text: `#1e293b`
-- Muted text: `#64748b`
+### Chart series — PM-314 sequence (webapp-mui PR #469)
+
+Discriminability palette for series 1..N. Pink, purple, cyan, and orange are
+legitimate here. **Index with a modulo** — when the sequence is exhausted,
+series 31 takes position 1: `DP_CHART_SERIES[i % DP_CHART_SERIES.length]`.
+
+```js
+// PM-314 / webapp-mui#469 — positions 1..30
+const DP_CHART_SERIES = [
+  '#3975d0', '#dca729', '#39c1d0', '#d03975', '#8436c9', '#d76c13',
+  '#543ed6', '#195b5c', '#a33267', '#ca9ae9', '#4296f2', '#e1bd3d',
+  '#1c2cc0', '#27a6b6', '#d98820', '#2c469e', '#e3538e', '#a354d8',
+  '#515151', '#acacac', '#6fb5f6', '#e5ca59', '#2ab6c9', '#e23c7a',
+  '#b472e0', '#ddb32f', '#735add', '#96caf9', '#e76ea3', '#55ccd8',
+];
+
+const DP_CHART_DELTA = {
+  'forecast': '#cbd5e1',
+  'negative': '#b0472f',
+  'neutral': '#94a3b8',
+  'positive': '#2f7d54',
+};
+```
+
+Keep series color in chart marks and legend swatches. Legend label text uses
+primary ink: `<Legend formatter={(value) => <span style={{ color: '#191815' }}>{value}</span>} />`.
+
+### Semantic (deltas)
+
+- Positive / favorable: `DP_CHART_DELTA.positive` (`#2f7d54`)
+- Negative / unfavorable: `DP_CHART_DELTA.negative` (`#b0472f`)
+- Neutral / zero chart mark: `DP_CHART_DELTA.neutral` (`#94a3b8`).
+  Use `DP_TEXT_MUTED` for neutral numeric text so it keeps readable contrast.
+- Forecast (when contrasted with actual): `DP_CHART_DELTA.forecast`
+  (`#cbd5e1`) — lighter than the actual-series color; prefer reduced opacity
+  or a dashed stroke when the fill alone is not enough
 
 Never use color as the only encoder for sign or variance. Pair color with
 an arrow, sign, or label.
+
+Surface for **customer-built** shells: `bg-white` / transparent inherit.
+Sent docs use `ArtifactPage` (warm `#f7f4f1` ground, near-white card).
 
 ---
 
 ## Typography
 
-- System font stack — never load fonts.
-- Headers: `font-semibold`. Use `text-base` for chart titles and `text-xl`
-  for dashboard headers.
-- Body: default Tailwind base.
+- **Use the system stack for this target.** Do not load or embed a font.
+  `DP_FONT_STACK` is `ui-sans-serif, system-ui, sans-serif`, matching the
+  offline artifact exception in brand-core.
+- **Customer-built:** restrained type — metadata band ~10.5px small-caps
+  (artifact type in ink, period muted), title 17px bold, subtitle 12px muted.
+  Section labels small-caps muted. Data is the hero; do not use display-scale
+  headers.
+- **Sent docs:** headers `font-semibold`; `text-base` for chart titles and
+  `text-xl` for dashboard headers.
+- Body: same stack as headers.
 - Numbers in tables: `tabular-nums` and right-aligned.
 
 ---
@@ -214,17 +390,32 @@ Never use:
 - Pie charts with >5 slices
 - 3D anything
 - Default Recharts colors
-- Rainbow palettes — series hierarchy comes from the primary/secondary
-  token order, not from hue distinctiveness
+- Ad-hoc rainbows — use `DP_CHART_SERIES` in order (PM-314), never
+  invent a competing sequence
 
 ---
 
 ## Layout patterns
 
-- Outer container: `p-6 bg-white`. First child is
-  `<ArtifactHeader title={…} subtitle={…} />` (see § "Brand lockup").
-  The `subtitle` prop contains the date range, plan (if SmartModel),
-  channel filter, and currency — all on one line, separated by `·`.
+- **Customer-built (default for this connector):** white `p-6 bg-white`
+  shell (max-width ~920). Open with
+  `<CompactHeader kind={…} period={…} title={…} subtitle={…} />`.
+  Close with `<BuiltWithFooter generated={…} />`. Do **not** use
+  `ArtifactPage`, `ArtifactHeader`, or `SignatureFooter`. Do **not** put
+  a lockup or logomark in the header. Map former `kicker` → `kind`,
+  date/meta → `period`, customer or artifact name → `title`. The
+  `subtitle` holds date range, plan (if SmartModel), channel filter, and
+  currency — one line, separated by `·`.
+- **Small-answer collapse:** single-answer / daily-flash cards may omit
+  `title` / `subtitle` and keep only the metadata band (`kind` +
+  `period`). When collapsed, `kind` must name the metric or answer so the
+  result remains understandable without the omitted title. Bare (no chrome)
+  is a degradation path, not a target.
+- **Sent docs only:** wrap in `<ArtifactPage>` and pass `kicker` on
+  `<ArtifactHeader title={…} subtitle={…} kicker={…} customer={…} />`
+  with `SignatureFooter`. Not for connector artifacts.
+- Non-data reference guides (tab-by-tab instructions, field maps):
+  customer-built compact shell + Example 8 in `example-artifacts.md`.
 - Dashboards: card grid for KPIs across the top (2–4 columns on desktop,
   stack on narrow), main chart below, supporting table at the bottom.
 - Scenario previews (canonical): impact-statement header (logo top-right via
@@ -237,11 +428,17 @@ Never use:
   emerald/red rule. Full spec and the "make the change visible" Y-axis rule
   live in the `scenario-planning` skill (§ Phase 5, Layout A).
 - Chart container: `<ResponsiveContainer width="100%" height={360}>`
-  (≥320, ≤480 in practice).
+  (≥320, ≤480 in practice). Prefer slightly tighter heights on compact
+  shells when the chart is secondary to a guide body.
 - Tables: sticky header (`sticky top-0 bg-white`), zebra stripes
-  (`even:bg-slate-50`), right-aligned numeric columns.
-- Always include a small footer line: `<div className="text-xs text-slate-400
-  mt-4">Source: {{env_prefix}}_dwh_mart · <table names></div>`.
+  (`even:bg-[#f9f8f6]`), right-aligned numeric columns. Section labels
+  on customer-built: small-caps muted (`text-[10.5px] font-bold
+  uppercase tracking-[0.11em] text-[#716e6b]`).
+- Always include a small source line when data is shown:
+  `<div className="text-xs text-[#716e6b] mt-4">Source: <table names></div>`
+  above `BuiltWithFooter`. Cite bare relation names (e.g.
+  `ecommerce_transactions_order_level · smartmodel_actuals`) — never the
+  warehouse-qualified form in customer-visible copy; that belongs in SQL only.
 
 ---
 
@@ -287,20 +484,20 @@ const REPORT_LINK = {
 
 // In the JSX, just above the source footer:
 {REPORT_LINK && (
-  <div className="text-xs text-slate-500 mt-4">
+  <div className="text-xs text-[#716e6b] mt-4">
     📊 Also available in Drivepoint:{' '}
     <a
       href={REPORT_LINK.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-slate-700 underline hover:text-slate-900"
+      className="text-[#191815] underline hover:decoration-2"
     >
       {REPORT_LINK.name}
     </a>
   </div>
 )}
-<div className="text-xs text-slate-400 mt-2">
-  Source: {{env_prefix}}_dwh_mart.<table>
+<div className="text-xs text-[#716e6b] mt-2">
+  Source: {'<table>'}
 </div>
 ```
 
@@ -319,13 +516,13 @@ Rules:
 const ChartTooltip = ({ active, payload, label, currency = 'USD' }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-slate-200 rounded shadow-sm p-3 text-sm">
-      <div className="font-semibold text-slate-900 mb-1">{label}</div>
+    <div className="bg-[#fefefe] border border-[#ecebe9] rounded shadow-sm p-3 text-sm">
+      <div className="font-semibold text-[#191815] mb-1">{label}</div>
       {payload.map((p) => (
         <div key={p.dataKey} className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-slate-600">{p.name}:</span>
-          <span className="tabular-nums text-slate-900">{fmtMoney(p.value, currency)}</span>
+          <span className="text-[#716e6b]">{p.name}:</span>
+          <span className="tabular-nums text-[#191815]">{fmtMoney(p.value, currency)}</span>
         </div>
       ))}
     </div>
