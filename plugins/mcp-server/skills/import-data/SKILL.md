@@ -1,3 +1,8 @@
+---
+name: import-data
+description: How to run a Drivepoint data-import definition (Shopify, Amazon, TikTok, Cin7, finance, custom BigQuery pulls) into a customer plan's Excel workbook with the list_import_definitions and import_data MCP tools. Required reading whenever the user asks to import, refresh, pull, or sync data into a plan, a tab, or the workbook, or names a stock import such as DTC Retention, Shopify raw pivot, Amazon monthly, Wholesale DC, or TikTok retention. Covers the single supported workflow, presenting inputs for confirmation, handling import errors, caching, and what is out of scope.
+---
+
 # Data Imports
 
 How to run a Drivepoint data-import definition (Shopify, Amazon, TikTok,

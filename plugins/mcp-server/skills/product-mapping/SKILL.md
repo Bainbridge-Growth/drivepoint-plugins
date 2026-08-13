@@ -1,3 +1,8 @@
+---
+name: product-mapping
+description: How to decide when two product records - from the same channel over time, or from different channels - refer to the same physical product, and how to record those decisions with the read_product_mapping_source and save_product_mappings_to_firebase MCP tools. Required reading whenever the user asks to map products, reconcile products, crosswalk SKUs across channels, deduplicate or clean up the catalog, or match Amazon to Shopify products. Covers re-runs against a roster that remembers prior decisions, the approval gate, inline title and size normalization, canonical id derivation, and choosing the mapped product name and SKU.
+---
+
 # Product Mapping
 
 How to decide when two product records — from the same channel over

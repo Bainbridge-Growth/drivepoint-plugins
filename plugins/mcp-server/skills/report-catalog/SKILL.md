@@ -1,3 +1,8 @@
+---
+name: report-catalog
+description: Catalog of the stock Drivepoint report bundles that ship to every customer, with the tenant-prefixed app URL templates for linking to them. Use when an answer matches a known bundle's intent and should point the user back to the canonical reporting experience, and when resolving the company_id that those bundle and reports-hub URLs need. Includes the bundle matching rules, each bundle's inner reports, and what is deliberately excluded from the catalog.
+---
+
 # Drivepoint Stock Report Catalog
 
 Stock report bundles that ship to every Drivepoint customer. Use this

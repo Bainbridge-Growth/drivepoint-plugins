@@ -1,3 +1,8 @@
+---
+name: artifact-style-guide
+description: Visual rules for Drivepoint React artifacts - brand lockup, color tokens, typography, number formatting, chart-type selection, layout patterns, the Recharts tooltip pattern, and artifact data-hygiene rules. Use whenever producing or restyling a chart, dashboard, or visual artifact from a query result, and when deciding whether a result warrants an artifact at all rather than a text answer. Covers the Recharts plus Tailwind plus lucide-react stack and how to link an artifact back to an existing Drivepoint report.
+---
+
 # Artifact Style Guide
 
 Visual rules for React artifacts. Inline-tokenized from the Drivepoint brand

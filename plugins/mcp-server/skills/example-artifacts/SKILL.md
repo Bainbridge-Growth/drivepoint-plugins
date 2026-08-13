@@ -1,3 +1,8 @@
+---
+name: example-artifacts
+description: Three working Drivepoint React artifact templates to pattern-match against - a monthly revenue dashboard, a P&L summary table, and an actuals versus forecast variance view. Use when building a new artifact and you want the established data-shape and rendering pattern rather than starting from scratch. Every embedded number is a synthetic placeholder and must be replaced with the real query result. The shared brand components these templates assume live in the artifact-style-guide skill.
+---
+
 # Example Artifacts
 
 Three working artifact templates. Pattern-match against these when producing

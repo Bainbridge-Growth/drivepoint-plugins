@@ -1,3 +1,8 @@
+---
+name: analysis-skills-guide
+description: Analytical method for Drivepoint data questions - how to frame the question, enumerate hypotheses, and keep the reasoning defensible before and while writing SQL. Use when an ask is vague or causal ("why is X down?"), or when a move needs decomposing via mix/rate/volume, a variance bridge, a funnel, statement linkage, or cohort triangulation. Also covers choosing the right denominator, sanity checks before believing a number, reading absence in the data, reconciling two paths that disagree, deciding when to drill or stop, and communicating uncertainty. Sits above sample-queries (execution) and below report-creation-guide (presentation).
+---
+
 # Analysis Skills Guide
 
 How to think through an analytical question before writing SQL, and how to
