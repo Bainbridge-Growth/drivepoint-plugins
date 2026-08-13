@@ -63,8 +63,9 @@ do not defer it.
    you are not sure it exists, run a discovery query first (see
    `sample-queries.md` §1–3) and report what you found.
 3. **Always qualify tables** as `` `{{env_prefix}}_dwh_mart.<table>` ``.
-4. **Never `SELECT *`** on the ecommerce tables. List columns. (No mart
-   table is partitioned or clustered — see "Cost & performance".)
+4. **Never `SELECT *`** on the wide tables (ecommerce and retail). List
+   columns. (Most marts are unpartitioned; the weekly `retail_*` marts are
+   partitioned + clustered — see "Cost & performance".)
 5. **Never silently hide null / zero / empty results.** If a query returns
    nothing, say so and propose a likely reason — wrong `metric_id` casing or
    separator, wrong plan, wrong date range, or a channel that doesn't exist
@@ -99,8 +100,12 @@ do not defer it.
 ## Mental model
 
 - **Single tenant per connection.** One customer's data only.
-- **Two domains:** ecommerce transactions (wide tables) and SmartModel
-  financial data (long / tall tables).
+- **Three domains:** ecommerce transactions (wide tables), SmartModel
+  financial data (long / tall tables), and — for brands with a retail feed —
+  retail marts (`retail_*`: POS sell-through, inventory / distribution,
+  shipments; wide tables, retailer and store grain, weekly and monthly). The
+  retail tables are empty for brands with no Alloy / Muffin connection. See the
+  data dictionary's "Retail domain" for the full schema and footguns.
 - **SmartModel is long-format.** Every (company, plan, month, metric) is its
   own row; the numeric column is always `metric_value`. The same column can
   hold dollars, percentages, ratios, counts, and days — depending on the row's
@@ -112,13 +117,16 @@ do not defer it.
   a known closed month and verify against the customer's chart of accounts.
 - **One live plan per company; the rest are frozen forecasts.**
 - **Partitioning / clustering varies by table.** The three table-materialized
-  marts (`ecommerce_transactions_order_level`,
+  ecommerce / SmartModel marts (`ecommerce_transactions_order_level`,
   `ecommerce_transactions_line_item_level`,
   `smartmodel_actuals_vs_forecast`) are not partitioned or clustered — date
   filters help latency and result size but do not reduce bytes scanned.
   The two SmartModel views (`smartmodel`, `smartmodel_actuals`) DO benefit
   from predicate pushdown, so `WHERE metric_id = …` and
-  `WHERE report_month = …` reduce work against them.
+  `WHERE report_month = …` reduce work against them. The **weekly** `retail_*`
+  marts ARE partitioned (by `retail_week_ending_date`) and clustered (by
+  `source_name, retailer_id`), so those filters cut bytes; the **monthly**
+  `retail_*` marts are neither.
 
 The full schema reference, metric taxonomy, and discovery patterns are in
 `data-dictionary.md`. Query templates are in `sample-queries.md`. Visual
@@ -237,6 +245,29 @@ if it is absent, say so rather than shipping an unbranded artifact.
 
 ---
 
+## Retail-specific footguns
+
+Only relevant when the brand has `retail_*` marts. Full detail in the data
+dictionary's "Retail domain"; the essentials:
+
+1. **`source_name` is `muffin` or `alloy` — two different lenses.** A
+   retailer-grain table can hold both feeds for the same retailer/week.
+   **Filter by `source_name` (or aggregate deliberately) or you double-count
+   sell-through.** Muffin has store detail (`location_id`); Alloy is
+   retailer-level and owns forecasts, pipeline, and distribution / OOS.
+2. **Inventory is a snapshot — never SUM `on_hand_*` or `stores_*` across
+   periods.** POS sales and shipments are additive flows; inventory is not.
+   `source_in_stock_pct` is Alloy-native and non-reaggregatable — recompute
+   in-stock rate as `stores_in_stock / stores_carrying`.
+3. **Location-grain tables are Muffin-only** (empty for an Alloy-only brand);
+   `forecast_*` is Alloy-native and never sums into actuals.
+4. **State "data through" from `data_complete_through_date`**, not the max
+   period date — the latest week/month may be partially loaded.
+5. **Week and month are separate tables** — query the month table, don't SUM
+   weeks (the muffin/alloy monthly seam differs).
+
+---
+
 ## Cost & performance
 
 - **Ecommerce tables and `smartmodel_actuals_vs_forecast` are unpartitioned
@@ -245,6 +276,9 @@ if it is absent, say so rather than shipping an unbranded artifact.
 - **`smartmodel` and `smartmodel_actuals` are views** — predicates push
   down to the underlying physical tables, so `WHERE metric_id = …` /
   `WHERE report_month = …` DO reduce work on them.
+- **Weekly `retail_*` marts are partitioned (`retail_week_ending_date`) and
+  clustered (`source_name, retailer_id`)** — those filters cut bytes. The
+  monthly `retail_*` marts are unpartitioned and unclustered.
 - BigQuery is columnar: narrow projections (`SELECT DISTINCT channel`,
   single-column scans) are cheap on every table. Do not avoid discovery on
   cost grounds.
