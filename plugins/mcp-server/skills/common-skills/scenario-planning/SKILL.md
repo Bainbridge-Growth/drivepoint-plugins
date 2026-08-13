@@ -237,8 +237,8 @@ If the scenario misses the target:
 Every completed scenario ships as a **React/Recharts artifact**
 (`application/vnd.ant.react`) unless the user explicitly asked for text
 only. **`artifact-style-guide.md` governs every visual token** — brand
-colors, the `ArtifactHeader` lockup, card surfaces, fonts, and number
-formatting. Do not invent your own colors, marks, or surfaces here. The
+colors, `CompactHeader` / `BuiltWithFooter`, card surfaces, fonts, and
+number formatting. Do not invent your own colors, marks, or surfaces here. The
 Figma reference above informs only the scenario-specific *layout* (the two
 screens below) and *series roles* (which line is baseline vs. scenario);
 everything you draw pulls its style from the artifact style guide.
@@ -249,12 +249,12 @@ The reference board contains **two distinct screens**. Pick based on how
 many scenarios you are presenting:
 
 1. **Single-scenario preview** (one scenario vs. baseline) — build the
-   _compact_ layout: header lockup → KPI card row → two-series line chart
-   → driver-change table → source footer. This is the common case for
-   "what if we cut opex by X?"
+   compact layout: `CompactHeader` → KPI card row → two-series line chart
+   → driver-change table → source line + `BuiltWithFooter`. This is the
+   common case for "what if we cut opex by X?"
 2. **Multi-scenario comparison** (2+ candidate scenarios, e.g. a
-   Drivepoint-Intelligence-style set of proposals) — build the _full_
-   layout: header lockup → proposals summary → comparison chart →
+   Drivepoint-Intelligence-style set of proposals) — same compact chrome,
+   fuller body: `CompactHeader` → proposals summary → comparison chart →
    **Scenario Details** table with per-scenario rows and controls. This
    is the case for "give me a few scenarios to hit breakeven." Run one
    `preview_plan_scenario` call per candidate scenario (each with its own
@@ -264,83 +264,84 @@ Do not mix them. If unsure, default to the single-scenario preview.
 
 ### Shared chrome (both layouts)
 
-**1. Header lockup.** Render the `ArtifactHeader` component from
-`artifact-style-guide.md` § "Brand lockup" as the first child — do not
-draw a custom or "circular" mark. It already carries the real Drivepoint
-mark + wordmark and the title/subtitle block, with colors and sizes fixed
-by the style guide.
+**1. Compact header.** Render `CompactHeader` from
+`artifact-style-guide.md` § "Customer-built compact header" as the first
+child — no lockup or logomark in the header.
 
+- `kind` — e.g. "Scenario comparison" or "Scenario preview".
+- `period` — horizon window (e.g. "JUN–SEP 2026").
 - `title` — the experiment / scenario name (e.g. "Ad Spend and CAC ·
   03/15/2025" or "`<KeyResult>` · Scenario Preview").
-- `subtitle` — the plan name, horizon window, currency, and — in one
-  phrase — the levers you moved ("Opex cuts: 5 lines, Jun–Sep 2026").
+- `subtitle` — the plan name, currency, and — in one phrase — the levers
+  you moved ("Opex cuts: 5 lines, Jun–Sep 2026").
 - In the multi-scenario layout only, add a "Drivepoint Intelligence"
   wordmark with a small **BETA** pill (Drivepoint yellow `#FFDE6A` fill /
-  `#92400e` text) beside `ArtifactHeader`, above the proposals block.
+  `#191815` text) below the header, above the proposals block.
 
-**2. Source footer.** Literal text:
+**2. Source + Built with footer.** Source line:
 `Source: plan '<planName>' · Raptor preview (workbook not modified)`.
-Keep it — it warns the user the change is not persisted.
+Close with `BuiltWithFooter`. Keep the source line — it warns the user
+the change is not persisted.
 
 **3. Formatting.** Every number is formatted per its metric's `dataType`
 (currency in the _plan's_ currency, not hardcoded USD; percent to one
-decimal; days to zero decimals). Color deltas with `text-emerald-600`
-(better) / `text-red-600` (worse) **and** a `↑`/`↓` glyph — never color
-alone. For negative baselines use the less-negative-is-better convention
-consistently.
+decimal; days to zero decimals). Color deltas with
+`DP_CHART_DELTA.positive` (better) / `DP_CHART_DELTA.negative` (worse)
+**and** a `↑`/`↓` glyph — never color alone. For negative baselines use the
+less-negative-is-better convention consistently.
 
-### Series roles (from the brand palette)
+### Series roles (from the chart palette)
 
 `artifact-style-guide.md` § "Color tokens" is the palette. Do not add new
 hexes — map each scenario series onto the existing tokens:
 
-- **Baseline series line:** slate `#cbd5e1` (the muted / forecast token),
+- **Baseline series line:** `DP_CHART_DELTA.forecast` (`#cbd5e1`),
   `strokeWidth={2}`, `dot={false}`.
-- **Scenario / primary series line:** Drivepoint blue `#5b8dd8` (primary
-  series token), `strokeWidth={2}`, `dot={false}`.
+- **Scenario / primary series line:** `DP_CHART_SERIES[0]`,
+  `strokeWidth={2}`, `dot={false}`.
 - **Second comparison series (two scenarios on one small chart):**
-  Drivepoint yellow `#E1BD3D` (second series token).
+  `DP_CHART_SERIES[1]`.
 - **Target / "winning" region highlight** (scatter view): the favorable
-  token — border `#22c55e`, fill `rgba(34,197,94,0.08)`.
+  token — border `#2f7d54`, fill `rgba(47,125,84,0.08)`.
 
 Grid, axes, cards, page background, fonts, and spacing are **not**
 redefined here — use them exactly as `artifact-style-guide.md` specifies
-(grid `#e2e8f0` `strokeDasharray="3 3"`, axis text `#64748b`, cards
-`border border-slate-200 rounded-lg shadow-sm` on `bg-white`).
+(grid `#ecebe9` `strokeDasharray="3 3"`, axis text `#716e6b`, cards
+`border border-[#ecebe9] rounded-lg shadow-sm` on `bg-[#fefefe]`).
 
 ### Layout A — single-scenario preview (compact)
 
 In order, top to bottom:
 
-1. **Header lockup** (shared chrome above).
+1. **Compact header** (shared chrome above).
 2. **KPI card row** — 3 cards across (`sm:grid-cols-3`), each a bordered
    white card:
    - Baseline at horizon end (formatted per the metric's `dataType`).
    - Scenario at horizon end (same formatting).
    - Delta — absolute value **and** percent, both signed, with `↑`/`↓`
-     and the emerald/red rule above.
+     and the favorable/unfavorable rule above.
 3. **Two-series `LineChart`** — the primary trend,
    `ResponsiveContainer width="100%" height={360}`. Baseline + scenario,
    Forecast periods only, aligned monthly:
 
    ```jsx
    <LineChart data={rows}>
-     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-     <XAxis dataKey="date" stroke="#64748b" />
-     <YAxis stroke="#64748b" tickFormatter={fmt} />
+     <CartesianGrid strokeDasharray="3 3" stroke="#ecebe9" />
+     <XAxis dataKey="date" stroke="#716e6b" />
+     <YAxis stroke="#716e6b" tickFormatter={fmt} />
      <Tooltip formatter={fmt} />
-     <Legend />
+     <Legend formatter={(value) => <span style={{ color: '#191815' }}>{value}</span>} />
      <Line
        dataKey="baseline"
        name="Baseline"
-       stroke="#cbd5e1"
+       stroke={DP_CHART_DELTA.forecast}
        strokeWidth={2}
        dot={false}
      />
      <Line
        dataKey="scenario"
        name="Scenario"
-       stroke="#5b8dd8"
+       stroke={DP_CHART_SERIES[0]}
        strokeWidth={2}
        dot={false}
      />
@@ -389,19 +390,22 @@ In order, top to bottom:
 Reproduces the "N Scenario Proposals" + "Scenario Details" screens. In
 order:
 
-1. **Header lockup** with the **Drivepoint Intelligence · BETA** wordmark.
+1. **Compact header** with the **Drivepoint Intelligence · BETA** wordmark.
 2. **Proposals summary** — a short "`N` Scenario Proposals" heading and a
    one-line rationale sentence ("I've identified `N` scenarios that best
    optimize `<lever>` based on the following trends and criteria.").
    Optionally a responsive grid of small "trend" cards (one per basis:
    Short-Term Growth, Medium-Term, Seasonality, Benchmarks, …), each a
-   titled mini `LineChart` (blue `#5b8dd8` vs. yellow `#E1BD3D`,
+   titled mini `LineChart` (`DP_CHART_SERIES[0]` vs. `DP_CHART_SERIES[1]`,
    `dot={false}`, no legend, tiny axes). Only include the trend cards you
    actually have data for — do not fabricate bases.
 3. **Comparison chart** — one chart comparing the candidate scenarios
    across the horizon:
    - Default: a multi-line `LineChart`, one line per scenario's `scenario`
      series, over the Forecast horizon (share one `baseline` line).
+   - Give line comparisons a data-derived padded Y-axis domain. Do not
+     default to zero when every series occupies a narrow high-value band;
+     that hides the differences this view exists to compare.
    - When the user cares about the scenario's position in a tradeoff
      space (e.g. CAC vs. Ad Spend), use a `ScatterChart` with a
      translucent **green target region** marking the desirable zone
@@ -415,9 +419,11 @@ order:
      In a static artifact these are real, working React controls:
      the toggle switches the table between absolute values and
      variance-vs-baseline; the Output Variable `<select>` re-renders the
-     table against whichever Key Result the user picks (so include every
-     Key Result you pulled in `results`); the Date Range can be a
-     read-only label if you only have one horizon.
+     table against whichever Key Result the user picks when more than one
+     Key Result is present (include every Key Result you pulled in
+     `results`). Use a read-only Output Variable label when exactly one
+     Key Result is present. The Date Range can be a read-only label if you
+     only have one horizon.
    - **Table**: a leading checkbox + scenario-name column, then one column
      per month across the horizon (Month 1 … Month N, labeled with the
      actual `YYYY-MM`). One row per scenario. Values formatted per the
@@ -428,8 +434,8 @@ order:
      default. Do not invent a winner; base it on the delta-vs-target you
      computed in Phase 5, and say in prose why it won.
    - **Relative-variance mode**: when the toggle is on, show each cell as
-     the signed delta vs. baseline (emerald/red + arrow), not the raw
-     value.
+     the signed delta vs. baseline (favorable/unfavorable color + arrow),
+     not the raw value.
 5. **Source footer** (shared chrome).
 
 ### Choosing a non-default chart type

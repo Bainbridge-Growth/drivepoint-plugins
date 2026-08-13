@@ -36,11 +36,11 @@ A report has these sections, in this order. Every section is optional
 except title and source-context line — include a section only when the
 data justifies it.
 
-1. **Title + lockup** — render via the `ArtifactHeader` component (see
-   `artifact-style-guide.md` § "Brand lockup"). Title is
-   `<noun> · <period>` — e.g. "Monthly Business Review · Mar 2026", "DTC
-   Sales · Last 12 Months". The Drivepoint mark + wordmark sit top-right;
-   title and source-context line stack top-left.
+1. **Title + compact header** — render via `CompactHeader` (see
+   `artifact-style-guide.md` § "Customer-built compact header"). `kind` is
+   the artifact type (e.g. "Monthly business review"); `period` is the
+   date band; `title` is the customer or report name; `subtitle` carries
+   the source-context line. No lockup in the header.
 2. **Source-context line** — one sentence with the date range, plan name
    (if SmartModel data is used), channel / segment filter, currency, and
    the last booked month if any actuals are involved. Same content as the
@@ -286,8 +286,9 @@ before showing the report — do not ship with a caveat.
 9. **Numbers tie.** If the report has both a KPI strip total and a
    breakdown, the breakdown sums to the KPI value (within rounding).
    Reconcile or remove one.
-10. **Brand lockup is present.** The report's first child renders the
-    `ArtifactHeader` component (Drivepoint mark + wordmark).
+10. **Compact header is present.** The report's first child renders
+    `CompactHeader` (no lockup in the header); it closes with
+    `BuiltWithFooter`.
 
 ---
 
