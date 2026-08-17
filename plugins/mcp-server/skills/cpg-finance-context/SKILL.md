@@ -12,12 +12,13 @@ saying "that metric isn't in your model" when the model has the same thing under
 different name.
 
 This skill is **concept knowledge**, not data. The live numbers, exact `metric_id`
-inventory, column names, and query idioms live in the Drivepoint MCP server's companion
-skills **`data-dictionary`** and **`sample-queries`** — fetch them with the server's
-`get_skill` tool; they are served by the MCP server, not shipped in this plugin. Always
-confirm a term against the actual model before quoting a number. If anything here
-conflicts with `data-dictionary` for a specific customer, the customer's real model
-wins; use the discovery queries below to check.
+inventory, column names, and query idioms live in the companion skills
+**`data-dictionary`** and **`sample-queries`**, which ship alongside this one in the
+plugin; the MCP server serves its own copies, so fetch them with the server's
+`get_skill` tool when you need the live version. Always confirm a term against the
+actual model before quoting a number. If anything here conflicts with
+`data-dictionary` for a specific customer, the customer's real model wins; use the
+discovery queries below to check.
 
 ---
 
@@ -381,7 +382,8 @@ hand over.
 
 ## Related skills
 
-Served by the **Drivepoint MCP server** — fetch with `get_skill` (not shipped in this plugin):
+Shipped in this plugin, and also served by the **Drivepoint MCP server** — fetch the
+server's copy with `get_skill` when you need the live version:
 
 - `data-dictionary` — the authoritative `metric_id` taxonomy, column names, and the
   netSales/netRevenue/fee definitions. This skill maps vocabulary *to* it.
