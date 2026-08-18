@@ -106,6 +106,11 @@ do not defer it.
   hold dollars, percentages, ratios, counts, and days — depending on the row's
   `metric_id`. **A `SUM(metric_value)` across heterogeneous `metric_id`s is
   always wrong.** See "Aggregation rules".
+- **SmartModel is monthly by default.** Some customers also keep a `W - Weekly`
+  tab, synced to weekly views (`smartmodel_wweekly*`, keyed on `report_week`)
+  that mirror the monthly ones. Use those only for explicitly week-level
+  questions and only when they return rows — they are empty for customers
+  without the tab. See `data-dictionary.md` §"Weekly SmartModel".
 - **`metric_value` sign is metric-dependent and not documented.** The
   `metric_sign` column is deferred (currently NULL). Before assuming
   expenses are positive or negative, probe with `MIN/MAX(metric_value)` for

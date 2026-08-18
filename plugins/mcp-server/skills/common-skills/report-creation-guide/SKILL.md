@@ -162,7 +162,12 @@ Pick by these tiebreakers in order:
 1. **Granularity needed.** Daily / weekly / sub-monthly → ecommerce.
    Monthly with no need to split further → either; default to SmartModel
    if the report also contains P&L lines, so all numbers come from one
-   source.
+   source. **Exception — weekly P&L / model lines:** customers who keep a
+   `W - Weekly` tab expose weekly SmartModel data (`smartmodel_wweekly*`).
+   For a week-grain report that needs three-statement or model lines (not
+   just revenue), prefer those views over ecommerce so the numbers tie to
+   the model. They are empty for customers without the tab — confirm with a
+   quick row-count and fall back to monthly SmartModel + ecommerce if so.
 2. **Sub-channel detail needed.** If the report breaks revenue by SKU,
    product, customer type, geo, or discount code → ecommerce. SmartModel
    only carries the channel-level rollups.
