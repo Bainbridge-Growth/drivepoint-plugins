@@ -18,8 +18,17 @@ Dataset: `{{env_prefix}}_dwh_mart` (in the customer's GCP project).
 | `smartmodel` | 1 row per (company, plan, tab, month, metric) | view | Forecasts, multi-plan comparisons, full model |
 | `smartmodel_actuals` | 1 row per (company, month, metric) | view | Default for "how did we actually do" |
 | `smartmodel_actuals_vs_forecast` | 1 row per (company, forecast plan, month, metric) | table | Budget vs. actual, variance, forecast accuracy. **Row-multiplied by # of forecast plans — always filter by `plan_id` first or queries fan out.** |
+| `smartmodel_wweekly` | 1 row per (company, plan, tab, week, metric) | view | Weekly counterpart to `smartmodel`. **Only for customers with a `W - Weekly` tab — empty otherwise.** |
+| `smartmodel_wweekly_actuals` | 1 row per (company, week, metric) | view | Weekly counterpart to `smartmodel_actuals`. Same per-customer caveat. |
+| `smartmodel_wweekly_actuals_vs_forecast` | 1 row per (company, forecast plan, week, metric) | table | Weekly counterpart to `smartmodel_actuals_vs_forecast`. Same per-customer caveat + **row-multiplied by # of forecast plans**. |
 
 Ignore `mart_test_model` — internal pipeline check.
+
+**Weekly is per-tenant optional.** The `W - Weekly` worksheet exists only for
+some customers, so the three `smartmodel_wweekly*` views return rows only for
+those tenants and are **empty (but still queryable) for everyone else**. Only
+reach for them on explicitly week-level or intra-month questions; default to
+the monthly tables otherwise. See §"Weekly SmartModel" below.
 
 **Retail marts (third domain).** Brands with a retail data feed (Alloy / Muffin)
 also have ten `retail_*` marts in this same dataset — POS sell-through,
@@ -27,11 +36,12 @@ inventory/distribution snapshots, and shipments, at retailer and store grain,
 weekly and monthly. They are empty for brands with no retail feed. Full schema
 in the "Retail domain" section at the bottom of this document.
 
-**Materialization matters for cost.** The three table marts above are
+**Materialization matters for cost.** The table-materialized marts above
+(both ecommerce tables and the two `*_actuals_vs_forecast` tables) are
 unpartitioned and unclustered: date filters help latency but do not reduce
-bytes scanned. The two SmartModel views push predicates down to their
-underlying physical tables, so `WHERE metric_id = …` /
-`WHERE report_month = …` DO reduce work against them.
+bytes scanned. The SmartModel views (monthly and weekly) push predicates down
+to their underlying physical tables, so `WHERE metric_id = …` /
+`WHERE report_month = …` (or `report_week`) DO reduce work against them.
 
 ---
 
@@ -124,14 +134,16 @@ the order-level table.
 Long-format three-statement financial model + KPIs. All plans, all months.
 
 Grain: one row per `(company_id, plan_id, tab_name, report_month, metric_id)`.
-Currently only `tab_name = 'M - Monthly'` is ingested.
+Only `tab_name = 'M - Monthly'` is ingested here. The separate `W - Weekly`
+worksheet — when a customer has one — lands in the `smartmodel_wweekly*` views,
+not this table (see §"Weekly SmartModel").
 
 | Column | Type | Notes |
 |---|---|---|
 | `company_id`, `company_name` | STRING | |
 | `plan_id` | STRING | Canonical plan identifier — use this in SQL filters, not `plan_name`. |
 | `plan_name` | STRING | Display name (e.g. "2025 Base Case"); editable in source, not guaranteed unique. |
-| `tab_name` | STRING | Currently always `'M - Monthly'` |
+| `tab_name` | STRING | Always `'M - Monthly'` in this table (weekly lives in `smartmodel_wweekly*`) |
 | `is_from_live_model` | BOOL | **Plan-level**, constant within a plan. Exactly one plan per company is TRUE (the continuously-updated source of truth). |
 | `is_actual` | BOOL | **Row-level**, varies by month within a plan. In the live plan, closed months are TRUE and future months are FALSE. In a frozen forecast plan, only months that had already closed at freeze time are TRUE. |
 | `report_month` | DATE | First day of month |
@@ -182,6 +194,52 @@ Same columns as `smartmodel_actuals` plus:
 | `forecast_value` | FLOAT64 | From the forecast plan; NULL if the metric/month isn't in that forecast |
 | `variance` | FLOAT64 | = `actual_value - forecast_value` |
 | `variance_pct` | FLOAT64 | = `SAFE_DIVIDE(variance, forecast_value)`; NULL when forecast = 0 |
+
+---
+
+## Weekly SmartModel (`W - Weekly`)
+
+Some customers maintain a `W - Weekly` worksheet alongside the monthly model.
+When they do, it is synced to three views that **mirror the monthly SmartModel
+tables one-for-one**, keyed on the week instead of the month:
+
+| Weekly view | Mirrors | Materialization |
+|---|---|---|
+| `smartmodel_wweekly` | `smartmodel` | view |
+| `smartmodel_wweekly_actuals` | `smartmodel_actuals` | view |
+| `smartmodel_wweekly_actuals_vs_forecast` | `smartmodel_actuals_vs_forecast` | table |
+
+**Only difference from their monthly counterparts:**
+
+- `report_week` (DATE, the **beginning-of-week / week-starting** date) replaces
+  `report_month`. There is no `report_month` column on the weekly views.
+- `tab_name` is `'W - Weekly'` (on `smartmodel_wweekly`).
+
+Everything else is identical: same column names, same `is_from_live_model` /
+`is_actual` semantics, same `metric_id` taxonomy and footguns, same
+`smartmodel_wweekly_actuals` = live-model actual rows, same
+`smartmodel_wweekly_actuals_vs_forecast` row-multiplication by forecast plan
+(**always filter by `plan_id` first**).
+
+**When to use them:**
+
+- Only for **explicitly week-level or intra-month** questions ("last 8 weeks
+  of net sales," "which week did we cross X"). For everything monthly, use the
+  monthly tables — they exist for every customer and are the default surface.
+- These views **compile for every tenant but return zero rows** when the
+  customer has no `W - Weekly` tab. A weekly query coming back empty usually
+  means the customer doesn't have the tab, not that the metric is missing —
+  fall back to the monthly tables and say so.
+- Weekly actuals extend only as far as the customer keeps the weekly tab
+  current; anchor with `SELECT MAX(report_week) FROM smartmodel_wweekly_actuals`
+  the same way you anchor the monthly grain with `MAX(report_month)`.
+
+```sql
+-- Does this customer have weekly SmartModel data?
+SELECT COUNT(*) AS weekly_rows,
+       MAX(report_week) AS last_week
+FROM `{{env_prefix}}_dwh_mart.smartmodel_wweekly_actuals`
+```
 
 ---
 
