@@ -30,6 +30,12 @@ those tenants and are **empty (but still queryable) for everyone else**. Only
 reach for them on explicitly week-level or intra-month questions; default to
 the monthly tables otherwise. See §"Weekly SmartModel" below.
 
+**Retail marts (third domain).** Brands with a retail data feed (Alloy / Muffin)
+also have ten `retail_*` marts in this same dataset — POS sell-through,
+inventory/distribution snapshots, and shipments, at retailer and store grain,
+weekly and monthly. They are empty for brands with no retail feed. Full schema
+in the "Retail domain" section at the bottom of this document.
+
 **Materialization matters for cost.** The table-materialized marts above
 (both ecommerce tables and the two `*_actuals_vs_forecast` tables) are
 unpartitioned and unclustered: date filters help latency but do not reduce
@@ -408,4 +414,199 @@ WHERE currency IS NOT NULL
 -- Last booked month for actuals (use to anchor YTD / MTD / QTD)
 SELECT MAX(report_month) AS last_booked_month
 FROM `{{env_prefix}}_dwh_mart.smartmodel_actuals`
+```
+
+---
+
+## Retail domain
+
+A third mart family (alongside ecommerce and SmartModel), present for brands
+with a retail data connection (Alloy and/or Muffin). Same dataset,
+`{{env_prefix}}_dwh_mart`. Covers point-of-sale sell-through, on-shelf
+inventory/distribution, and shipments into the retail channel — the
+physical-retail counterpart to the ecommerce tables.
+
+**Only populated for brands with a retail feed.** dbt builds all ten tables for
+every tenant, but they are empty for brands with no Alloy/Muffin connection.
+Even within a retail brand a table can be empty when that brand lacks that
+source's grain (see footgun 2). Probe with a `COUNT(*)` and
+`SELECT DISTINCT source_name` before assuming a retail table has data.
+
+### Tables
+
+Three families × {retailer, location} grain × {week, month} period. The weekly
+tables are the primary surface.
+
+| Table | Grain | Use for |
+|---|---|---|
+| `retail_pos_sales_retailer_week` | source × retailer × product × week (Sat week-ending) | Sell-through by retailer/week. Muffin + Alloy. |
+| `retail_pos_sales_location_week` | source × retailer × location × product × week | Store-level sell-through. **Muffin only.** |
+| `retail_pos_sales_retailer_month` | source × retailer × product × calendar month | Monthly sell-through by retailer. Muffin + Alloy. |
+| `retail_pos_sales_location_month` | source × retailer × location × product × month | Store-level monthly sell-through. **Muffin only.** |
+| `retail_inventory_snapshot_retailer_week` | source × retailer × product × week | On-hand + distribution/OOS by retailer/week. Muffin + Alloy. |
+| `retail_inventory_snapshot_location_week` | source × retailer × location × product × week | Store-level on-hand + in-stock. **Muffin only.** |
+| `retail_inventory_snapshot_retailer_month` | source × retailer × product × month | Monthly on-hand + distribution. Muffin + Alloy. |
+| `retail_inventory_snapshot_location_month` | source × retailer × location × product × month | Store-level monthly on-hand. **Muffin only.** |
+| `retail_shipments_week` | source × shipment_type × ship_from × ship_to × product × week | Shipments into retail (distributor→store + inbound receipts). |
+| `retail_shipments_month` | source × shipment_type × ship_from × ship_to × product × month | Monthly shipments. |
+
+Each table's uniqueness key IS its grain — exact column tuples in "Grain keys"
+below. `alloy_sales_by_product_and_partner` also lives in this dataset; it is a
+legacy Alloy rollup superseded by `retail_pos_sales_retailer_*` — prefer the
+retail marts.
+
+### Cost & materialization (differs from the other two domains)
+
+Unlike the ecommerce and SmartModel marts, the **weekly** retail tables ARE
+partitioned (by `retail_week_ending_date`, DAY) and clustered (by
+`source_name, retailer_id`). So `WHERE retail_week_ending_date >= …` and
+`WHERE source_name = …` / `retailer_id = …` genuinely reduce bytes scanned —
+use them. The **monthly** tables are not partitioned or clustered; filter for
+latency but it will not cut bytes.
+
+### Shared columns (every retail mart)
+
+| Column | Type | Notes |
+|---|---|---|
+| `company_id`, `company_name` | STRING | Provenance |
+| `source_name` | STRING | `muffin` \| `alloy` — the retail feed the row came from. See footgun 1. |
+| `source_table`, `data_source` | STRING | Upstream identifiers |
+| `source_reporting_grain` | STRING | `day` \| `week` \| `month` — granularity of the source row before rollup |
+| `retailer_id`, `retailer_name`, `parent_retailer` | STRING | Retailer / banner. `parent_retailer` groups banners (e.g. all Walmart formats). |
+| `reporting_channel` | STRING | Retail reporting channel |
+| `product_id`, `retailer_product_id`, `product_name`, `upc`, `gtin_14`, `sku` | STRING | Product identity. `sku` is absent on the location-grain tables. |
+| `retail_week_ending_date` *(week)* / `retail_month_end_date` *(month)* | DATE | Period end. Week-ending is always a Saturday; month-end is always `LAST_DAY`. |
+| `source_updated_at`, `latest_source_date`, `data_complete_through_date` | TIMESTAMP / DATE | Freshness. Use `data_complete_through_date` — not `MAX(retail_week_ending_date)` — to state "data through". |
+| `days_observed` | INT64 | Distinct source dates rolled into this period bucket |
+| `nrf_fiscal_year`, `nrf_quarter`, `nrf_period` | INT64 | Conformed NRF 4-5-4 calendar (week and month tables) |
+| `calendar_year`, `calendar_month`, `calendar_quarter` | INT64 | Gregorian calendar dims |
+| `walmart_*`, `iso_*`, `walmart_week_alignable` | — | **Week tables only.** Walmart (Sat-Fri) and ISO week conformance. Absent on month tables — months do not align to retail-week boundaries. |
+
+Location-grain tables additionally carry store descriptors: `location_id`,
+`location_name`, `location_type`, `location_status_source`, `address`, `city`,
+`state`, `postal_code`, `country`, `latitude`, `longitude`.
+
+### POS-sales measures (`retail_pos_sales_*`)
+
+Additive sell-through. Retailer grain carries the full set: `units_sold`,
+`units_sold_gross`, `pos_scan_units`, `gross_sales`, `net_sales`; regular /
+promo / clearance splits (`{regular,promo,clearance}_{units,sales}`); returns
+(`returns_units`, `returns_sales`, `returns_cost_dollars`); margin / COGS
+(`gross_margin_dollars` + regular/promo/clearance variants, `cogs_net_dollars`,
+`cogs_gross_dollars`, `cogs_from_sales_dollars`, and regular/promo/clearance
+COGS). All additive within the table's grain.
+
+`forecast_*` columns (`forecast_inbound_ordered_units`,
+`forecast_inbound_received_units`, `forecast_sales_units_net`,
+`forecast_store_sales_units_net`) are **Alloy-native forecasts** — keep them
+segregated, never sum them into the actuals measures.
+
+Location tables carry a thinner measure set (`units_sold`, `pos_scan_units`,
+`gross_sales`, `net_sales`, `regular_units`); the promo/clearance/COGS/forecast
+splits are retailer-grain only.
+
+### Inventory-snapshot measures (`retail_inventory_snapshot_*`)
+
+Snapshot (point-in-time, **NOT additive over time**). `inventory_as_of_date` is
+the day the snapshot was actually picked (≤ the period end).
+
+Retailer grain carries the rich set: `on_hand_units`, `on_hand_dollars`,
+`on_hand_cost_dollars`, `regular_on_hand_*`; pipeline `on_order_*`,
+`in_transit_*`; distribution / OOS store counts `stores_carrying`,
+`stores_in_stock`, `stores_carrying_target`, `stores_in_stock_target`,
+`stores_observed`, `stores_oos`, `stores_below_presmin`, `stores_selling`,
+`stores_active`; `presentation_units`, `presentation_minimum_units`; and
+`source_in_stock_pct`. `days_observed` counts snapshot dates in the period.
+
+Location grain is intentionally thin: `on_hand_units`, `was_in_stock` (BOOL),
+`days_observed`, `days_in_stock`.
+
+- **`on_hand_*` and `stores_*` are point-in-time — never SUM across periods.**
+  Take the latest, or average deliberately. They ARE additive across products /
+  retailers within one period.
+- **`source_in_stock_pct` is an Alloy-native ratio for traceability only —
+  never SUM or AVG it** across weeks, retailers, or products. Recompute in-stock
+  rate as `stores_in_stock / stores_carrying` when you need an aggregate.
+
+### Shipments measures (`retail_shipments_*`)
+
+`shipment_type` splits the table into `distributor_to_store` (Muffin) and
+`inbound_received` (Alloy) — different physical flows; filter to one before
+analysis. Ship nodes: `ship_from_id`, `ship_to_id` plus `ship_to_*` location
+descriptors. Measures (additive): `ordered_units`, `ordered_cases`,
+`shipped_units`, `shipped_cases`, `shipped_gross_dollars`, `shipped_net_dollars`,
+`received_units`, `received_dollars`, `received_cost_dollars`.
+
+### Retail footguns
+
+1. **`source_name` is `muffin` or `alloy`, and they are different lenses.**
+   Muffin = store-level POS / distributor detail (has `location_id`); Alloy =
+   retailer-level syndicated data (no store grain) plus forecasts, pipeline, and
+   distribution / OOS. A retailer-grain table can hold BOTH sources for the same
+   retailer/week — **filter by `source_name` (or aggregate deliberately) so you
+   do not double-count sell-through across the two feeds.**
+2. **Source × grain coverage.** Location-grain tables are **Muffin-only** (Alloy
+   has no store column) and are empty for an Alloy-only brand. Retailer-grain
+   tables carry both. `forecast_*`, `stores_*`, `on_order_*`, `in_transit_*`, and
+   `source_in_stock_pct` are Alloy-native — NULL / absent on Muffin rows.
+3. **`walmart_week_alignable`** is TRUE only for day-sourced (Muffin) rows.
+   Alloy weekly rows are Saturday-boundary snapshots that cannot be re-bucketed
+   into Walmart Sat-Fri weeks (FALSE). Only roll into Walmart fiscal weeks where
+   this flag is TRUE.
+4. **Week vs month are separate tables, not a rollup you do yourself.** The month
+   tables are calendar-month grouped (Alloy month rows are its native monthly
+   feed, NOT re-bucketed from weeks). Query the month table rather than SUMming
+   weeks across the muffin/alloy seam.
+5. **State "data through" from `data_complete_through_date`**, not the max period
+   date — a partially-loaded latest week/month is still present in the table.
+6. **Snapshots vs flows.** POS sales and shipments are additive flows; inventory
+   is a snapshot — never SUM inventory over time.
+
+### Grain keys (uniqueness tuple per table)
+
+- `retail_pos_sales_retailer_{week,month}`: `source_name, company_id, retailer_id, product_id, retail_{week_ending,month_end}_date`
+- `retail_pos_sales_location_{week,month}`: the above **+ `location_id`**
+- `retail_inventory_snapshot_retailer_{week,month}`: `source_name, company_id, retailer_id, product_id, retail_{…}_date`
+- `retail_inventory_snapshot_location_{week,month}`: the above **+ `location_id`**
+- `retail_shipments_{week,month}`: `source_name, company_id, shipment_type, retailer_id, ship_from_id, ship_to_id, product_id, retail_{…}_date`
+
+### Retail discovery patterns
+
+```sql
+-- Which retail sources / retailers does this brand have, and how fresh?
+SELECT source_name, retailer_id, retailer_name,
+       COUNT(*)                        AS rows,
+       MAX(data_complete_through_date) AS data_through
+FROM `{{env_prefix}}_dwh_mart.retail_pos_sales_retailer_week`
+GROUP BY 1, 2, 3
+ORDER BY 1, 2
+```
+
+```sql
+-- Weekly sell-through for one retailer (partition + cluster pruned)
+SELECT retail_week_ending_date,
+       SUM(units_sold)  AS units,
+       SUM(gross_sales) AS gross_sales
+FROM `{{env_prefix}}_dwh_mart.retail_pos_sales_retailer_week`
+WHERE source_name = 'muffin'                    -- pick one feed; avoid double-counting alloy
+  AND retailer_id = '<retailer_id>'
+  AND retail_week_ending_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 26 WEEK)
+GROUP BY 1
+ORDER BY 1
+```
+
+```sql
+-- Latest on-shelf distribution / OOS by retailer (snapshot — take the latest week)
+SELECT retailer_id, retailer_name,
+       SUM(stores_carrying) AS stores_carrying,
+       SUM(stores_in_stock) AS stores_in_stock,
+       SAFE_DIVIDE(SUM(stores_in_stock), SUM(stores_carrying)) AS in_stock_rate
+FROM `{{env_prefix}}_dwh_mart.retail_inventory_snapshot_retailer_week`
+WHERE source_name = 'alloy'
+  AND retail_week_ending_date = (
+    SELECT MAX(retail_week_ending_date)
+    FROM `{{env_prefix}}_dwh_mart.retail_inventory_snapshot_retailer_week`
+    WHERE source_name = 'alloy')
+GROUP BY 1, 2
+ORDER BY in_stock_rate
 ```
