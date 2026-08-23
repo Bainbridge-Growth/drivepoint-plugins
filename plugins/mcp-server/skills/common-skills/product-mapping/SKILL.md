@@ -21,7 +21,7 @@ The MCP server exposes exactly three product-mapping tools:
   `existing` field: the last saved decision for that sourceKey (or
   `null` on first-run). The response's `existingMappingCount` tells
   you whether this is a re-run.
-- `save_product_mappings_to_firebase` — **DELTA-MERGES** your changes
+- `save_product_mappings` — **DELTA-MERGES** your changes
   into the company's Firestore mapping document. Firestore stores
   **decisions only** (`confirmed` + `rejected`); `unmapped` is
   expressed by absence. Takes three inputs: `mappings` (a CSV of NEW
@@ -30,7 +30,7 @@ The MCP server exposes exactly three product-mapping tools:
   `unmapped_source_keys` (a JSON array of sourceKeys to explicitly
   demote back to unmapped). **Rows you don't mention keep their prior
   state** — do NOT re-send unchanged confirmations.
-- `publish_product_mappings_to_bigquery` — reads the confirmed
+- `publish_product_mappings` — reads the confirmed
   decisions out of Firestore and **fully OVERWRITES** the mapped-
   products catalog table in BigQuery.
 
@@ -175,7 +175,7 @@ Follow these steps in order. Never skip a step, never reorder them.
    unchanged baseline.
 9. **STOP. Wait for explicit user approval.** See the "Approval gate"
    block below — this is a hard stop, not a soft one.
-10. **Call `save_product_mappings_to_firebase` ONCE**, serializing
+10. **Call `save_product_mappings` ONCE**, serializing
     your in-head decision set from step 7 into the CSV — one row per
     confirmed sourceKey, with the shared canonical attributes copied
     across each alias — plus the rejections into
@@ -187,7 +187,7 @@ Follow these steps in order. Never skip a step, never reorder them.
     step 7 — commit to the groupings first, then come back. **Merges
     into the Firestore doc.** On re-runs the payload is typically
     small — only the rows whose decisions changed.
-11. **Call `publish_product_mappings_to_bigquery` ONCE.** **Overwrites
+11. **Call `publish_product_mappings` ONCE.** **Overwrites
     the BigQuery catalog table.** If this call fails after save, rerun
     publish — the Firestore doc is already correct, do not re-save.
 
@@ -207,7 +207,7 @@ end**, once your complete decision set already exists inline. If you
 write a script for that, use a real CSV library (Python's `csv`
 module, Node's `csv-stringify`) — the naive `join(",")` silently
 corrupts any row whose title contains a comma. The CSV you pass to
-`save_product_mappings_to_firebase` must be **RFC 4180 compliant**:
+`save_product_mappings` must be **RFC 4180 compliant**:
 quote any field containing a comma, double quote, or newline with
 `"..."`, and escape embedded quotes as `""`. For most rosters,
 emitting the CSV inline is also fine — just quote every field that
@@ -225,7 +225,7 @@ you to proceed. You do not save until they do.
   prompt: _"Review the map above. Reply `save` (or `looks good`,
   `proceed`, `publish`) to write to Firestore, or tell me what to
   change."_
-- **Do NOT call `save_product_mappings_to_firebase` on the same turn
+- **Do NOT call `save_product_mappings` on the same turn
   as the artifact.** The artifact is for the user's eyes, not a
   self-triggering signal.
 - **Do NOT call save on a follow-up turn unless the user's latest
@@ -397,7 +397,7 @@ attribute is more useful than a fabricated one.
 
 ## The save call
 
-`save_product_mappings_to_firebase` is a **delta merge**. Firestore
+`save_product_mappings` is a **delta merge**. Firestore
 stores only decisions (`confirmed` + `rejected`); `unmapped` is
 expressed by absence. Rows you don't mention keep their prior state.
 
@@ -660,7 +660,7 @@ artifacts.
 
 **End your turn here.** Ask the user to review and reply with
 `save` / `looks good` / `proceed` / `publish` to write, or to tell
-you what to change. **Do NOT call `save_product_mappings_to_firebase`
+you what to change. **Do NOT call `save_product_mappings`
 on the same turn as the artifact.** See "Approval gate — DO NOT SKIP"
 above; save is step 10, and only after explicit approval.
 
@@ -786,7 +786,7 @@ above; save is step 10, and only after explicit approval.
   confirmed or rejected row back to `unmapped`, list its sourceKey in
   `unmapped_source_keys` — that's the only way the server knows to
   delete the prior decision.
-- **Never call `save_product_mappings_to_firebase` without prior
+- **Never call `save_product_mappings` without prior
   explicit user approval.** See "Approval gate — DO NOT SKIP". The
   artifact-and-immediately-save pattern is a protocol violation, no
   matter how confident you are in the mappings.
