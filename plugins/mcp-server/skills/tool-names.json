@@ -1,0 +1,40 @@
+{
+  "_comment": "Contract pin for MCP tool-name references inside common-skills SKILL.md files. Skills name tools in their workflow steps (e.g. `save_product_mappings`); if a tool is renamed in the webapp-server MCP registry and a skill still names the old identifier, the model is pointed at a dead tool. scripts/check_tool_contract.py fails CI when a skill references a tool-shaped identifier that is not in `valid_tools` (and not an explicitly allowed non-tool token).",
+  "_starter_note": "This list is maintained by hand today. Hardening follow-up: have webapp-server emit its tool registry as a build artifact (tools.json) and publish it here so the pin can never drift from the deployed server. Until then, update `valid_tools` in the same PR that renames/adds/removes a tool.",
+  "skills_root": "plugins/mcp-server/skills/common-skills",
+  "tool_verb_prefixes": [
+    "get", "list", "save", "read", "run", "import",
+    "preview", "publish", "search", "add", "mark"
+  ],
+  "valid_tools": [
+    "get_drivepoint_user",
+    "list_datasets",
+    "list_tables",
+    "get_schema",
+    "run_query",
+    "list_import_definitions",
+    "import_data",
+    "list_company_plans",
+    "get_plan",
+    "get_valid_plan_tabs",
+    "list_plan_key_drivers_and_results",
+    "get_plan_key_driver_values",
+    "search_plan_row",
+    "add_plan_row",
+    "mark_key_driver_or_result",
+    "preview_plan_scenario",
+    "save_plan_scenario",
+    "list_reports",
+    "get_report",
+    "preview_report",
+    "save_report",
+    "read_product_mapping_source",
+    "save_product_mappings",
+    "publish_product_mappings",
+    "list_skills",
+    "get_skill"
+  ],
+  "allow_non_tool": [
+    "get_data_from_warehouse"
+  ]
+}
