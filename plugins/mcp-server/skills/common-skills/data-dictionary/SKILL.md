@@ -22,6 +22,21 @@ Dataset: `{{env_prefix}}_dwh_mart` (in the customer's GCP project).
 | `smartmodel_wweekly_actuals` | 1 row per (company, week, metric) | view | Weekly counterpart to `smartmodel_actuals`. Same per-customer caveat. |
 | `smartmodel_wweekly_actuals_vs_forecast` | 1 row per (company, forecast plan, week, metric) | table | Weekly counterpart to `smartmodel_actuals_vs_forecast`. Same per-customer caveat + **row-multiplied by # of forecast plans**. |
 
+| `financials_general_ledger` | 1 row per (company, account, class, dimension, period) | view | Full GL with Drivepoint mapping fields. Source of truth for period-level accounting detail. |
+| `financials_income_statement` | 1 row per (company, account, class, dimension, period) | view | P&L view filtered from the GL (`financial_statement = 'income_statement'`). Primary value: `period_net_change`. |
+| `financials_balance_sheet` | 1 row per (company, account, class, dimension, period) | view | Balance sheet view filtered from the GL (`financial_statement = 'balance_sheet'`). Primary value: `period_ending_balance`. |
+| `financials_chart_of_accounts` | 1 row per (company, account) | view | Account dimension table. No period dimension. Hierarchy, class, type, sub-type. |
+| `financials_mapping_coverage` | 1 row per (company, financial_statement) | view | Mapping audit. Account-count and value-weighted coverage rates. |
+| `financials_invoices` | 1 row per invoice | view | QuickBooks AR invoice headers with aging. **QB customers only.** |
+| `financials_invoice_lines` | 1 row per (invoice, line) | view | QB invoice line items with parsed account-number family and revenue-line flag. **QB customers only.** |
+| `financials_bills` | 1 row per bill | view | QB AP bills with vendor name and aging. **QB customers only.** |
+| `financials_payments` | 1 row per payment | view | QB payment records. **QB customers only.** |
+| `financials_purchases` | 1 row per purchase | view | QB purchase transactions with vendor name. **QB customers only.** |
+| `financials_journal_entries` | 1 row per journal entry | view | QB manual journal entries with nested line items. **QB customers only.** |
+| `financials_vendors` | 1 row per vendor | view | QB vendor master. **QB customers only.** |
+| `financials_items` | 1 row per item | view | QB item/product master. **QB customers only.** |
+| `financials_transactions` | 1 row per transaction line | view | Transaction-level drill-down with Drivepoint mappings. **QB customers only.** |
+
 Ignore `mart_test_model` — internal pipeline check.
 
 **Weekly is per-tenant optional.** The `W - Weekly` worksheet exists only for
@@ -29,6 +44,18 @@ some customers, so the three `smartmodel_wweekly*` views return rows only for
 those tenants and are **empty (but still queryable) for everyone else**. Only
 reach for them on explicitly week-level or intra-month questions; default to
 the monthly tables otherwise. See §"Weekly SmartModel" below.
+
+**Financials marts (fourth domain).** Fourteen `financials_*` views in this same
+dataset expose the ERP general ledger, Drivepoint mapping status, and
+QuickBooks sub-ledger detail. The GL views (`financials_general_ledger`,
+`financials_income_statement`, `financials_balance_sheet`,
+`financials_chart_of_accounts`, `financials_mapping_coverage`) are populated for
+every customer with a financial data connection. The ten QuickBooks-specific
+views (`financials_invoices`, `financials_invoice_lines`, `financials_bills`,
+`financials_payments`, `financials_purchases`, `financials_journal_entries`,
+`financials_vendors`, `financials_items`, `financials_transactions`) compile for
+every tenant but are **empty for non-QB customers** (NetSuite, Xero, etc.).
+Full schema in the "Financials domain" section at the bottom of this document.
 
 **Retail marts (third domain).** Brands with a retail data feed (Alloy / Muffin)
 also have ten `retail_*` marts in this same dataset — POS sell-through,
@@ -609,4 +636,435 @@ WHERE source_name = 'alloy'
     WHERE source_name = 'alloy')
 GROUP BY 1, 2
 ORDER BY in_stock_rate
+```
+
+---
+
+## Financials domain
+
+A fourth mart family exposing ERP general-ledger data and QuickBooks
+sub-ledger detail. Same dataset, `{{env_prefix}}_dwh_mart`. All fourteen
+views compile for every tenant. The five GL views are populated for any
+customer with a financial data connection (QuickBooks, NetSuite, Xero). The
+nine QuickBooks-specific views are **empty (but queryable) for non-QB
+customers**.
+
+### GL views (always populated)
+
+Five views built from the Drivepoint financial mapping pipeline.
+
+| View | Grain | Use for |
+|---|---|---|
+| `financials_general_ledger` | (company, account, class, dimension1, period) | Full GL with Drivepoint v2 mapping fields. Every GL line carries its category, sign adjustment, and mapping status. |
+| `financials_income_statement` | (company, account, class, dimension1, period) | P&L only. Pre-filtered to `financial_statement = 'income_statement'`. Primary value: `period_net_change`. |
+| `financials_balance_sheet` | (company, account, class, dimension1, period) | Balance sheet only. Pre-filtered to `financial_statement = 'balance_sheet'`. Primary value: `period_ending_balance`. |
+| `financials_chart_of_accounts` | (company, account) | Account dimension. No period axis. Use for lookups, hierarchy navigation, filtering. |
+| `financials_mapping_coverage` | (company, financial_statement) | Mapping audit. Account-count coverage and value-weighted coverage rates (0 to 1). |
+
+### QuickBooks sub-ledger views (QB customers only)
+
+Nine views sourced from QuickBooks via Airbyte. Deduplicated to the latest
+extract per entity ID.
+
+| View | Grain | Use for |
+|---|---|---|
+| `financials_invoices` | 1 row per invoice | AR invoice headers with aging (is_open, days_past_due). |
+| `financials_invoice_lines` | (invoice, line) | Invoice line items with parsed account_number, account_number_family, and is_revenue_line flag. |
+| `financials_bills` | 1 row per bill | AP bills with vendor name and aging. |
+| `financials_payments` | 1 row per payment | Payment records with customer and method. |
+| `financials_purchases` | 1 row per purchase | Purchase transactions with vendor name, payment_type. |
+| `financials_journal_entries` | 1 row per journal entry | Manual journal entries with nested line_items JSON. |
+| `financials_vendors` | 1 row per vendor | Vendor master with name, balance, 1099 status. |
+| `financials_items` | 1 row per item | Item/product master with income/expense/asset account links. |
+| `financials_transactions` | 1 row per transaction line | Transaction-level drill-down joined to Drivepoint mappings. |
+
+### View: `financials_general_ledger`
+
+The core financials view. LEFT JOINs the canonical GL to the v2 financial
+mapping output so every GL line carries its Drivepoint category, sign
+adjustment, and mapping status.
+
+| Column | Type | Notes |
+|---|---|---|
+| `company_id`, `company_name` | STRING | Provenance |
+| `account_id` | STRING | GL account identifier from the ERP |
+| `account_name` | STRING | GL account name |
+| `account_number` | STRING | GL account number |
+| `full_account_name` | STRING | Full account name including parent path |
+| `fully_qualified_name` | STRING | Fully qualified account name from the ERP |
+| `parent_account_name` | STRING | Immediate parent account name |
+| `category_account_name` | STRING | Category-level parent |
+| `grand_parent_account_name` | STRING | Top-level parent |
+| `account_class` | STRING | Asset, Liability, Equity, Revenue, or Expense |
+| `account_type` | STRING | Type within class (e.g., Cost of Goods Sold, Other Current Asset) |
+| `account_sub_type` | STRING | Sub-type |
+| `account_transaction_type` | STRING | Credit or Debit |
+| `financial_statement` | STRING | `income_statement` \| `balance_sheet` |
+| `is_sub_account` | BOOL | Whether this is a sub-account |
+| `period_first_day`, `period_last_day` | DATE | Accounting period boundaries |
+| `period_net_change` | FLOAT64 | Net change during the period (raw ERP sign) |
+| `period_beginning_balance` | FLOAT64 | Balance at period open |
+| `period_ending_balance` | FLOAT64 | Balance at period close |
+| `class` | STRING | QuickBooks class or NetSuite classification |
+| `dimension1`, `dimension2`, `dimension3` | STRING | Custom dimensions (department, location, etc.) |
+| `currency` | STRING | Transaction currency |
+| `channel`, `vertical`, `stores` | STRING | Tags if present |
+| `drivepoint_category_id` | STRING | Drivepoint v2 category ID. NULL if unmapped. |
+| `drivepoint_category_name` | STRING | Human-readable Drivepoint category name. NULL if unmapped. |
+| `drivepoint_type` | STRING | Category type (e.g., revenue, cogs, opex). NULL if unmapped. |
+| `drivepoint_statement_type` | STRING | `income_statement` \| `balance_sheet`. NULL if unmapped. |
+| `sign_convention` | STRING | `Revenue`, `Expense`, or `BalanceSheet`. NULL if unmapped. |
+| `is_mapped` | BOOL | Whether this GL line has a Drivepoint v2 mapping |
+
+### View: `financials_income_statement`
+
+Filtered view of `financials_general_ledger` where
+`financial_statement = 'income_statement'`. Same columns except
+`financial_statement`, `account_transaction_type`, `is_sub_account`,
+`period_beginning_balance`, `period_ending_balance` are dropped. Primary
+value column is `period_net_change`.
+
+### View: `financials_balance_sheet`
+
+Filtered view of `financials_general_ledger` where
+`financial_statement = 'balance_sheet'`. Same column set as
+`financials_income_statement`. Primary value columns are
+`period_ending_balance` and `period_beginning_balance` (both present here);
+`period_net_change` is also available.
+
+### View: `financials_chart_of_accounts`
+
+Account dimension table. One row per (company, account). No period axis.
+Picks the latest period's metadata via `ROW_NUMBER() OVER (PARTITION BY
+company_id, account_id ORDER BY period_last_day DESC)`.
+
+Same account-descriptor columns as the general ledger (`account_id`,
+`account_name`, `account_number`, `full_account_name`,
+`fully_qualified_name`, `parent_account_name`, `category_account_name`,
+`grand_parent_account_name`, `account_class`, `account_type`,
+`account_sub_type`, `account_transaction_type`, `financial_statement`,
+`is_sub_account`, `currency`).
+
+### View: `financials_mapping_coverage`
+
+Mapping audit aggregated by company and financial statement.
+
+| Column | Type | Notes |
+|---|---|---|
+| `company_id`, `company_name` | STRING | Provenance |
+| `financial_statement` | STRING | `income_statement` \| `balance_sheet` |
+| `total_account_periods`, `mapped_account_periods`, `unmapped_account_periods` | INT64 | Account-period counts |
+| `mapping_coverage_rate` | FLOAT64 | Fraction of account-periods mapped (0 to 1) |
+| `total_accounts`, `mapped_accounts`, `unmapped_accounts` | INT64 | Distinct account counts |
+| `total_absolute_value`, `mapped_absolute_value`, `unmapped_absolute_value` | FLOAT64 | Value-weighted amounts |
+| `value_coverage_rate` | FLOAT64 | Fraction of absolute value covered by mapped accounts (0 to 1). More meaningful than account count for assessing completeness. |
+
+### View: `financials_invoices`
+
+QuickBooks AR invoice headers with computed aging fields.
+
+| Column | Type | Notes |
+|---|---|---|
+| `invoice_id` | STRING | QuickBooks invoice ID |
+| `transaction_date`, `due_date` | DATE | Invoice and due dates |
+| `total_amount`, `balance`, `deposit` | FLOAT64 | Amounts |
+| `doc_number` | STRING | Invoice document number |
+| `customer_id`, `customer_name` | STRING | Customer |
+| `currency` | STRING | Invoice currency |
+| `exchange_rate` | FLOAT64 | FX rate |
+| `home_total_amount` | FLOAT64 | Amount in home currency |
+| `sales_term_id`, `sales_term_name` | STRING | Payment terms |
+| `email_status`, `print_status` | STRING | Send status |
+| `memo` | STRING | Private note |
+| `is_open` | BOOL | TRUE when balance > 0 |
+| `days_past_due` | INT64 | Days past due. NULL if not overdue or fully paid. |
+
+### View: `financials_invoice_lines`
+
+Invoice line items. Explodes each invoice's Line JSON into one row per
+economic line (sales items, discounts, allowances). SubTotal lines are
+excluded so line amounts foot to the invoice total.
+
+| Column | Type | Notes |
+|---|---|---|
+| `invoice_id` | STRING | Joins to `financials_invoices` |
+| `doc_number` | STRING | Invoice document number |
+| `transaction_date` | DATE | Invoice date |
+| `customer_id`, `customer_name` | STRING | Customer (denormalized from header) |
+| `currency` | STRING | Invoice currency |
+| `line_id` | STRING | Line ID within the invoice |
+| `line_num` | INT64 | Line sequence |
+| `detail_type` | STRING | e.g. SalesItemLineDetail, DescriptionOnly |
+| `item_id`, `item_name` | STRING | Product/item |
+| `account_id`, `account_name` | STRING | GL account the line posts to (colon-separated hierarchy) |
+| `tax_code` | STRING | e.g. TAX, NON |
+| `quantity` | FLOAT64 | Units vary by item (cases vs eaches) |
+| `unit_price` | FLOAT64 | Line unit price |
+| `amount` | FLOAT64 | Line amount, signed as booked |
+| `account_number` | STRING | Parsed from the leading alphanumeric prefix of `account_name` (e.g. `41310N`) |
+| `account_number_family` | STRING | First digit of `account_number`. Groups into families: 4 = revenue, 5 = COGS, 6-9 = expenses, 1-3 = balance sheet. |
+| `is_revenue_line` | BOOL | TRUE when the line posts to a 41xxx sales account |
+
+### View: `financials_bills`
+
+QuickBooks AP bills with vendor name and computed aging fields.
+
+| Column | Type | Notes |
+|---|---|---|
+| `bill_id` | STRING | QuickBooks bill ID |
+| `transaction_date`, `due_date` | DATE | Bill and due dates |
+| `total_amount`, `balance` | FLOAT64 | Amounts |
+| `doc_number` | STRING | Bill document number |
+| `vendor_id`, `vendor_name`, `vendor_company_name` | STRING | Vendor (name resolved via vendor master) |
+| `ap_account_id`, `ap_account_name` | STRING | AP posting account |
+| `department_id`, `department_name` | STRING | Department |
+| `sales_term_id`, `sales_term_name` | STRING | Payment terms |
+| `currency` | STRING | Bill currency |
+| `exchange_rate` | FLOAT64 | FX rate |
+| `memo` | STRING | Private note |
+| `is_open` | BOOL | TRUE when balance > 0 |
+| `days_past_due` | INT64 | Days past due. NULL if not overdue or fully paid. |
+
+### View: `financials_payments`
+
+QuickBooks payment records.
+
+| Column | Type | Notes |
+|---|---|---|
+| `payment_id` | STRING | QuickBooks payment ID |
+| `transaction_date` | DATE | Payment date |
+| `total_amount`, `unapplied_amount` | FLOAT64 | Amount and unapplied portion |
+| `payment_ref_number` | STRING | Reference/check number |
+| `customer_id`, `customer_name` | STRING | Customer |
+| `payment_method_id`, `payment_method_name` | STRING | Method (e.g. Check, ACH, Credit Card) |
+| `ar_account_id`, `ar_account_name` | STRING | AR account |
+| `deposit_account_id`, `deposit_account_name` | STRING | Deposit-to account |
+| `currency` | STRING | Payment currency |
+| `exchange_rate` | FLOAT64 | FX rate |
+| `memo` | STRING | Memo |
+
+### View: `financials_purchases`
+
+QuickBooks purchase transactions with vendor name.
+
+| Column | Type | Notes |
+|---|---|---|
+| `purchase_id` | STRING | QuickBooks purchase ID |
+| `transaction_date` | DATE | Transaction date |
+| `total_amount` | FLOAT64 | Amount |
+| `doc_number` | STRING | Reference number |
+| `payment_type` | STRING | Cash, Check, or CreditCard |
+| `is_credit` | BOOL | TRUE if this is a credit transaction |
+| `entity_id`, `entity_name` | STRING | Vendor/payee (name resolved via vendor master when entity_type = Vendor) |
+| `entity_type` | STRING | Vendor, Employee, or Customer |
+| `account_id`, `account_name` | STRING | GL account |
+| `currency` | STRING | Transaction currency |
+| `exchange_rate` | FLOAT64 | FX rate |
+| `memo` | STRING | Memo |
+
+### View: `financials_journal_entries`
+
+QuickBooks manual journal entries.
+
+| Column | Type | Notes |
+|---|---|---|
+| `journal_entry_id` | STRING | QuickBooks journal entry ID |
+| `transaction_date` | DATE | Entry date |
+| `doc_number` | STRING | Document number |
+| `is_adjustment` | BOOL | Whether this is an adjustment entry |
+| `currency` | STRING | Entry currency |
+| `exchange_rate` | FLOAT64 | FX rate |
+| `memo` | STRING | Memo |
+| `line_items` | JSON | Nested array of debit/credit lines. Parse with `JSON_EXTRACT_ARRAY`. |
+
+### View: `financials_vendors`
+
+QuickBooks vendor master.
+
+| Column | Type | Notes |
+|---|---|---|
+| `vendor_id` | STRING | QuickBooks vendor ID |
+| `display_name` | STRING | Display name |
+| `company_name` | STRING | Company name |
+| `given_name`, `family_name` | STRING | Contact name |
+| `print_on_check_name` | STRING | Check print name |
+| `is_active` | BOOL | Active status |
+| `balance` | FLOAT64 | Outstanding balance |
+| `is_1099` | BOOL | 1099 contractor flag |
+| `account_number` | STRING | Vendor account number |
+| `tax_identifier` | STRING | Tax ID |
+| `currency` | STRING | Default currency |
+| `email`, `phone` | STRING | Contact info |
+
+### View: `financials_items`
+
+QuickBooks item/product master.
+
+| Column | Type | Notes |
+|---|---|---|
+| `item_id` | STRING | QuickBooks item ID |
+| `item_name` | STRING | Item name |
+| `fully_qualified_name` | STRING | Full hierarchy name |
+| `item_type` | STRING | Service, Inventory, NonInventory, Group, Category, Bundle, Fixed Asset |
+| `is_active` | BOOL | Active status |
+| `unit_price` | FLOAT64 | Sales price |
+| `purchase_cost` | FLOAT64 | Purchase cost |
+| `description`, `purchase_description` | STRING | Sales / purchase descriptions |
+| `is_taxable` | BOOL | Taxable flag |
+| `tracks_quantity` | BOOL | Whether inventory is tracked |
+| `quantity_on_hand` | FLOAT64 | Current inventory on hand |
+| `inventory_start_date` | DATE | When inventory tracking started |
+| `income_account_id`, `income_account_name` | STRING | Revenue posting account |
+| `expense_account_id`, `expense_account_name` | STRING | Expense posting account |
+| `asset_account_id`, `asset_account_name` | STRING | Inventory asset account |
+
+### View: `financials_transactions`
+
+Transaction-level drill-down for QuickBooks customers. Joins raw transactions
+to Drivepoint mappings so each line carries its category and mapping status.
+
+| Column | Type | Notes |
+|---|---|---|
+| `account_name`, `account_id` | STRING | GL account |
+| `amount` | FLOAT64 | Transaction amount (raw ERP sign) |
+| `transaction_date` | DATE | Transaction date |
+| `entity_name`, `entity_id` | STRING | Vendor, customer, or employee |
+| `transaction_type` | STRING | Invoice, Bill, Journal Entry, etc. |
+| `transaction_type_id` | STRING | QB type code |
+| `memo` | STRING | Transaction memo |
+| `split_account`, `split_account_id` | STRING | Contra/split account |
+| `department`, `department_id` | STRING | Department |
+| `doc_number` | STRING | Document number |
+| `is_posting` | BOOL | Whether the transaction posts to the GL |
+| `currency` | STRING | Transaction currency |
+| `period_start`, `period_end` | DATE | Period boundaries used for mapping join |
+| `company_id` | STRING | From the mapping join. NULL if unmapped. |
+| `drivepoint_category_id`, `drivepoint_category_name` | STRING | Drivepoint category. NULL if unmapped. |
+| `drivepoint_type`, `drivepoint_statement_type` | STRING | Category metadata. NULL if unmapped. |
+| `sign_convention` | STRING | Revenue, Expense, or BalanceSheet. NULL if unmapped. |
+| `is_mapped` | BOOL | Whether this transaction's account has a Drivepoint mapping |
+
+### Financials grain keys (uniqueness tuple per view)
+
+- `financials_general_ledger`: `company_id, account_id, class, dimension1, period_last_day`
+- `financials_income_statement`: `company_id, account_id, class, dimension1, period_last_day`
+- `financials_balance_sheet`: `company_id, account_id, class, dimension1, period_last_day`
+- `financials_chart_of_accounts`: `company_id, account_id`
+- `financials_mapping_coverage`: `company_id, financial_statement`
+- `financials_invoices`: `invoice_id`
+- `financials_invoice_lines`: `invoice_id, line_id`
+- `financials_bills`: `bill_id`
+- `financials_payments`: `payment_id`
+- `financials_purchases`: `purchase_id`
+- `financials_journal_entries`: `journal_entry_id`
+- `financials_vendors`: `vendor_id`
+- `financials_items`: `item_id`
+- `financials_transactions`: no single unique key (transaction lines can repeat across splits)
+
+### Financials footguns
+
+1. **QB views are empty stubs for non-QB customers.** The views compile for
+   every tenant (no runtime errors), but return zero rows for NetSuite, Xero,
+   etc. Probe with a `COUNT(*)` before building analysis on them. The GL views
+   (`financials_general_ledger` through `financials_mapping_coverage`) are
+   always populated.
+2. **`class` and `dimension1` can be empty strings, not NULL.** The GL grain
+   includes these columns, so two rows for the same account/period with
+   different class values are distinct. Use `COALESCE(class, '')` or filter
+   with `class = ''` when looking for unclassified entries.
+3. **`period_net_change` sign follows the ERP.** Revenue accounts typically
+   carry negative net change (credit normal); expenses are positive (debit
+   normal). Use `sign_convention` from the Drivepoint mapping to normalize:
+   Revenue lines should be flipped; Expense and BalanceSheet lines keep their
+   raw sign.
+4. **`is_mapped` is the mapping-quality signal.** Unmapped GL lines
+   (`is_mapped = FALSE`) have NULL for all `drivepoint_*` columns. Use
+   `financials_mapping_coverage` to assess how complete the mapping is before
+   building Drivepoint-category rollups.
+5. **Invoice line `quantity` units vary.** Cases vs eaches depends on the item
+   configuration. Do not sum quantities across items without normalizing.
+6. **`account_number_family` on invoice lines is a single character.** Use it
+   for broad classification (4 = revenue, 5 = COGS), not exact account
+   matching.
+
+### Financials discovery patterns
+
+```sql
+-- Does this customer have financials data? Check GL row count and date range.
+SELECT company_id,
+       company_name,
+       COUNT(*)            AS gl_rows,
+       MIN(period_last_day) AS earliest_period,
+       MAX(period_last_day) AS latest_period,
+       COUNTIF(is_mapped)   AS mapped_rows,
+       COUNTIF(NOT is_mapped) AS unmapped_rows
+FROM `{{env_prefix}}_dwh_mart.financials_general_ledger`
+GROUP BY 1, 2
+```
+
+```sql
+-- Does this customer have QuickBooks sub-ledger data?
+SELECT
+  (SELECT COUNT(*) FROM `{{env_prefix}}_dwh_mart.financials_invoices`) AS invoices,
+  (SELECT COUNT(*) FROM `{{env_prefix}}_dwh_mart.financials_bills`) AS bills,
+  (SELECT COUNT(*) FROM `{{env_prefix}}_dwh_mart.financials_payments`) AS payments,
+  (SELECT COUNT(*) FROM `{{env_prefix}}_dwh_mart.financials_vendors`) AS vendors,
+  (SELECT COUNT(*) FROM `{{env_prefix}}_dwh_mart.financials_items`) AS items,
+  (SELECT COUNT(*) FROM `{{env_prefix}}_dwh_mart.financials_transactions`) AS transactions
+```
+
+```sql
+-- Mapping coverage summary
+SELECT company_name,
+       financial_statement,
+       mapped_accounts,
+       total_accounts,
+       ROUND(mapping_coverage_rate, 3)  AS acct_coverage,
+       ROUND(value_coverage_rate, 3)    AS value_coverage
+FROM `{{env_prefix}}_dwh_mart.financials_mapping_coverage`
+ORDER BY company_name, financial_statement
+```
+
+```sql
+-- Income statement by Drivepoint category for a given period
+SELECT drivepoint_category_name,
+       drivepoint_type,
+       SUM(period_net_change) AS net_change
+FROM `{{env_prefix}}_dwh_mart.financials_income_statement`
+WHERE is_mapped
+  AND period_last_day = '2025-12-31'
+GROUP BY 1, 2
+ORDER BY drivepoint_type, drivepoint_category_name
+```
+
+```sql
+-- Open AR invoices with aging
+SELECT invoice_id, doc_number, customer_name,
+       transaction_date, due_date, total_amount, balance, days_past_due
+FROM `{{env_prefix}}_dwh_mart.financials_invoices`
+WHERE is_open
+ORDER BY days_past_due DESC
+```
+
+```sql
+-- Revenue by product from invoice lines
+SELECT item_name,
+       SUM(quantity)  AS total_qty,
+       SUM(amount)    AS total_revenue
+FROM `{{env_prefix}}_dwh_mart.financials_invoice_lines`
+WHERE is_revenue_line
+GROUP BY 1
+ORDER BY total_revenue DESC
+```
+
+```sql
+-- AP aging by vendor
+SELECT vendor_name,
+       COUNT(*) AS open_bills,
+       SUM(balance) AS total_outstanding,
+       MAX(days_past_due) AS max_days_past_due
+FROM `{{env_prefix}}_dwh_mart.financials_bills`
+WHERE is_open
+GROUP BY 1
+ORDER BY total_outstanding DESC
 ```
