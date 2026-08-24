@@ -22,20 +22,20 @@ Dataset: `{{env_prefix}}_dwh_mart` (in the customer's GCP project).
 | `smartmodel_wweekly_actuals` | 1 row per (company, week, metric) | view | Weekly counterpart to `smartmodel_actuals`. Same per-customer caveat. |
 | `smartmodel_wweekly_actuals_vs_forecast` | 1 row per (company, forecast plan, week, metric) | table | Weekly counterpart to `smartmodel_actuals_vs_forecast`. Same per-customer caveat + **row-multiplied by # of forecast plans**. |
 
-| `financials_general_ledger` | 1 row per (company, account, class, dimension, period) | view | Full GL with Drivepoint mapping fields. Source of truth for period-level accounting detail. |
-| `financials_income_statement` | 1 row per (company, account, class, dimension, period) | view | P&L view filtered from the GL (`financial_statement = 'income_statement'`). Primary value: `period_net_change`. |
-| `financials_balance_sheet` | 1 row per (company, account, class, dimension, period) | view | Balance sheet view filtered from the GL (`financial_statement = 'balance_sheet'`). Primary value: `period_ending_balance`. |
-| `financials_chart_of_accounts` | 1 row per (company, account) | view | Account dimension table. No period dimension. Hierarchy, class, type, sub-type. |
-| `financials_mapping_coverage` | 1 row per (company, financial_statement) | view | Mapping audit. Account-count and value-weighted coverage rates. |
-| `financials_invoices` | 1 row per invoice | view | QuickBooks AR invoice headers with aging. **QB customers only.** |
-| `financials_invoice_lines` | 1 row per (invoice, line) | view | QB invoice line items with parsed account-number family and revenue-line flag. **QB customers only.** |
-| `financials_bills` | 1 row per bill | view | QB AP bills with vendor name and aging. **QB customers only.** |
-| `financials_payments` | 1 row per payment | view | QB payment records. **QB customers only.** |
-| `financials_purchases` | 1 row per purchase | view | QB purchase transactions with vendor name. **QB customers only.** |
-| `financials_journal_entries` | 1 row per journal entry | view | QB manual journal entries with nested line items. **QB customers only.** |
-| `financials_vendors` | 1 row per vendor | view | QB vendor master. **QB customers only.** |
-| `financials_items` | 1 row per item | view | QB item/product master. **QB customers only.** |
-| `financials_transactions` | 1 row per transaction line | view | Transaction-level drill-down with Drivepoint mappings. **QB customers only.** |
+| `financials_general_ledger` | 1 row per (company, account, class, dimension, period) | table | Full GL with Drivepoint mapping fields. Source of truth for period-level accounting detail. |
+| `financials_income_statement` | 1 row per (company, account, class, dimension, period) | table | P&L filtered from the GL (`financial_statement = 'income_statement'`). Primary value: `period_net_change`. |
+| `financials_balance_sheet` | 1 row per (company, account, class, dimension, period) | table | Balance sheet filtered from the GL (`financial_statement = 'balance_sheet'`). Primary value: `period_ending_balance`. |
+| `financials_chart_of_accounts` | 1 row per (company, account) | table | Account dimension table. No period dimension. Hierarchy, class, type, sub-type. |
+| `financials_mapping_coverage` | 1 row per (company, financial_statement) | table | Mapping audit. Account-count and value-weighted coverage rates. |
+| `financials_invoices` | 1 row per invoice | table | QuickBooks AR invoice headers with aging. **QB customers only.** |
+| `financials_invoice_lines` | 1 row per (invoice, line) | table | QB invoice line items with parsed account-number family and revenue-line flag. **QB customers only.** |
+| `financials_bills` | 1 row per bill | table | QB AP bills with vendor name and aging. **QB customers only.** |
+| `financials_payments` | 1 row per payment | table | QB payment records. **QB customers only.** |
+| `financials_purchases` | 1 row per purchase | table | QB purchase transactions with vendor name. **QB customers only.** |
+| `financials_journal_entries` | 1 row per journal entry | table | QB manual journal entries with nested line items. **QB customers only.** |
+| `financials_vendors` | 1 row per vendor | table | QB vendor master. **QB customers only.** |
+| `financials_items` | 1 row per item | table | QB item/product master. **QB customers only.** |
+| `financials_transactions` | 1 row per transaction line | table | Transaction-level drill-down with Drivepoint mappings. **QB customers only.** |
 
 Ignore `mart_test_model` — internal pipeline check.
 
@@ -45,15 +45,15 @@ those tenants and are **empty (but still queryable) for everyone else**. Only
 reach for them on explicitly week-level or intra-month questions; default to
 the monthly tables otherwise. See §"Weekly SmartModel" below.
 
-**Financials marts (fourth domain).** Fourteen `financials_*` views in this same
+**Financials marts (fourth domain).** Fourteen `financials_*` tables in this same
 dataset expose the ERP general ledger, Drivepoint mapping status, and
-QuickBooks sub-ledger detail. The GL views (`financials_general_ledger`,
+QuickBooks sub-ledger detail. The GL tables (`financials_general_ledger`,
 `financials_income_statement`, `financials_balance_sheet`,
 `financials_chart_of_accounts`, `financials_mapping_coverage`) are populated for
 every customer with a financial data connection. The ten QuickBooks-specific
-views (`financials_invoices`, `financials_invoice_lines`, `financials_bills`,
+tables (`financials_invoices`, `financials_invoice_lines`, `financials_bills`,
 `financials_payments`, `financials_purchases`, `financials_journal_entries`,
-`financials_vendors`, `financials_items`, `financials_transactions`) compile for
+`financials_vendors`, `financials_items`, `financials_transactions`) exist for
 every tenant but are **empty for non-QB customers** (NetSuite, Xero, etc.).
 Full schema in the "Financials domain" section at the bottom of this document.
 
@@ -644,16 +644,16 @@ ORDER BY in_stock_rate
 
 A fourth mart family exposing ERP general-ledger data and QuickBooks
 sub-ledger detail. Same dataset, `{{env_prefix}}_dwh_mart`. All fourteen
-views compile for every tenant. The five GL views are populated for any
+tables exist for every tenant. The five GL tables are populated for any
 customer with a financial data connection (QuickBooks, NetSuite, Xero). The
-nine QuickBooks-specific views are **empty (but queryable) for non-QB
+nine QuickBooks-specific tables are **empty (but queryable) for non-QB
 customers**.
 
-### GL views (always populated)
+### GL tables (always populated)
 
-Five views built from the Drivepoint financial mapping pipeline.
+Five tables built from the Drivepoint financial mapping pipeline.
 
-| View | Grain | Use for |
+| Table | Grain | Use for |
 |---|---|---|
 | `financials_general_ledger` | (company, account, class, dimension1, period) | Full GL with Drivepoint v2 mapping fields. Every GL line carries its category, sign adjustment, and mapping status. |
 | `financials_income_statement` | (company, account, class, dimension1, period) | P&L only. Pre-filtered to `financial_statement = 'income_statement'`. Primary value: `period_net_change`. |
@@ -661,12 +661,12 @@ Five views built from the Drivepoint financial mapping pipeline.
 | `financials_chart_of_accounts` | (company, account) | Account dimension. No period axis. Use for lookups, hierarchy navigation, filtering. |
 | `financials_mapping_coverage` | (company, financial_statement) | Mapping audit. Account-count coverage and value-weighted coverage rates (0 to 1). |
 
-### QuickBooks sub-ledger views (QB customers only)
+### QuickBooks sub-ledger tables (QB customers only)
 
-Nine views sourced from QuickBooks via Airbyte. Deduplicated to the latest
+Nine tables sourced from QuickBooks via Airbyte. Deduplicated to the latest
 extract per entity ID.
 
-| View | Grain | Use for |
+| Table | Grain | Use for |
 |---|---|---|
 | `financials_invoices` | 1 row per invoice | AR invoice headers with aging (is_open, days_past_due). |
 | `financials_invoice_lines` | (invoice, line) | Invoice line items with parsed account_number, account_number_family, and is_revenue_line flag. |
@@ -678,9 +678,9 @@ extract per entity ID.
 | `financials_items` | 1 row per item | Item/product master with income/expense/asset account links. |
 | `financials_transactions` | 1 row per transaction line | Transaction-level drill-down joined to Drivepoint mappings. |
 
-### View: `financials_general_ledger`
+### Table: `financials_general_ledger`
 
-The core financials view. LEFT JOINs the canonical GL to the v2 financial
+The core financials table. LEFT JOINs the canonical GL to the v2 financial
 mapping output so every GL line carries its Drivepoint category, sign
 adjustment, and mapping status.
 
@@ -716,23 +716,23 @@ adjustment, and mapping status.
 | `sign_convention` | STRING | `Revenue`, `Expense`, or `BalanceSheet`. NULL if unmapped. |
 | `is_mapped` | BOOL | Whether this GL line has a Drivepoint v2 mapping |
 
-### View: `financials_income_statement`
+### Table: `financials_income_statement`
 
-Filtered view of `financials_general_ledger` where
+Filtered subset of `financials_general_ledger` where
 `financial_statement = 'income_statement'`. Same columns except
 `financial_statement`, `account_transaction_type`, `is_sub_account`,
 `period_beginning_balance`, `period_ending_balance` are dropped. Primary
 value column is `period_net_change`.
 
-### View: `financials_balance_sheet`
+### Table: `financials_balance_sheet`
 
-Filtered view of `financials_general_ledger` where
+Filtered subset of `financials_general_ledger` where
 `financial_statement = 'balance_sheet'`. Same column set as
 `financials_income_statement`. Primary value columns are
 `period_ending_balance` and `period_beginning_balance` (both present here);
 `period_net_change` is also available.
 
-### View: `financials_chart_of_accounts`
+### Table: `financials_chart_of_accounts`
 
 Account dimension table. One row per (company, account). No period axis.
 Picks the latest period's metadata via `ROW_NUMBER() OVER (PARTITION BY
@@ -745,7 +745,7 @@ Same account-descriptor columns as the general ledger (`account_id`,
 `account_sub_type`, `account_transaction_type`, `financial_statement`,
 `is_sub_account`, `currency`).
 
-### View: `financials_mapping_coverage`
+### Table: `financials_mapping_coverage`
 
 Mapping audit aggregated by company and financial statement.
 
@@ -759,7 +759,7 @@ Mapping audit aggregated by company and financial statement.
 | `total_absolute_value`, `mapped_absolute_value`, `unmapped_absolute_value` | FLOAT64 | Value-weighted amounts |
 | `value_coverage_rate` | FLOAT64 | Fraction of absolute value covered by mapped accounts (0 to 1). More meaningful than account count for assessing completeness. |
 
-### View: `financials_invoices`
+### Table: `financials_invoices`
 
 QuickBooks AR invoice headers with computed aging fields.
 
@@ -779,7 +779,7 @@ QuickBooks AR invoice headers with computed aging fields.
 | `is_open` | BOOL | TRUE when balance > 0 |
 | `days_past_due` | INT64 | Days past due. NULL if not overdue or fully paid. |
 
-### View: `financials_invoice_lines`
+### Table: `financials_invoice_lines`
 
 Invoice line items. Explodes each invoice's Line JSON into one row per
 economic line (sales items, discounts, allowances). SubTotal lines are
@@ -805,7 +805,7 @@ excluded so line amounts foot to the invoice total.
 | `account_number_family` | STRING | First digit of `account_number`. Groups into families: 4 = revenue, 5 = COGS, 6-9 = expenses, 1-3 = balance sheet. |
 | `is_revenue_line` | BOOL | TRUE when the line posts to a 41xxx sales account |
 
-### View: `financials_bills`
+### Table: `financials_bills`
 
 QuickBooks AP bills with vendor name and computed aging fields.
 
@@ -825,7 +825,7 @@ QuickBooks AP bills with vendor name and computed aging fields.
 | `is_open` | BOOL | TRUE when balance > 0 |
 | `days_past_due` | INT64 | Days past due. NULL if not overdue or fully paid. |
 
-### View: `financials_payments`
+### Table: `financials_payments`
 
 QuickBooks payment records.
 
@@ -843,7 +843,7 @@ QuickBooks payment records.
 | `exchange_rate` | FLOAT64 | FX rate |
 | `memo` | STRING | Memo |
 
-### View: `financials_purchases`
+### Table: `financials_purchases`
 
 QuickBooks purchase transactions with vendor name.
 
@@ -862,7 +862,7 @@ QuickBooks purchase transactions with vendor name.
 | `exchange_rate` | FLOAT64 | FX rate |
 | `memo` | STRING | Memo |
 
-### View: `financials_journal_entries`
+### Table: `financials_journal_entries`
 
 QuickBooks manual journal entries.
 
@@ -877,7 +877,7 @@ QuickBooks manual journal entries.
 | `memo` | STRING | Memo |
 | `line_items` | JSON | Nested array of debit/credit lines. Parse with `JSON_EXTRACT_ARRAY`. |
 
-### View: `financials_vendors`
+### Table: `financials_vendors`
 
 QuickBooks vendor master.
 
@@ -896,7 +896,7 @@ QuickBooks vendor master.
 | `currency` | STRING | Default currency |
 | `email`, `phone` | STRING | Contact info |
 
-### View: `financials_items`
+### Table: `financials_items`
 
 QuickBooks item/product master.
 
@@ -918,7 +918,7 @@ QuickBooks item/product master.
 | `expense_account_id`, `expense_account_name` | STRING | Expense posting account |
 | `asset_account_id`, `asset_account_name` | STRING | Inventory asset account |
 
-### View: `financials_transactions`
+### Table: `financials_transactions`
 
 Transaction-level drill-down for QuickBooks customers. Joins raw transactions
 to Drivepoint mappings so each line carries its category and mapping status.
@@ -944,7 +944,7 @@ to Drivepoint mappings so each line carries its category and mapping status.
 | `sign_convention` | STRING | Revenue, Expense, or BalanceSheet. NULL if unmapped. |
 | `is_mapped` | BOOL | Whether this transaction's account has a Drivepoint mapping |
 
-### Financials grain keys (uniqueness tuple per view)
+### Financials grain keys (uniqueness tuple per table)
 
 - `financials_general_ledger`: `company_id, account_id, class, dimension1, period_last_day`
 - `financials_income_statement`: `company_id, account_id, class, dimension1, period_last_day`
@@ -963,9 +963,9 @@ to Drivepoint mappings so each line carries its category and mapping status.
 
 ### Financials footguns
 
-1. **QB views are empty stubs for non-QB customers.** The views compile for
+1. **QB tables are empty stubs for non-QB customers.** The tables exist for
    every tenant (no runtime errors), but return zero rows for NetSuite, Xero,
-   etc. Probe with a `COUNT(*)` before building analysis on them. The GL views
+   etc. Probe with a `COUNT(*)` before building analysis on them. The GL tables
    (`financials_general_ledger` through `financials_mapping_coverage`) are
    always populated.
 2. **`class` and `dimension1` can be empty strings, not NULL.** The GL grain
