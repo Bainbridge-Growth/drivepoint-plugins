@@ -340,6 +340,67 @@ Rules that keep reports clean:
 - **Drivepoint house style.** Concise, plain language. **No em dashes** in any
   copy (titles, labels, body) — use commas, periods, or "to" for ranges.
 
+## Controls (optional interactivity)
+
+A report may carry a top-level `controls` array (a sibling of `header`/`blocks`)
+of renderer-owned interactive controls. Add them only when the user wants to
+slice or reshape the report themselves; a report with no `controls` is still
+complete. Every control is `{type, key, label, ...}` where `key` is a unique id.
+There are two families:
+
+- **View controls** change what the reader sees without touching data. They
+  target blocks, so give each affected block a stable `id` and reference it:
+  - `seriesVisibility` — show/hide a chart's series.
+  - `columnSet` — switch a table between named column subsets.
+  - `tabs` — show one group of blocks at a time.
+  - `blockVisibility` — toggle a group of blocks on/off.
+  - (a `table` can also set `sortable: true` on its own, no control needed.)
+- **Global filter controls** — `select`, `multiSelect`, `dateRange`, `number`,
+  `text` — carry a `bind`:
+  - `bind: "clientData"` filters the rows already on the page against a
+    `column`. Only use it where **every** affected block carries that column,
+    else its KPIs/totals/prose go stale.
+  - `bind: "requery"` re-runs the queries with the value bound into a
+    `${$CONTEXT.<key>}` token. The control `key` **is** the token: you MUST also
+    put `${$CONTEXT.<key>}` into the query it should scope (e.g.
+    `WHERE channel = ${$CONTEXT.channel}`) and must **NOT** quote it — the value
+    is inserted as a ready SQL literal (strings/dates quoted, numbers bare;
+    `multiSelect` expands to a comma list for `IN (...)`; `dateRange` exposes
+    `${$CONTEXT.<key>_start}` and `${$CONTEXT.<key>_end}`; `number` binds a bare
+    numeric literal; `text` binds a quoted string). A query with no token is
+    left unchanged. Give every requery token a default in `context`.
+
+Per type:
+- `select` / `multiSelect` — options come from `{source: "static" | "data" |
+  "query"}` (`static` lists them inline; `data`/`query` derive them from rows).
+- `dateRange` — a start/end picker.
+- `number` — a free-form numeric input with optional `min` / `max` / `step`
+  (the value is clamped to min/max). For a **threshold/cap/floor** use
+  `bind: "requery"` and compare it in SQL (e.g. `WHERE margin_pct >=
+  ${$CONTEXT.minMargin}`); with `bind: "clientData"` it filters to rows whose
+  `column` **equals** the value (exact match, not a range).
+- `text` — a free-form string input; with `clientData` it does a
+  case-insensitive **contains** match on `column`.
+
+Limits (state these honestly, don't imply otherwise):
+- Controls are **global or target a whole block by `id`** — there is **no
+  per-row control**. Per-table-row editable cells, per-row growth inputs, and
+  per-row checkboxes **cannot be saved**; they stay in the interactive artifact
+  only. The savable equivalent is a global `number`/`select`/`text` that
+  re-queries or filters the whole block.
+- `clientData` only reshapes rows already fetched; anything that must change
+  totals/KPIs honestly should be `requery`.
+
+```json
+"controls": [
+  { "type": "dateRange", "key": "period", "label": "Period", "bind": "requery" },
+  { "type": "select", "key": "channel", "label": "Channel", "bind": "requery",
+    "options": { "source": "static", "values": ["DTC", "Amazon", "Retail"] } },
+  { "type": "number", "key": "minMargin", "label": "Min margin %", "bind": "requery",
+    "min": 0, "max": 100, "step": 1 }
+]
+```
+
 ## Governance (do not work around)
 
 - Queries run only in the company's own warehouse project and only against
