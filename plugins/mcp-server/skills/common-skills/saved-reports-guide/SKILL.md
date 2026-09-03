@@ -16,6 +16,13 @@ page," or "edit the retention scorecard," this guide applies.
 
 ## Golden rules (read first)
 
+- **Emit the whole `report` object in one shot — no placeholders.** `blocks` is
+  required and must be the complete array; every entry in `controls` must be a
+  full control object. Never abbreviate with placeholder strings (`"wired
+  below"`, `"..."`, `"TODO"`), never omit `blocks`, and never leave a required
+  field to "fill in later". `save_report` validates the payload and rejects any
+  stub or missing field, so a truncated object just fails the save. If the object
+  is large, write it out in full anyway.
 - **Never call `save_report` unless the user explicitly asks to save.** A
   preview is not permission to save. Wait for a clear instruction, and let the
   user pick **save as new** (create) or **update** (overwrite an existing
