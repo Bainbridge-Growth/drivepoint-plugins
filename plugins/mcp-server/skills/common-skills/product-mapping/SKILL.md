@@ -173,8 +173,10 @@ Follow these steps in order. Never skip a step, never reorder them.
    On re-runs, call out what CHANGED since the last mapping (new
    rows, drift, corrections) — that's the useful review, not the
    unchanged baseline.
-9. **STOP. Wait for explicit user approval.** See the "Approval gate"
-   block below — this is a hard stop, not a soft one.
+9. **STOP. Wait for the single customer approval: `Approve & publish`.**
+   See the "Approval gate" block below — this is a hard stop, not a
+   soft one. Do not ask the customer to separately save, publish, or
+   acknowledge the review.
 10. **Call `save_product_mappings` ONCE**, serializing
     your in-head decision set from step 7 into the CSV — one row per
     confirmed sourceKey, with the shared canonical attributes copied
@@ -186,10 +188,22 @@ Follow these steps in order. Never skip a step, never reorder them.
     row-by-row at save time to figure out membership, you skipped
     step 7 — commit to the groupings first, then come back. **Merges
     into the Firestore doc.** On re-runs the payload is typically
-    small — only the rows whose decisions changed.
+    small — only the rows whose decisions changed. Do not pass
+    `acknowledge_human_review`; publishing must succeed before the
+    review is complete.
 11. **Call `publish_product_mappings` ONCE.** **Overwrites
-    the BigQuery catalog table.** If this call fails after save, rerun
-    publish — the Firestore doc is already correct, do not re-save.
+    the BigQuery catalog table.** If the artifact covered every key in
+    `newSinceLastReviewKeys`, pass `acknowledge_human_review: true` so
+    the successful publish also completes the review, and pass
+    `reviewed_source_keys` containing every `records[].sourceKey` from
+    the read whose artifact was approved. This snapshot prevents a
+    product arriving between read and publish from being silently
+    acknowledged. If the user deliberately scoped the session to only
+    part of the new-product batch, omit both options and tell them the
+    remaining products will stay New. If publish fails after save,
+    rerun publish — the Firestore doc is already correct, do not
+    re-save, and the review remains unacknowledged until publish
+    succeeds.
 
 **Reason inline. Do not script the decision-making.** The mapping
 judgment — normalization, grouping, canonical id derivation, value
@@ -218,20 +232,22 @@ could contain a delimiter.
 ## Approval gate — DO NOT SKIP
 
 Between step 8 (render the artifact) and step 10 (call save) there is
-a **hard stop**. The user reviews the artifact and explicitly tells
-you to proceed. You do not save until they do.
+a **hard stop**. The user reviews the artifact and explicitly chooses
+the single customer-facing completion action, **Approve & publish**.
+You do not save until they do.
 
 - After rendering the artifact, your next message ends with a short
-  prompt: _"Review the map above. Reply `save` (or `looks good`,
-  `proceed`, `publish`) to write to Firestore, or tell me what to
-  change."_
+  prompt: _"Review the map above. Reply `Approve & publish` to apply
+  these mappings and update reporting, or tell me what to change."_
 - **Do NOT call `save_product_mappings` on the same turn
   as the artifact.** The artifact is for the user's eyes, not a
   self-triggering signal.
 - **Do NOT call save on a follow-up turn unless the user's latest
-  message is an explicit approval.** A neutral message ("ok",
-  "thanks", "cool") is NOT an approval — ask again. A request for
-  changes is not an approval — regenerate the artifact.
+  message is an explicit approval to publish.** `Approve & publish`
+  is canonical; unambiguous equivalents such as "publish these
+  mappings" or "looks good, publish" also count. A neutral message
+  ("ok", "thanks", "cool") is NOT an approval — ask again. A request
+  for changes is not an approval — regenerate the artifact.
 - **Do NOT infer approval from your own confidence.** "I've validated
   the counts and everything looks right" is not a reason to save;
   it is a reason to _ask_.
@@ -242,6 +258,15 @@ Bypassing this gate is the single most-reported failure of this
 workflow. The user has been burned by silent saves; they treat any
 save without prior approval as broken behavior. If you are ever
 unsure whether the user has approved, the answer is no — ask.
+
+`save_product_mappings`, `publish_product_mappings`, and
+`acknowledge_human_review` are implementation details. Never present
+them as three customer choices. After **Approve & publish**, perform
+the save and publish calls back-to-back. Acknowledge the review on the
+publish call only when the artifact covered the complete current
+new-product batch, and include the full `records[].sourceKey` snapshot
+in `reviewed_source_keys`. Report one outcome to the customer:
+published, or publish failed and needs retry.
 
 ---
 
@@ -659,8 +684,8 @@ and follow its tokens so the table matches the server's other
 artifacts.
 
 **End your turn here.** Ask the user to review and reply with
-`save` / `looks good` / `proceed` / `publish` to write, or to tell
-you what to change. **Do NOT call `save_product_mappings`
+`Approve & publish` to apply the mappings and update reporting, or to
+tell you what to change. **Do NOT call `save_product_mappings`
 on the same turn as the artifact.** See "Approval gate — DO NOT SKIP"
 above; save is step 10, and only after explicit approval.
 

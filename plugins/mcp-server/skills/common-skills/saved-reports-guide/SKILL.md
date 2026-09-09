@@ -16,6 +16,13 @@ page," or "edit the retention scorecard," this guide applies.
 
 ## Golden rules (read first)
 
+- **Emit the whole `report` object in one shot — no placeholders.** `blocks` is
+  required and must be the complete array; every entry in `controls` must be a
+  full control object. Never abbreviate with placeholder strings (`"wired
+  below"`, `"..."`, `"TODO"`), never omit `blocks`, and never leave a required
+  field to "fill in later". `save_report` validates the payload and rejects any
+  stub or missing field, so a truncated object just fails the save. If the object
+  is large, write it out in full anyway.
 - **Never call `save_report` unless the user explicitly asks to save.** A
   preview is not permission to save. Wait for a clear instruction, and let the
   user pick **save as new** (create) or **update** (overwrite an existing
@@ -339,6 +346,67 @@ Rules that keep reports clean:
   anything that doesn't serve the question.
 - **Drivepoint house style.** Concise, plain language. **No em dashes** in any
   copy (titles, labels, body) — use commas, periods, or "to" for ranges.
+
+## Controls (optional interactivity)
+
+A report may carry a top-level `controls` array (a sibling of `header`/`blocks`)
+of renderer-owned interactive controls. Add them only when the user wants to
+slice or reshape the report themselves; a report with no `controls` is still
+complete. Every control is `{type, key, label, ...}` where `key` is a unique id.
+There are two families:
+
+- **View controls** change what the reader sees without touching data. They
+  target blocks, so give each affected block a stable `id` and reference it:
+  - `seriesVisibility` — show/hide a chart's series.
+  - `columnSet` — switch a table between named column subsets.
+  - `tabs` — show one group of blocks at a time.
+  - `blockVisibility` — toggle a group of blocks on/off.
+  - (a `table` can also set `sortable: true` on its own, no control needed.)
+- **Global filter controls** — `select`, `multiSelect`, `dateRange`, `number`,
+  `text` — carry a `bind`:
+  - `bind: "clientData"` filters the rows already on the page against a
+    `column`. Only use it where **every** affected block carries that column,
+    else its KPIs/totals/prose go stale.
+  - `bind: "requery"` re-runs the queries with the value bound into a
+    `${$CONTEXT.<key>}` token. The control `key` **is** the token: you MUST also
+    put `${$CONTEXT.<key>}` into the query it should scope (e.g.
+    `WHERE channel = ${$CONTEXT.channel}`) and must **NOT** quote it — the value
+    is inserted as a ready SQL literal (strings/dates quoted, numbers bare;
+    `multiSelect` expands to a comma list for `IN (...)`; `dateRange` exposes
+    `${$CONTEXT.<key>_start}` and `${$CONTEXT.<key>_end}`; `number` binds a bare
+    numeric literal; `text` binds a quoted string). A query with no token is
+    left unchanged. Give every requery token a default in `context`.
+
+Per type:
+- `select` / `multiSelect` — options come from `{source: "static" | "data" |
+  "query"}` (`static` lists them inline; `data`/`query` derive them from rows).
+- `dateRange` — a start/end picker.
+- `number` — a free-form numeric input with optional `min` / `max` / `step`
+  (the value is clamped to min/max). For a **threshold/cap/floor** use
+  `bind: "requery"` and compare it in SQL (e.g. `WHERE margin_pct >=
+  ${$CONTEXT.minMargin}`); with `bind: "clientData"` it filters to rows whose
+  `column` **equals** the value (exact match, not a range).
+- `text` — a free-form string input; with `clientData` it does a
+  case-insensitive **contains** match on `column`.
+
+Limits (state these honestly, don't imply otherwise):
+- Controls are **global or target a whole block by `id`** — there is **no
+  per-row control**. Per-table-row editable cells, per-row growth inputs, and
+  per-row checkboxes **cannot be saved**; they stay in the interactive artifact
+  only. The savable equivalent is a global `number`/`select`/`text` that
+  re-queries or filters the whole block.
+- `clientData` only reshapes rows already fetched; anything that must change
+  totals/KPIs honestly should be `requery`.
+
+```json
+"controls": [
+  { "type": "dateRange", "key": "period", "label": "Period", "bind": "requery" },
+  { "type": "select", "key": "channel", "label": "Channel", "bind": "requery",
+    "options": { "source": "static", "values": ["DTC", "Amazon", "Retail"] } },
+  { "type": "number", "key": "minMargin", "label": "Min margin %", "bind": "requery",
+    "min": 0, "max": 100, "step": 1 }
+]
+```
 
 ## Governance (do not work around)
 
