@@ -201,21 +201,28 @@ Follow these steps in order. Never skip a step, never reorder them.
     acknowledged. If the user deliberately scoped the session to only
     part of the new-product batch, omit both options and tell them the
     remaining products will stay New. If publish fails after save,
-    rerun publish — the Firestore doc is already correct, do not
-    re-save, and the review remains unacknowledged until publish
-    succeeds **and reporting refresh did not fail**.
+    rerun publish with the same `acknowledge_human_review` and
+    `reviewed_source_keys` — the Firestore doc is already correct, do
+    not re-save, and the review remains unacknowledged until publish
+    succeeds **and** `overlayStatus` is not `failed`.
 
-    After a successful publish, tell the user what is live **now**:
-    - If `refreshedOverlayTables` includes Product Mix
-      (`monthly_product_mix`), Product Mix reporting is live from this
-      publish. Retail and ecommerce still wait for nightly dbt until
-      later overlay phases.
-    - If `skippedOverlayTables` lists Product Mix, the catalog is
-      published but Product Mix is not deployed for this customer yet.
-    - If `overlayRefreshFailed` is true, the catalog published but
-      reporting refresh failed. Say that plainly. Retry
-      `publish_product_mappings` only — do **not** re-save. The review
-      is not acknowledged until overlay refresh succeeds.
+    After the publish call returns, tell the user what is live **now**.
+    Key off `overlayStatus` (`refreshed` | `skipped` | `failed`); the
+    overlay table arrays contain fully-qualified names such as
+    `<project>.<env>_executiveDashboard.monthly_product_mix`.
+    - `overlayStatus: refreshed` (and the FQN contains
+      `monthly_product_mix`): Product Mix reporting is live from this
+      publish. Retail and ecommerce still refresh overnight until
+      those overlays ship.
+    - `overlayStatus: skipped`: the catalog is published but Product
+      Mix was not rebuilt (table missing, not a TABLE, or mapped
+      columns not deployed yet).
+    - `overlayStatus: failed` / `overlayRefreshFailed: true`: the
+      catalog published but reporting refresh failed. Say that
+      plainly. Retry `publish_product_mappings` with the **same**
+      `acknowledge_human_review` and `reviewed_source_keys` — do
+      **not** re-save. The review is not acknowledged until overlay
+      refresh succeeds.
 
 **Reason inline. Do not script the decision-making.** The mapping
 judgment — normalization, grouping, canonical id derivation, value
@@ -250,7 +257,8 @@ You do not save until they do.
 
 - After rendering the artifact, your next message ends with a short
   prompt: _"Review the map above. Reply `Approve & publish` to apply
-  these mappings and update reporting, or tell me what to change."_
+  these mappings and refresh reporting where it is live, or tell me
+  what to change."_
 - **Do NOT call `save_product_mappings` on the same turn
   as the artifact.** The artifact is for the user's eyes, not a
   self-triggering signal.
@@ -279,22 +287,22 @@ publish call only when the artifact covered the complete current
 new-product batch, and include the full `records[].sourceKey` snapshot
 in `reviewed_source_keys`. Report one outcome to the customer:
 published, or catalog published but reporting refresh failed (retry
-publish only), or publish failed and needs retry.
+publish with the same acknowledgement fields), or publish failed and
+needs retry.
 
-After a successful publish (`written: true` and
-`overlayRefreshFailed` is false), say what is live now versus what
-still waits:
+A successful publish is `written: true` and `overlayRefreshFailed` is
+false. Then say what is live now versus what still waits:
 
 - **Live now:** mapped-products catalog, and Product Mix when
-  `refreshedOverlayTables` includes `monthly_product_mix`.
-- **Not live from this publish:** skipped overlay tables in
-  `skippedOverlayTables` (not deployed yet), plus retail and
-  ecommerce until later phases — those still wait for nightly dbt.
+  `overlayStatus` is `refreshed`.
+- **Not live from this publish:** `overlayStatus: skipped` (Product
+  Mix table or mapped-column schema not deployed yet), plus retail
+  and ecommerce — those still refresh overnight.
 
 If `overlayRefreshFailed` is true: **do not** say the review is
 complete, **do not** re-save, and retry `publish_product_mappings`
-only. Tell the user the catalog is published and reporting refresh
-failed.
+with the same `acknowledge_human_review` and `reviewed_source_keys`.
+Tell the user the catalog is published and reporting refresh failed.
 
 ---
 
@@ -712,8 +720,9 @@ and follow its tokens so the table matches the server's other
 artifacts.
 
 **End your turn here.** Ask the user to review and reply with
-`Approve & publish` to apply the mappings and update reporting, or to
-tell you what to change. **Do NOT call `save_product_mappings`
+`Approve & publish` to apply the mappings and refresh reporting where
+it is live, or to tell you what to change. **Do NOT call
+`save_product_mappings`
 on the same turn as the artifact.** See "Approval gate — DO NOT SKIP"
 above; save is step 10, and only after explicit approval.
 
@@ -846,8 +855,9 @@ above; save is step 10, and only after explicit approval.
 - **Never silently map a bundle as a single simple unit.** Flag it
   and ask.
 - **Never re-save just to retry publish.** If `publish` fails after a
-  successful `save`, rerun `publish` only — Firestore already has the
-  right state.
+  successful `save`, or returns `overlayRefreshFailed: true`, rerun
+  `publish` with the same `acknowledge_human_review` and
+  `reviewed_source_keys` — Firestore already has the right state.
 
 ---
 
