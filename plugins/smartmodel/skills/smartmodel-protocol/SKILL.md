@@ -69,7 +69,7 @@ Every SmartModel workbook uses a consistent tab color system:
 
 **R- sheets** (prefix "R-"): Data import layer. One R- sheet per import declaration. Populated by the add-in from connected data sources, or manually by the user. Template formula sheets reference R- sheets dynamically via Excel formulas. The agent does not need to declare wiring between templates — connections are discerned at runtime by reading the formula layer.
 
-**Settings tab**: Machine-readable key-value configuration. Column A is reserved/empty; columns B–E contain `id`, `setting`, `value`, `description`. Add-in owned, never user-edited directly.
+**Settings tab**: Machine-readable key-value configuration. Column A is reserved/empty; columns B–E carry the header `id`, `Setting`, `Value`, `Description` (capital V and D — see Settings Tab Structure). Add-in owned, never user-edited directly.
 
 ---
 
@@ -79,9 +79,16 @@ The Settings tab stores model configuration as a key-value table. The agent read
 
 **Column layout**: Column A is reserved (narrow, empty). Data starts at column B:
 - Column B: `id` — dot-notation identifier (monospace font), e.g. `settings.smartmodelSpec`
-- Column C: `setting` — human-readable label
-- Column D: `value` — the stored value
-- Column E: `description` — explanatory note
+- Column C: `Setting` — human-readable label
+- Column D: `Value` — the stored value
+- Column E: `Description` — explanatory note
+
+**Header row (row 1) literals are `id`, `Setting`, `Value`, `Description` — capital V and D.** The add-in
+locates the id and value columns by scanning for a header row that contains the literal strings `id` and
+`Value` (`ModelSettings.findHeaderColumnIndices`). If it finds none it falls back to fixed offsets inside the
+used range, and because column A is empty that reads column C as the id and column E as the value: every
+`settings.*` parses blank and the workbook is reported as "not a Drivepoint SmartModel". A lowercase `value`
+header is a defect, not a style choice.
 
 Required settings fields:
 
