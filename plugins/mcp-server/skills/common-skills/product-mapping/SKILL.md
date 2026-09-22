@@ -462,7 +462,7 @@ attribute is more useful than a fabricated one.
 stores only decisions (`confirmed` + `rejected`); `unmapped` is
 expressed by absence. Rows you don't mention keep their prior state.
 
-It takes three inputs:
+It takes four inputs:
 
 - **`mappings`** — a CSV of NEW or CHANGED confirmations (and rare
   rejections that need explicit fields). Line 1 is the header; one
@@ -483,7 +483,15 @@ It takes three inputs:
   that decision from Firestore, and the row shows `status = unmapped`
   on the next read. **Silent omission does NOT demote** — a row you
   simply don't mention keeps its prior state. To remove a prior
-  decision, you must list the key here.
+  decision, you must list the key here. Demoting a kit parent also
+  drops its BOM.
+- **`bom_components`** _(optional)_ — a JSON array of kit parents
+  whose bill of materials should be replaced. Each entry is
+  `{parent_source_key, kit_type?, components: [{component_drivepoint_mapped_id, component_qty, start_date?, end_date?}]}`.
+  Listing a parent replaces that parent's BOM. Omission keeps the
+  prior BOM. `components: []` clears it. Components must already be
+  canonical products (`drivepointMappedId` values from confirmed
+  rows). Do not invent component ids.
 
 ### Merge semantics
 
@@ -495,6 +503,9 @@ It takes three inputs:
 | Bulk reject                                    | Add the sourceKey to `rejected_source_keys`                     |
 | CSV reject that needs explicit fields          | Full CSV row with `status = rejected`                           |
 | Undo a prior confirmation or rejection         | Add the sourceKey to `unmapped_source_keys`                     |
+| Confirm a kit / bundle                         | Confirm the parent as a canonical, then pass `bom_components`   |
+| Change a kit BOM                               | Pass `bom_components` for that parent only                      |
+| Clear a kit BOM                                | Pass `bom_components` with `components: []`                     |
 
 **On re-runs, a typical save is a handful of rows** — the new
 decisions since last time, plus any corrections. The vast majority
@@ -605,11 +616,15 @@ later). Collapse the drift onto one canonical product per channel.
   product (subscription variants, legacy codes, wholesale-prefixed
   codes). Fold them onto the canonical the primary SKU defines by
   matching title + variant; don't treat them as separate products.
-- **Bundles/kits.** A kit sold as one SKU represents several
-  component products. Map it to a single canonical bundle product
-  and set `status` to `unmapped`, describing the components in the
-  review table so the customer can confirm how to split it. Never
-  silently map a bundle as if it were one simple unit.
+- **Bundles/kits.** A kit sold as one SKU is still one catalog
+  row (the sold-as parent). Confirm it as a canonical product, then
+  attach a BOM: each component is an existing canonical
+  (`component_drivepoint_mapped_id` + `component_qty`). Use
+  `kit_type` `fixed` unless the customer describes a virtual or
+  variable kit. Never silently map a bundle as if it were one
+  simple unit, and never leave a kit as `unmapped` just because it
+  has components. Demand units explode from the BOM; the catalog
+  stays 1:1.
 - **Drop $0 promotional/gift lines with `rejected`.**
 
 ---
@@ -676,7 +691,7 @@ minimum:
   size.
 - Size or pack-count collapses (multiple real variants rolled into
   one canonical — offer to split).
-- Bundles and kits.
+- Bundles and kits (show proposed parent + component canonicals).
 - SKU reuse across eras.
 - Display/sample/non-product SKUs (use `rejected` and ask whether to
   drop).
@@ -697,7 +712,7 @@ list into artifact-ready data. You already have the list; hand it
 straight to the component.
 
 Render ONE JSX/React artifact (`application/vnd.ant.react`)
-containing three sections. Do NOT render one row per source row — on
+containing four sections. Do NOT render one row per source row — on
 a 500+ row roster that is thousands of cells of transcription and
 nobody reviews it.
 
@@ -712,7 +727,12 @@ nobody reviews it.
    `channel`, `stores`, `sku`, `title`, `proposedCanonical`,
    `reasonFlagged`. Visually distinguish this section from Canonical
    products (e.g. tinted row background).
-3. **Coverage summary** — one row per channel. Columns: `channel`,
+3. **Kits / BOM** — one row per kit parent. Columns:
+   `parentSourceKey`, `parentMappedSku`, `kitType`, `componentMappedSku`,
+   `componentMappedName`, `componentQty`. Components must already
+   appear in Canonical products. If there are no kits, render the
+   section with an empty state ("No kits").
+4. **Coverage summary** — one row per channel. Columns: `channel`,
    `totalRows`, `confirmed`, `rejected`, `unmapped`.
 
 **Styling.** Fetch the `artifact-style-guide` skill via `get_skill`
@@ -852,8 +872,9 @@ above; save is step 10, and only after explicit approval.
   explicit user approval.** See "Approval gate — DO NOT SKIP". The
   artifact-and-immediately-save pattern is a protocol violation, no
   matter how confident you are in the mappings.
-- **Never silently map a bundle as a single simple unit.** Flag it
-  and ask.
+- **Never silently map a bundle as a single simple unit.** Confirm
+  the parent and attach `bom_components` whose ids already exist as
+  canonicals.
 - **Never re-save just to retry publish.** If `publish` fails after a
   successful `save`, or returns `overlayRefreshFailed: true`, rerun
   `publish` with the same `acknowledge_human_review` and
