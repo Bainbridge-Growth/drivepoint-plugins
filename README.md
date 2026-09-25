@@ -69,6 +69,7 @@ drivepoint-plugins/                          ← marketplace root
         summarize-model/SKILL.md             ← Model Ops
         interrogate-model/SKILL.md
         audit-model/SKILL.md
+        change-safety/SKILL.md
         clean-model/SKILL.md
         optimize-model/SKILL.md
         qa-financials/SKILL.md               ← Finance QA
