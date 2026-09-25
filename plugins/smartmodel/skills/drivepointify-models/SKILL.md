@@ -19,7 +19,8 @@ per-tab conversion; the wider programme is a model migration.
 | Script | When | What it does |
 |---|---|---|
 | `profile_source.py <src.xlsx> [--sheet S]` | **Before** writing the spec | Finds stacked LY / actuals blocks, pasted "% × base" values, "LY × factor" growth builds, rows that are copies of other rows, `=row + constant` adjustments, shifted date blocks, bridges that skip rows, opening balances that don't roll, labels in the wrong column, duplicate names, copied `Plan Settings` tabs. |
-| `validate_drivepointified.py <built.xlsx> [--ties ties.json]` | **After** build + recalc, before hand-off | The gate. Fails on: broken / partial date spine, history not in the spine, stacked blocks under the budget, columns right of the spine, anything but markers in A:B, Key Drivers that are formulas, Key Results that are typed, $ drivers that are a pasted % of another row, errors, uncached formulas, protocol chrome. `--ties` compares every mapped row to the source. |
+| `drivepointify_engine.py` (import it) | Build | `Model` → `seed()` R-tab, `schedule()` tabs with `row()` templates, `summary()`, `save()` = Index + Settings + chrome + recalc (if the `formulas` package is present) + add-in WebExtension. Refuses a Key Driver without budget inputs or a Key Result without a formula. `python3 drivepointify_engine.py --inject-addin file.xlsx` injects the add-in part into any workbook. |
+| `validate_drivepointified.py <built.xlsx> [--ties ties.json] [--allow-uncalculated]` | **After** build + recalc, before hand-off | The gate. Fails on: broken / partial date spine, history not in the spine, stacked blocks under the budget, columns right of the spine, anything but markers in A:B, Key Drivers that are formulas, Key Results that are typed, $ drivers that are a pasted % of another row, errors, uncached formulas, protocol chrome. `--ties` compares every mapped row to the source. |
 
 ---
 
@@ -107,18 +108,37 @@ Plus:
 If the user already asked you to build, present the spec in one message and proceed; pause only for
 genuine ambiguity (e.g. two inventory bases, the history-vs-column-K conflict above).
 
-### Phase 2 — Build (one script)
+### Phase 2 — Build (one script, on the engine)
 
-One build script reads the source's **cached values** (never re-type numbers) and writes the
-workbook in a single pass: Index, Settings, the schedule tab(s), Budget Summary, seed R-tab.
-Useful formula-template tokens for a row engine: `{c}` current column, `{ly}` same month last year
-(12 columns back), `{p}` previous column (roll-forwards), `{m11}` 11 back (trailing-12 windows),
-`{@row_key}` row lookup. Section order follows the customer's tab.
+One build script reads the source's **cached values** with openpyxl (`data_only=True` — never re-type
+numbers) and writes the workbook in a single pass with `drivepointify_engine.py`:
+
+```python
+import sys; sys.path.insert(0, "<skill>/scripts")
+from drivepointify_engine import Model, FMT_PCT, FMT_X, FMT_USD
+m = Model(company_id="<tenant id>", company_name="…", model_name="… 2027 Budget",
+          spine_start=(2026, 1), months=24, budget_start=(2027, 1), last_actuals=(2026, 8))
+seed = m.seed("R - <Co> <TAB> Seed", source_note="<file>, <date>", flags=<Act/For per history month>)
+seed.add("dr", "D&R", <FY2026 values>)
+t = m.schedule("<TAB>", name="… Schedule", template_id="<co>-<tab>-budget", description="…")
+t.section("Discounts & returns", "D&R as % of gross (default = FY2026 ratio).")
+t.row("drPct", "driver", "D&R % of gross", ident="<tab>_drPct",
+      hist="IFERROR({c}{@dr}/{c}{@gross},0)", values=<the customer's exact %>, fmt=FMT_PCT)
+t.row("dr", "result", "D&R", ident="<tab>_dr", hist=seed.ref("dr"), bud="{c}{@gross}*{c}{@drPct}")
+m.summary("<TAB>", [("Net Sales", "total", "net", FMT_USD), ("D&R %", "ratio", ("dr", "gross"), FMT_PCT)])
+path, recalculated = m.save("<TAB>_2027_Template_drivepointified.xlsx")
+```
+
+Tokens: `{c}` this column · `{ly}` same month last year · `{p}` previous column (roll-forwards) ·
+`{m11}` 11 back (trailing-12) · `{@key}` / `{@Tab.key}` row lookup. `hist` fills the history months,
+`bud`/`values` the budget months. Section order follows the customer's tab.
 
 ### Phase 3 — Recalc + chrome
 
-Recalculate so every formula has a cached value (Excel `Ctrl+Alt+F9` + save, or a formula engine),
-then inject the add-in WebExtension (openpyxl and LibreOffice strip it).
+`Model.save()` recalculates when the `formulas` package is installed and always injects the add-in
+WebExtension. Without `formulas` (e.g. a chat sandbox without package installs) the file is saved
+with `fullCalcOnLoad`: the user must open it in Excel, press `Ctrl+Alt+F9`, and save **before** uploading,
+because the add-in reads uncached formulas as NaN.
 
 ### Phase 4 — Validate (the gate)
 
@@ -129,6 +149,8 @@ python3 scripts/validate_drivepointified.py <built.xlsx> --ties ties.json
 - `ties.json` covers **every** mapped row: budget columns vs the source budget range, history columns
   vs the source LY range, plus summary cells vs the source totals.
 - **0 FAIL required.** Explain every WARN in the hand-off (e.g. "growth factors have no history — expected").
+- No formula engine available: run with `--allow-uncalculated` (the spine is evaluated from its formulas so
+  structure is still checked). Value checks and ties then need the recalculated file — say so in the hand-off.
 - Also re-open the file and eyeball the first screen of each tab: labels in C, dates in row 2, blue
   input cells only on Key Driver budget months.
 
@@ -142,6 +164,17 @@ Lead with what changed and why it's safe:
 5. Findings in their file (bridge gaps, basis mismatches, shifted blocks) — with the numbers.
 6. How to load it: upload as a plan in the Drivepoint app (Plans → Upload Plan); the add-in shows it
    as a SmartModel only after that registration.
+7. After upload, if the Drivepoint MCP connector is available, confirm Drivepoint itself reads it:
+   `list_company_plans` → `get_valid_plan_tabs` (every schedule tab must be listed) →
+   `list_plan_key_drivers_and_results` (every marked row must come back with its id and label).
+
+## In Claude chat (claude.ai / Desktop)
+
+Works when the conversation has **file upload + code execution** and this skill (the SmartModel plugin)
+is loaded: upload the customer's .xlsx, run the profiler, build with the engine, validate, and return
+the file. Chat users who only have the Drivepoint MCP connector get the procedure as the
+`drivepointify-models` skill via `get_skill`; without code execution Claude can plan the conversion
+and check a registered plan with the connector tools, but cannot write the workbook.
 
 ---
 

@@ -124,7 +124,7 @@ def check_protocol(rep: Report, path: str, wf, wv):
     return s
 
 
-def check_calc(rep: Report, wf, wv):
+def check_calc(rep: Report, wf, wv, allow_uncalculated: bool = False):
     g = "CALC"
     errs, uncached = [], []
     for ws in wf.worksheets:
@@ -137,7 +137,9 @@ def check_calc(rep: Report, wf, wv):
                 if is_formula(c.value) and v is None:
                     uncached.append(f"{ws.title}!{c.coordinate}")
     rep.ok(not errs, g, f"no error cells ({len(errs)}: {errs[:6]})")
-    rep.ok(not uncached, g, f"every formula has a cached value ({len(uncached)} without: {uncached[:6]}) — recalc before hand-off")
+    rep.ok(not uncached, g, f"every formula has a cached value ({len(uncached)} without: {uncached[:6]}) — recalc before hand-off"
+           + (" (allowed: open in Excel, Ctrl+Alt+F9, save — BEFORE uploading)" if allow_uncalculated and uncached else ""),
+           "WARN" if allow_uncalculated else "FAIL")
 
 
 def spine_of(wv_ws):
@@ -151,6 +153,52 @@ def spine_of(wv_ws):
         dates.append(d)
         c += 1
     return cols, dates
+
+
+def fill_spine_from_formulas(wf, wv, settings: dict) -> int:
+    """Uncalculated workbook: evaluate the standard spine formulas (row 2 EOMONTH chain, row 3 Actual/Forecast IF)
+    so structure can still be checked. Returns the number of cells filled."""
+    filled = 0
+    cache = {"historicalStartDate": settings.get("settings.historicalStartDate"),
+             "modelStartDate": settings.get("settings.modelStartDate"), "lastDateActuals": settings.get("settings.lastDateActuals")}
+    st = wf["Settings"] if "Settings" in wf.sheetnames else None
+    by_cell = {}
+    if st:
+        for r in range(1, st.max_row + 1):
+            v = st.cell(r, 4).value
+            if isinstance(v, (datetime, date)):
+                by_cell[f"$D${r}"] = v if isinstance(v, datetime) else datetime(v.year, v.month, v.day)
+
+    def eom(d: datetime, k: int) -> datetime:
+        y, m = d.year + (d.month - 1 + k) // 12, (d.month - 1 + k) % 12 + 1
+        return datetime(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1)
+    for ws in wf.worksheets:
+        vs = wv[ws.title]
+        if vs["C2"].value != "End of Period":
+            continue
+        c = SPINE_START
+        while True:
+            f = ws.cell(2, c).value
+            if not is_formula(f):
+                break
+            m1 = re.fullmatch(r"=EOMONTH\(Settings!(\$D\$\d+),(-?\d+)\)", f)
+            m2 = re.fullmatch(r"=EOMONTH\(\$?([A-Z]{1,3})\$?2,(-?\d+)\)", f)
+            if m1 and m1.group(1) in by_cell:
+                d = eom(by_cell[m1.group(1)], int(m1.group(2)))
+            elif m2 and isinstance(vs[f"{m2.group(1)}2"].value, datetime):
+                d = eom(vs[f"{m2.group(1)}2"].value, int(m2.group(2)))
+            else:
+                break
+            if vs.cell(2, c).value is None:
+                vs.cell(2, c).value = d
+                filled += 1
+            f3 = ws.cell(3, c).value
+            m3 = re.fullmatch(r'=IF\(\$?[A-Z]{1,3}\$?2<=Settings!(\$D\$\d+),"Actual","Forecast"\)', str(f3 or ""))
+            if m3 and m3.group(1) in by_cell and vs.cell(3, c).value is None:
+                vs.cell(3, c).value = "Actual" if d <= by_cell[m3.group(1)] else "Forecast"
+                filled += 1
+            c += 1
+    return filled
 
 
 def check_tab(rep: Report, name: str, wf, wv, settings: dict):
@@ -329,12 +377,20 @@ def main() -> int:
     ap.add_argument("xlsx")
     ap.add_argument("--ties")
     ap.add_argument("--strict", action="store_true")
+    ap.add_argument("--allow-uncalculated", action="store_true",
+                    help="no formula engine available (e.g. a chat sandbox): uncached formulas become a WARN; "
+                         "the user must recalculate in Excel before upload")
     a = ap.parse_args()
     wf = openpyxl.load_workbook(a.xlsx)
     wv = openpyxl.load_workbook(a.xlsx, data_only=True)
     rep = Report()
     settings = check_protocol(rep, a.xlsx, wf, wv)
-    check_calc(rep, wf, wv)
+    check_calc(rep, wf, wv, a.allow_uncalculated)
+    if a.allow_uncalculated:
+        n = fill_spine_from_formulas(wf, wv, settings)
+        if n:
+            rep.add("WARN", "CALC", f"evaluated {n} spine cells from their formulas (uncalculated workbook); value checks "
+                                    "(pasted %, history presence, ties) need a recalculated file")
     tabs = [n for n in wf.sheetnames if not IGNORE_TABS.search(n) and wv[n]["C2"].value == "End of Period"
             and as_date(wv[n].cell(2, SPINE_START).value)]
     rep.ok(bool(tabs), "SPINE", f"time-series tabs found: {tabs}")
