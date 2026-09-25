@@ -415,6 +415,7 @@ When the user asks a question that would benefit from a structured workflow, use
 | "monthly report", "monthly summary", "monthly recap", "monthly writeup", "monthly close", "do the [month] numbers", "[customer]'s [month] writeup" | monthly-report |
 | "board deck", "board report", "investor update", "package this up" | build-report |
 | "build a schedule", "revenue build", "COGS schedule", "headcount plan", "payroll tab" | build-schedule |
+| "drivepointify", "make this Drivepoint compatible", "convert this budget template", "turn this spreadsheet into a SmartModel", "add key drivers to this file" | drivepointify-models |
 | "what is this", "overview", "stand up the model", "orient" | summarize-model |
 | "where does that number come from", "trace", "what's driving that line" | interrogate-model |
 | "QA the financials", "QA the GL", "QA R-GL", "QA RGL", "QA the import", "tie out the GL", "reconcile GL", "check NetSuite import", "verify the import for [month]" | qa-financials |
@@ -512,6 +513,7 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 | Skill | Path | Purpose |
 |-------|------|---------|
 | Build Schedule | `../build-schedule/SKILL.md` | Construct a new schedule sheet from scratch — data-first flow, any model version |
+| Drivepointify Models | `../drivepointify-models/SKILL.md` | Convert a customer's own budget / forecast template into a SmartModel tab — one date spine with history, real Key Drivers, profiler + hand-off validator |
 | Monthly Report | `../monthly-report/SKILL.md` | Produce the Drivepoint-style monthly summary & variance report for a CPG customer |
 | Build Report | `../build-report/SKILL.md` | Create a blue report tab — board reports, monthly close reports, investor updates |
 | Create Scenario | `../create-scenario/SKILL.md` | Build a named what-if scenario by adjusting Key Driver assumptions |

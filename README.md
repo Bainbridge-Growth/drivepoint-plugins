@@ -7,7 +7,7 @@ Drivepoint's Claude products as separate, independently-installable plugins.
 
 | Plugin | What it does | Version |
 |--------|--------------|---------|
-| **`smartmodel`** | SmartModel Protocol v6.0 — the AI-readable grammar for Drivepoint Excel financial models, plus the full SmartModel skill library (builders, analysis, model ops, scenarios). This repo is the **canonical home** of the SmartModel Protocol specification. | 1.1.0 |
+| **`smartmodel`** | SmartModel Protocol v6.0 — the AI-readable grammar for Drivepoint Excel financial models, plus the full SmartModel skill library (builders, analysis, model ops, scenarios). This repo is the **canonical home** of the SmartModel Protocol specification. | 1.2.0 |
 | **`mcp-server`** | The Drivepoint MCP server — connects Claude to a brand's Drivepoint analytics data (read-only, BigQuery-backed marts, skills, and plans). | 0.1.0 |
 
 ## Install
@@ -53,6 +53,7 @@ drivepoint-plugins/                          ← marketplace root
       skills/
         smartmodel-protocol/SKILL.md         ← canonical protocol spec (plugin entry point)
         build-schedule/SKILL.md              ← Builders
+        drivepointify-models/                ← convert a customer's own template (+ scripts/ profiler & validator)
         build-report/SKILL.md
         create-scenario/SKILL.md
         variance-analysis/SKILL.md           ← Analysis
