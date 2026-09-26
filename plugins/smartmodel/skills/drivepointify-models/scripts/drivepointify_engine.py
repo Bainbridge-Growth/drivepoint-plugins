@@ -72,7 +72,9 @@ F = {
     "b11b": Font(name="Calibri", size=11, bold=True), "gi": Font(name="Calibri", size=11, color=GRAY, italic=True),
     "g9i": Font(name="Calibri", size=9, color=GRAY, italic=True), "mono": Font(name="Menlo", size=10),
     "monowb": Font(name="Menlo", size=10, color="FFFFFF", bold=True), "input": Font(name="Calibri", size=11, color="4472C4"),
-    "actual": Font(name="Calibri", size=11, color="ED7D31"), "import": Font(name="Calibri", size=11, color="548235"),
+    "actual": Font(name="Calibri", size=11, color="ED7D31"),
+    # style-donor roles: R-tab pull = external_reference_readonly, other-schedule pull = feeder_reference_readonly
+    "extref": Font(name="Calibri", size=11, color="F79646"), "feeder": Font(name="Calibri", size=11, color="70AD47"),
 }
 BORDER_SECTION = Border(bottom=Side(style="thick", color=SECTION_BLUE))
 BORDER_TOTAL = Border(top=Side(style="thin", color="000000"))
@@ -326,7 +328,7 @@ class Model:
                 else:
                     num, den = arg
                     cell.value = f"=IFERROR({L}{out[num]}/{L}{out[den]},0)"
-                cell.font = Font(name="Calibri", size=11, color="548235", bold=bold)
+                cell.font = Font(name="Calibri", size=11, color="70AD47", bold=bold)
                 if bold:
                     cell.border = BORDER_TOTAL
             var_cols = [L for L, _l, s, _e in periods if s is None]
@@ -338,8 +340,9 @@ class Model:
                     h.value, h.number_format = f"=IFERROR({var_cols[0]}{r}/ABS({a}{r}),0)", FMT_PCT
             r += 1
         ws.freeze_panes = "E13"
-        for c, w in (("A", 6), ("B", 30), ("C", 44), ("D", 3)):
+        for c, w in (("A", 15), ("B", 30), ("C", 44), ("D", 3)):
             ws.column_dimensions[c].width = w
+        ws.column_dimensions["B"].outline_level = 1
         for L, *_ in periods:
             ws.column_dimensions[L].width = 14
         self.summary_rows = out
@@ -467,7 +470,7 @@ class Schedule:
                 if i < m.budget_idx:
                     if s["hist"]:
                         cell.value = "=" + m.render(s["hist"], self.title, i)
-                        cell.font = F["import"] if "'R -" in s["hist"] or "'R-" in s["hist"] else F["b11"]
+                        cell.font = F["extref"] if "'R -" in s["hist"] or "'R-" in s["hist"] else F["b11"]
                 elif vals is not None:
                     v = vals[i - m.budget_idx]
                     cell.value = 0 if v is None else v
