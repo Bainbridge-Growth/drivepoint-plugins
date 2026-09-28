@@ -34,10 +34,173 @@ The MCP server exposes exactly three product-mapping tools:
   decisions out of Firestore and **fully OVERWRITES** the mapped-
   products catalog table in BigQuery.
 
-Everything else is out of scope. Do not use `run_query`, `list_tables`,
-or any other data-catalog tool as part of a mapping — the source table
-`product_mapping_source` is pre-unioned across channels by dbt, and
-the tools above already query it.
+Four read-only data-catalog tools are used **only** in the discovery
+phase that opens every session (see "Discover before you map"):
+`list_datasets`, `list_tables`, `get_schema`, and `run_query`. They
+tell you which data sources are actually connected and which of them
+carry product information. Once the user has chosen what to map,
+they are off-limits: the mapping decisions themselves are made
+against the roster in your context, never by re-querying it. The
+source table `product_mapping_source` is pre-unioned across channels
+by dbt, and the three tools above already query it.
+
+---
+
+## Discover before you map — DO NOT SKIP
+
+The first thing that happens in every mapping session — first-run or
+re-run, whether the user said "map my products" or "map Amazon to
+Shopify" — is a short, read-only discovery pass followed by a
+question. You do not derive, group, or decide anything until the user
+has answered it. This is a hard stop, exactly like the approval gate
+later in the workflow.
+
+The point: customers connect many systems to Drivepoint (storefronts,
+marketplaces, retail feeds, 3PL / inventory systems such as Finale or
+Cin7 via Trackstar, finance, ads). Only some of those carry product
+information, only some of those are wired into the mapping roster
+today, and the user — not you — decides which of them they want to
+map or organize in this session. **Never present a hardcoded menu of
+sources.** The menu is whatever is actually connected for this
+company right now; if a connection is not live, it is not on the
+menu, and if a new kind of connection shows up, it is.
+
+### D1. Discover what is connected and live
+
+1. Resolve the company (`get_drivepoint_user` if you don't already
+   have the `company_id`).
+2. Call `read_product_mapping_source` **once**. This is the same
+   single roster read the workflow below uses — do not call it again
+   later. From the roster, note the distinct `channel` / `stores`
+   pairs and their row counts: these are the sources the mapping
+   pipeline already sees, so decisions on them can be saved and
+   published today.
+3. Call `list_datasets` **once**. Raw connector landing datasets
+   follow a `<source>Raw…` naming convention (for example
+   `shopifyRawRecent11`, `amazonSPRawRecent1`, `quickbooksRaw1`, a
+   Trackstar / 3PL dataset, a Cin7 dataset) — one dataset per
+   connected account. Datasets prefixed with the environment
+   (`<env>_bainbridgeAnalytics`, `<env>_executiveDashboard`,
+   `<env>_productData`, …) are Drivepoint's modeled outputs, not
+   connections; ignore them for discovery. Every raw dataset you see
+   is a candidate connection; every channel already in the roster is
+   a confirmed one. If `list_datasets` is not available to this user
+   (tool access is per company), fall back to the roster channels
+   alone and tell the user discovery was limited to what the roster
+   already sees.
+4. For each raw dataset that is **not** obviously already
+   represented in the roster, call `list_tables` **once** to see what
+   it lands. A dataset whose tables are all finance / ads / analytics
+   (ledgers, invoices, campaigns, sessions) is a connection with no
+   product taxonomy — record it, but it will not be offered for
+   mapping.
+5. Confirm "live" cheaply. A dataset that exists but is empty or
+   stale is not a live source. Where you need the signal, use
+   `get_schema` (its `numRows`) or one small `run_query` aggregate
+   (`COUNT(*)` plus `MAX` of the extracted-at / updated-at column) on
+   the product-bearing table. One query per candidate source at most;
+   never select rows.
+
+### D2. Decide which connections carry product information
+
+A connection carries product information or a taxonomy when its
+tables include a product master, item catalog, or SKU-bearing line
+items. Judge from table names and, when a name is ambiguous, one
+`get_schema` call. Signals that a table is product-bearing:
+
+- Table names like `products`, `product_variants`, `items`,
+  `inventory_items`, `catalog`, `kits`, `bill_of_materials`,
+  `sale_order_line`, `orders_line_items`, `shipments`,
+  `shipment_line_items`.
+- Columns like `sku`, `title` / `name`, `product_type` / `category`,
+  `upc` / `gtin`, `is_kit`, `inventory_items`, `unit_quantity`,
+  `case_pack` / `units_per_case`, `variant`.
+
+For each product-bearing connection, note what it contributes to the
+mapping so the user can decide with eyes open:
+
+- **Catalog or taxonomy** — product names, types, categories,
+  variants (storefronts, marketplaces, PIM-like inventory systems).
+- **Sales line items** — SKU + quantity sold per order (the channels
+  the roster is built from today).
+- **3PL / warehouse shipments** — SKU + quantity shipped, usually per
+  fulfillment rather than per sale; the same product often appears
+  under a warehouse SKU / case-pack name.
+- **Kits / BOM** — an `is_kit` flag or component lists; feeds the
+  Kits / BOM section of the review.
+- **Case-to-unit conversion** — a units-per-case or `unit_quantity`
+  style field. 3PL and retail rows are frequently recorded in
+  **cases**, not sellable units; a source that carries this field
+  can supply the multiplier that rolls every source up to clean
+  units (DTC and marketplace rows are 1:1 by default). Surface this
+  whenever an inventory / 3PL connection is live — it is one of the
+  things the user is choosing whether to organize.
+
+Finally, split the product-bearing connections into two buckets:
+
+- **In the roster** — its `channel` appears in
+  `read_product_mapping_source`. Decisions can be saved and
+  published today.
+- **Connected, not yet in the roster** — live product data exists in
+  the warehouse but the dbt roster does not union it yet (3PL /
+  inventory streams such as Trackstar-Finale or Cin7 are the usual
+  case). You can *review* these read-only in this session, but
+  `save_product_mappings` drops any sourceKey that is not in the
+  live roster (`staleSourceKeyCount`), so nothing can be persisted
+  for them until the roster includes that stream. Say so plainly.
+
+### D3. Ask the user which datasets to map or organize — then STOP
+
+Present one compact plain-text table (no artifact yet — the artifact
+is for the mapping review later). One row per product-bearing
+connection:
+
+| Source (system · store/account) | Status | Carries | Roster rows | Mappable today? |
+| --- | --- | --- | --- | --- |
+| Shopify · acme-store | live | catalog, sales line items | 312 | yes |
+| Amazon Seller · A1XYZ | live | sales line items | 88 | yes |
+| Trackstar-Finale · main warehouse | live | products (is_kit, unit_quantity), shipments | 0 | review only — not in roster yet |
+
+Below the table, list in one line the live connections you found that
+carry **no** product information (finance, ads, analytics) so the user
+knows they were seen and skipped, and name any connection that exists
+but looks stale or empty.
+
+Then ask, and end your turn:
+
+_"Which of these do you want to map / organize in this session? Reply
+with the sources (or `all`), and tell me if you also want the
+review-only sources included."_
+
+Rules for this gate:
+
+- **Do NOT start normalizing, grouping, or deriving ids before the
+  user answers.** A neutral message ("ok", "thanks") is not an answer
+  — ask again. If the user named a scope in their opening request
+  ("map Amazon to Shopify"), still show the table — it may contain a
+  live source they didn't know about — but you may pre-select their
+  named sources and ask them to confirm or add.
+- **Do NOT invent a source that discovery didn't find**, and do not
+  hide one it did. The table is the connections that exist for this
+  company, nothing more, nothing less.
+- **Scope everything that follows to the chosen sources.** Rows from
+  channels the user did not pick are neither decided nor emitted;
+  merge semantics keep their prior state. The Coverage summary covers
+  only the chosen channels. If the chosen scope does not include
+  every key in `newSinceLastReviewKeys`, this is a deliberately
+  partial batch — omit `acknowledge_human_review` and
+  `reviewed_source_keys` at publish time (see step 11) and tell the
+  user the remaining products stay New.
+- **For review-only sources the user included:** run one capped
+  `run_query` (aggregate to distinct SKU / name / GTIN / kit flag /
+  case-pack field, at most a few hundred rows, never raw shipments),
+  then add a fifth artifact section, **"Connected, not in roster
+  (review only)"**, proposing which roster canonical each warehouse
+  SKU appears to be and the units-per-case value the source itself
+  reports (blank when the source has none — never guess a
+  multiplier). Nothing in this section is sent to
+  `save_product_mappings`; tell the user it becomes savable once the
+  stream is added to the roster.
 
 ---
 
@@ -119,16 +282,21 @@ everything. There's just no prior state to preserve yet.
 ## The one workflow
 
 Follow these steps in order. Never skip a step, never reorder them.
+Steps 1–11 begin only after the user has answered the discovery
+question in "Discover before you map" (D3) — the chosen sources are
+the scope for everything below.
 
-1. **Read ONCE, then reason inline — no follow-up scripts.** Call
-   `read_product_mapping_source` a single time for the entire roster.
-   Do NOT split the read by channel, by key type, or by SKU presence.
-   One read, one roster in context. Each record carries an `existing`
-   field with the last saved decision — check `existingMappingCount`
-   to see if this is a re-run. **Once the roster is loaded, do not
-   run any script to inspect, preview, summarize, filter, dump, or
-   sample it.** All subsequent analysis is inline reading. See "Three
-   ideas to hold in your head" rule #3.
+1. **Read ONCE, then reason inline — no follow-up scripts.** The
+   single `read_product_mapping_source` call already happened in
+   discovery step D1 — the entire roster is in your context. Do NOT
+   call it again, and do NOT split a read by channel, by key type, or
+   by SKU presence. One read, one roster in context. Each record
+   carries an `existing` field with the last saved decision — check
+   `existingMappingCount` to see if this is a re-run. Work only the
+   rows whose `channel` / `stores` the user chose. **Once the roster
+   is loaded, do not run any script or query to inspect, preview,
+   summarize, filter, dump, or sample it.** All subsequent analysis is
+   inline reading. See "Three ideas to hold in your head" rule #3.
 2. **Normalize titles and sizes in place.** As you read each row,
    mentally apply the normalization rules in the next section. Do not
    write a script for this — do it inline as you group. (On re-runs,
@@ -732,8 +900,17 @@ nobody reviews it.
    `componentMappedName`, `componentQty`. Components must already
    appear in Canonical products. If there are no kits, render the
    section with an empty state ("No kits").
-4. **Coverage summary** — one row per channel. Columns: `channel`,
-   `totalRows`, `confirmed`, `rejected`, `unmapped`.
+4. **Coverage summary** — one row per channel **the user chose in
+   discovery**. Columns: `channel`, `totalRows`, `confirmed`,
+   `rejected`, `unmapped`. Channels that were connected but not
+   chosen are not rows here; name them in one line under the table so
+   the user remembers they were left untouched.
+5. **Connected, not in roster (review only)** — render this section
+   only when the user included a review-only source in D3. One row
+   per distinct warehouse / 3PL SKU. Columns: `source`, `sku`,
+   `name`, `proposedCanonical`, `unitsPerCase` (as reported by the
+   source; blank when it has none), `note`. Label the section clearly
+   as not saved by this session.
 
 **Styling.** Fetch the `artifact-style-guide` skill via `get_skill`
 and follow its tokens so the table matches the server's other
@@ -750,11 +927,30 @@ above; save is step 10, and only after explicit approval.
 
 ## Never do
 
+- **Never skip discovery.** Every session opens with "Discover before
+  you map": find what is connected and live, work out which of those
+  connections carry product information, show the user the table,
+  ask which datasets to map or organize, and **stop**. Starting to
+  normalize, group, or derive ids before the user has answered is a
+  protocol violation, even when their opening message named a
+  channel.
+- **Never present a hardcoded menu of sources.** The menu is whatever
+  discovery found for this company. Do not list Shopify / Amazon
+  because "customers usually have them", and do not omit a live
+  Trackstar-Finale, Cin7, retail feed, or other connection because
+  the roster does not include it yet — show it, bucket it as
+  review-only, and let the user decide.
+- **Never use the data-catalog tools after the user has chosen.**
+  `list_datasets`, `list_tables`, `get_schema`, and `run_query` are
+  discovery tools (plus the one capped aggregate for a review-only
+  source the user opted into). Once mapping starts, the roster in
+  your context is the only data you reason over.
 - **Never split the read.** One `read_product_mapping_source` call
-  per session. Do not call it per channel, per SKU prefix, or per
-  anything else. If the roster is too large to reason about in one
-  context, ask the user which subset to focus on rather than issuing
-  multiple reads.
+  per session — it happens in discovery step D1. Do not call it
+  again per channel, per SKU prefix, or per anything else. If the
+  roster is too large to reason about in one context, the discovery
+  question already asked the user which sources to focus on; narrow
+  further with them rather than issuing multiple reads.
 - **Never try to re-materialize the roster as a file.** Your script
   environment cannot access the tool response — the roster only
   exists in your context. Do not spend turns hand-typing 500+ rows
