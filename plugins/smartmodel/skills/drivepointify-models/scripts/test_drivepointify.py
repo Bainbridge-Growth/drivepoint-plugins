@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -155,7 +156,54 @@ def engine_build(path: Path) -> bool:
     m.summary("WHL", [("Revenue", "section", None, None), ("Gross", "sum", "gross", e.FMT_USD),
                       ("Net Sales", "total", "net", e.FMT_USD), ("Net %", "ratio", ("net", "gross"), e.FMT_PCT)])
     _, recalculated = m.save(path)
+    engine_build.model = m
     return recalculated
+
+
+def formulas_installed() -> bool:
+    try:
+        import formulas  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def multi_tab_build(path: Path, *, break_it: bool = False):
+    """One template owning two account tabs + a rollup + a pool allocated by share — the retailer-P&L shape."""
+    sys.path.insert(0, str(HERE))
+    import drivepointify_engine as e
+    m = e.Model(company_id="acme", company_name="Acme", model_name="Acme Accounts", spine_start=(2026, 1), months=24,
+                budget_start=(2027, 1), last_actuals=(2026, 8), model_start=(2026, 8))
+    seed = m.seed("D - Acme Seed", source_note="synthetic", flags=["Act"] * 8 + ["For"] * 4)
+    seed.add("poolGl", "Pool GL (Jan–Aug)", [100.0 + i for i in range(8)] + [None] * 4)
+    for k, base in (("a", 1000), ("b", 400)):
+        seed.add(f"{k}_gross", f"{k} gross", [base + 10 * i for i in range(12)])
+    p = m.schedule("Pool", name="Pool", template_id="acme-pool", description="GL pool, trailing-3 forecast, $ driver")
+    p.row("amt", "driver", "Pool — monthly", ident="pool_monthly", hist="{c}{@total}", values=[110.0] * 12)
+    p.row("total", "result", "Pool — total", ident="pool_total", zero_before_spine=True,
+          hist=f"IF(ISNUMBER({seed.cell('poolGl')}),{seed.cell('poolGl')},AVERAGE({{m1}}{{@total}},{{m2}}{{@total}},{{m3}}{{@total}}))",
+          bud="{c}{@amt}")
+    for k, title in (("a", "Account - A"), ("b", "Account - B")):
+        t = m.schedule(title, name=title, template_id="acme-account", description="one account P&L")
+        t.row("growth", "driver", "Growth vs LY (×)", ident=f"{k}_growth", values=1.0, fmt=e.FMT_X)
+        t.row("gross", "result", "Gross", ident=f"{k}_gross", hist=seed.cell(f"{k}_gross"), bud="{ly}{@gross}*{c}{@growth}")
+        t.row("alloc", "result", "Pool allocation", ident=f"{k}_alloc",
+              hist="IFERROR('Pool'!{c}{@Pool.total}*{c}{@gross}/'Rollup'!{c}{@Rollup.gross},0)",
+              bud="IFERROR('Pool'!{c}{@Pool.total}*{c}{@gross}/'Rollup'!{c}{@Rollup.gross},0)")
+        t.row("cm", "result", "Contribution", ident=f"{k}_cm", hist="{c}{@gross}-{c}{@alloc}", bud="{c}{@gross}-{c}{@alloc}")
+    r = m.schedule("Rollup", name="Rollup", template_id="acme-rollup", description="Σ accounts")
+    s = "'Account - A'!{c}{@Account - A.gross}+'Account - B'!{c}{@Account - B.gross}"
+    r.row("gross", "result", "Gross — all accounts", ident="all_gross", hist=s, bud=s)
+    m.summary("Rollup", [("Gross", "sum", "gross", e.FMT_USD)])
+    out, recalculated = m.save(path, gate=False)
+    if break_it:  # a cycle, a broken sheet ref and a literal — the audit must catch all three
+        wb = openpyxl.load_workbook(out)
+        ws = wb["Account - A"]
+        ids = {ws.cell(i, 2).value: i for i in range(1, ws.max_row + 1)}
+        ws.cell(ids["a_cm"], 30).value = f"=AD{ids['a_cm']}+1"                       # self-reference
+        ws.cell(ids["a_alloc"], 30).value = "='No Such Tab'!AD5*0.0385"             # missing sheet + literal
+        wb.save(out)
+    return m, recalculated
 
 
 class DrivepointifyTests(unittest.TestCase):
@@ -197,6 +245,73 @@ class DrivepointifyTests(unittest.TestCase):
             ws = wb["WHL"]
             gross_row = next(r for r in range(1, ws.max_row + 1) if ws.cell(r, 2).value == "whl_gross")
             self.assertAlmostEqual(ws.cell(gross_row, 11 + 12).value, 1000 * 1.1, places=6)   # Jan-27 = Jan-26 × 1.1
+
+    def test_engine_recalculates_when_formulas_is_installed(self):
+        # openpyxl ≥3.1 writes an empty cached value as <v></v>; the cache writer used to match only <v/> and
+        # silently shipped uncalculated files (recalculated=False) — the add-in then reads NaN.
+        if not formulas_installed():
+            self.skipTest("formulas package not installed")
+        self.assertTrue(engine_build(Path(self.td.name) / "recalc.xlsx"))
+        self.assertTrue(engine_build.model.gate_ok, engine_build.model.gate_report)
+
+    def test_multi_tab_template_index_tokens_and_identities(self):
+        out = Path(self.td.name) / "multi.xlsx"
+        m, recalculated = multi_tab_build(out)
+        wb = openpyxl.load_workbook(out)
+        I = wb["Index"]
+        rows = [(I.cell(r, 2).value, I.cell(r, 4).value) for r in range(13, I.max_row + 1) if I.cell(r, 2).value]
+        self.assertIn(("acme-account", "Account - A, Account - B"), rows)          # one manifest row, sheets joined
+        ws = wb["Pool"]
+        tot = next(r for r in range(1, ws.max_row + 1) if ws.cell(r, 2).value == "pool_total")
+        self.assertIn("AVERAGE(0,0,0)", ws.cell(tot, 11).value)       # Jan: back-refs before the spine → 0
+        self.assertIn("AVERAGE(U", ws.cell(tot, 22).value)                         # Dec (col V): {m1}{m2}{m3} = U/T/S
+        if not recalculated:
+            self.skipTest("formulas package not installed")
+        ident = Path(self.td.name) / "ident.json"
+        ident.write_text(json.dumps([
+            {"type": "row", "name": "cm = gross − alloc", "sheets": "Account - *", "lhs": "cm",
+             "rhs": [["+", "gross"], ["-", "alloc"]]},
+            {"type": "sum", "name": "pool fully allocated", "target": "Pool!pool_total", "sources": "Account - *!alloc"}]))
+        code, outp = run("gate.py", out, "--identities", ident, "--no-post-validate")
+        self.assertEqual(code, 0, outp)
+        self.assertIn("pool fully allocated", run("audit_drivepointified.py", out, "--identities", ident)[1])
+
+    def test_import_tab_param_and_forecast_window(self):
+        sys.path.insert(0, str(HERE))
+        import drivepointify_engine as e
+        from datetime import datetime
+        m = e.Model(company_id="acme", company_name="Acme", model_name="Acme", spine_start=(2026, 1), months=24,
+                    budget_start=(2027, 1), last_actuals=(2026, 7))
+        months = [datetime(2026 + (k // 12), k % 12 + 1, 28) for k in range(24)]
+        gl = m.import_tab("R - GL", ["Helper", "Name", "No", "Financial Report Name"] + [None] * 6 + months,
+                          [["IS", "Freight", 5405, "5405 Freight"] + [None] * 6 + [100.0] * 8 + [0.0] * 16])
+        t = m.schedule("Pool", name="Pool", template_id="acme-pool", description="d")
+        t.param("acct", "GL account", 'Say "hi"')
+        t.row("rate", "driver", "Rate", ident="rate", hist="{c}{@total}", fcst="{b0}{@rate}", fcst_start=(2026, 9),
+              values=[5.0] * 12)
+        t.row("total", "result", "Total", ident="total", hist=gl.sumifs("{c}", Financial__Report__Name="$D${@acct}"),
+              fcst="{c}{@rate}", fcst_start=(2026, 9), bud="{c}{@rate}")
+        t.row("uc", "driver", "Unit cost typed every month", ident="uc", values=[1.0] * 24)
+        out = Path(self.td.name) / "imp.xlsx"
+        m.save(out, gate=False, recalc=False)
+        wb = openpyxl.load_workbook(out)
+        ws, r = wb["Pool"], {wb["Pool"].cell(i, 2).value: i for i in range(1, 60)}
+        self.assertEqual(wb["R - GL"]["D2"].value, "5405 Freight")                        # add-in layout
+        self.assertIn("SUMIFS('R - GL'!K$2:K$1001,'R - GL'!$D$2:$D$1001,$D$", ws.cell(r["total"], 11).value)
+        self.assertEqual(ws.cell(r["total"], 19).value, f"=S{r['rate']}")                  # Sep: forecast window
+        self.assertEqual(ws.cell(r["rate"], 19).value, f"=$W{r['rate']}")                  # {b0} = Jan-27 input
+        self.assertEqual(ws.cell(r["uc"], 11).value, 1.0)                                  # typed across the spine
+        self.assertIn("R - GL", wb["Index"]["F13"].value)
+        self.assertEqual(e.ImportTab(m, "R - X", ["a"], [], "").sumifs("a", a='x"y'), \
+                         "SUMIFS('R - X'!$A$2:$A$1001,'R - X'!$A$2:$A$1001,\"x\"\"y\")")
+
+    def test_audit_catches_cycle_broken_ref_and_hardcode(self):
+        out = Path(self.td.name) / "broken.xlsx"
+        multi_tab_build(out, break_it=True)
+        code, outp = run("audit_drivepointified.py", out)
+        self.assertEqual(code, 1, outp)
+        for needle in ("circular references (1 groups", "missing sheet (1", "0.0385"):
+            self.assertIn(needle, outp)
 
     def test_validator_accepts_time_series_build_on_structure(self):
         code, out = run("validate_drivepointified.py", self.good)
