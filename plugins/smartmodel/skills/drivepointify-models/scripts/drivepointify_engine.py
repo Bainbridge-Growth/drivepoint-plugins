@@ -35,6 +35,7 @@ Months:     `hist` fills the months before budget_start, `bud` / `values` fill b
 from __future__ import annotations
 
 import re
+import warnings
 import tempfile
 import uuid
 import zipfile
@@ -403,9 +404,12 @@ class Seed:
     """
 
     def __init__(self, model: Model, title: str, note: str, flags: list[str]):
-        if not re.match(r"^D\s*-\s*", title):
-            raise ValueError("seed tab titles must start with 'D - ' (Data: the customer's own values). "
-                             "'R - ' is reserved for add-in imports")
+        if re.match(r"^R\s*-\s*", title):  # legacy name: existing customer builds keep working unchanged
+            warnings.warn(f"seed {title!r}: new builds name seeds 'D - …' (Data); 'R - ' means an add-in import",
+                          stacklevel=2)
+        elif not re.match(r"^D\s*-\s*", title):
+            raise ValueError("seed tab titles must start with 'D - ' (Data: the customer's own values); "
+                             "'R - ' (legacy) is still accepted")
         self.m, self.title, self.note, self.flags = model, title, note, flags
         self.rows: list[tuple[str, str, list]] = []
 
