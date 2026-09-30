@@ -139,7 +139,7 @@ def engine_build(path: Path) -> bool:
     import drivepointify_engine as e
     m = e.Model(company_id="acme", company_name="Acme", model_name="Acme Wholesale 2027 Budget",
                 spine_start=(2026, 1), months=24, budget_start=(2027, 1), last_actuals=(2026, 8), model_start=(2026, 8))
-    seed = m.seed("R - Acme WHL Seed", source_note="synthetic", flags=["Act"] * 8 + ["For"] * 4)
+    seed = m.seed("D - Acme WHL Seed", source_note="synthetic", flags=["Act"] * 8 + ["For"] * 4)
     seed.add("gross", "Gross", [1000 + 50 * i for i in range(12)])
     seed.add("dr", "D&R", [-(1000 + 50 * i) * 0.1 for i in range(12)])
     t = m.schedule("WHL", name="Wholesale Schedule", template_id="acme-whl-budget", description="synthetic")

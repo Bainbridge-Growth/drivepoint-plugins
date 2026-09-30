@@ -44,7 +44,7 @@ from openpyxl.utils import column_index_from_string, get_column_letter
 
 SPINE_START = 11                     # column K
 KD_TOKEN, KR_TOKEN = "Key Driver", "Key Result"
-IGNORE_TABS = re.compile(r"^(Settings|Index|Plan Settings|Home|Key Drivers and Results|Drivepoint Agent Log)$|^[RF]\s*-\s*")
+IGNORE_TABS = re.compile(r"^(Settings|Index|Plan Settings|Home|Key Drivers and Results|Drivepoint Agent Log)$|^[RDF]\s*-\s*")
 MONTHS = ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
 ERRORS = ("#REF!", "#DIV/0!", "#NAME?", "#VALUE!", "#N/A", "#NUM!", "#NULL!", "Err:")
 EPOCH = datetime(1899, 12, 30)
@@ -270,7 +270,7 @@ def check_tab(rep: Report, name: str, wf, wv, settings: dict):
     # Budget columns = forecast months the Key Drivers actually drive (most KD cells are typed inputs).
     # Forecast months fed from an R-tab / seed (e.g. the customer's own current-year forecast) are
     # reported, but held to the history rules, not the driver rules.
-    imported = lambda v: is_formula(v) and re.search(r"'?[RF]\s*-\s*[^!']*'?!", v)  # noqa: E731
+    imported = lambda v: is_formula(v) and re.search(r"'?[RDF]\s*-\s*[^!']*'?!", v)  # noqa: E731
     fc_cols, seeded = [], []
     for c in fc_all:
         inputs = sum(1 for r in kd if ws.cell(r, c).value is not None and not is_formula(ws.cell(r, c).value))
