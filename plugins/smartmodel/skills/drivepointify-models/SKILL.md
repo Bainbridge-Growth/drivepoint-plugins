@@ -19,7 +19,7 @@ per-tab conversion; the wider programme is a model migration.
 | Script | When | What it does |
 |---|---|---|
 | `profile_source.py <src.xlsx> [--sheet S]` | **Before** writing the spec | Finds stacked LY / actuals blocks, pasted "% × base" values, "LY × factor" growth builds, rows that are copies of other rows, `=row + constant` adjustments, shifted date blocks, bridges that skip rows, opening balances that don't roll, labels in the wrong column, duplicate names, copied `Plan Settings` tabs. |
-| `drivepointify_engine.py` (import it) | Build | `Model` → `seed()` R-tab, `schedule()` tabs with `row()` templates, `summary()`, `save()` = Index + Settings + chrome + recalc (if the `formulas` package is present) + add-in WebExtension. Refuses a Key Driver without budget inputs or a Key Result without a formula. `python3 drivepointify_engine.py --inject-addin file.xlsx` injects the add-in part into any workbook. |
+| `drivepointify_engine.py` (import it) | Build | `Model` → `seed()` D-tab, `schedule()` tabs with `row()` templates, `summary()`, `save()` = Index + Settings + chrome + recalc (if the `formulas` package is present) + add-in WebExtension. Colours every cell by role (input / actual / linked / calculated) and closes every schedule with End of Schedule + a hyperlinked Return to Top. Refuses a Key Driver without budget inputs, a Key Result without a formula, or a seed not named `D - `. `python3 drivepointify_engine.py --inject-addin file.xlsx` injects the add-in part into any workbook. |
 | `validate_drivepointified.py <built.xlsx> [--ties ties.json] [--allow-uncalculated]` | **After** build + recalc, before hand-off | The gate. Fails on: broken / partial date spine, history not in the spine, stacked blocks under the budget, columns right of the spine, anything but markers in A:B, Key Drivers that are formulas, Key Results that are typed, $ drivers that are a pasted % of another row, errors, uncached formulas, protocol chrome. `--ties` compares every mapped row to the source. |
 
 ---
@@ -32,7 +32,8 @@ user to ask.
 1. **One date spine, in the series.** Row 2 from **K2**: contiguous month-end dates covering history
    **and** the plan (e.g. K = Jan of last year … AH = Dec of the budget year). Actuals and the
    customer's current-year forecast sit in the **same rows** as the budget, to the left of it, fed from a
-   seed R-tab (`R - <Customer> <Tab> Seed`) until the add-in import takes over. **Never** leave a "2026
+   seed **D-tab** (`D - <Customer> <Tab> Seed`: Data, the customer's own values) until the add-in import
+   takes over. Never name it `R - `: that prefix means an add-in import. **Never** leave a "2026
    Forecast (LY)" / "Actuals" block stacked under the budget — that is the #1 thing reviewers reject.
    - If the user asks for "the budget to start in column K" **and** the source carries history, say in
      the spec — before building — that K is the spine start and the budget therefore starts later
@@ -78,12 +79,54 @@ user to ask.
    `settings.companyId` = the Drivepoint tenant id; real Excel dates; Index manifest; metadata block
    B9:B16; recalculated (cached values present); add-in WebExtension part; **do not copy the source's
    hidden `Plan Settings` tab** (it pins the other file's SharePoint id).
+10. **Formatting says what each cell is.** Colour every cell by role: input = blue on grey, actual =
+    the workbook's actual colour, linked from another tab = green, calculated = black. Building into
+    an existing SmartModel means **its** conventions (read its Home legend; v5 actuals are gold), and
+    its Home tab is copied, never rebuilt. Only a real sum is a bold total with a rule above it; %
+    rows are italic `0.0%`; column B is grouped. Every schedule ends in **End of Schedule** with a
+    hyperlinked **Return to Top**. Format every row down to the last one.
+11. **The simplest formula that works.** One formula pattern per row across the forecast months; roll
+    up once (one total row per channel, or one SUMIFS on a category), never a hand-listed SUM of a
+    dozen cells on other tabs; no `=+`, empty arguments or numeric literals; split anything past ~150
+    characters into a labelled helper row. Reuse the template's formula for the same line.
+12. **Inputs live on the spine, on the tab that uses them.** A typed number that drives the model is a
+    Key Driver row by month, blue on grey. No "assumption constants" blocks read as single cells, and
+    no parking sections for the source's hard-keyed plugs: each plug becomes a labelled driver next to
+    the line it adjusts, or a finding.
+13. **No working notes in the workbook.** Labels say what the line is. No "her"/"his", "src row 79",
+    "source row N", `_r79` ids, "manual value", or filenames: provenance goes in the spec. One row per
+    GL account.
 
 ---
 
 ## Workflow
 
-### Phase 0 — Profile the source (always)
+### Phase 0 — Scope with the user, then profile (always)
+
+Ask before building, in one message, and **wait for the answer**, even when you have a
+recommendation. Record the answers in the spec:
+
+1. **Tab set.** For each area of their file: keep **their tab** (their layout on our spine, formulas
+   and formatting), use **our standard tab** (their numbers mapped in), or a **blend** (ours plus
+   their extra sections). Show it as a table: their tab → our tab → recommendation.
+2. **Depth.** Where our standard tab has a build their file lacks, ask whether they want it:
+   - Wholesale: the bottoms-up retail build (Doors × SKUs per Door × Units per SKU per Week, i.e.
+     velocity by SKU, then unit sales by product).
+   - DTC / TikTok / Amazon: cohort retention and Sales by SKU.
+   - Product: SKU-level landed cost.
+   - Payroll: headcount schedule vs their department payroll.
+   - Opex: one row per GL account vs vendor lines.
+3. **Leftovers.** Anything with no home in our tabs (an assumptions tab, notes): where it goes.
+
+A tab carrying a standard name (DTC, AMZN, Wholesale - <Retailer>, Product, Payroll, Opex, …) must
+contain that tab's standard sections from the SmartModel templates, ending in End of Schedule,
+unless the user agreed to leave one out.
+
+Cohort blocks follow the template: cohorts start at the spine start, month 0 = initial orders (100%),
+later months by months since first order, no pre-spine cohorts, no retention-method comparison on the
+tab.
+
+Then profile:
 
 ```bash
 python3 scripts/profile_source.py <source.xlsx> --sheet <TAB> --out profile.md
@@ -105,7 +148,7 @@ Plus:
 - **Findings & decisions**: every profiler line, each resolved (built as X / reported to owner / not applicable).
 - **Summary tab**: which source totals it replaces and which it ties to.
 
-If the user already asked you to build, present the spec in one message and proceed; pause only for
+Once the Phase 0 scope is confirmed, present the spec in one message and proceed; pause only for
 genuine ambiguity (e.g. two inventory bases, the history-vs-column-K conflict above).
 
 ### Phase 2 — Build (one script, on the engine)
@@ -118,7 +161,7 @@ import sys; sys.path.insert(0, "<skill>/scripts")
 from drivepointify_engine import Model, FMT_PCT, FMT_X, FMT_USD
 m = Model(company_id="<tenant id>", company_name="…", model_name="… 2027 Budget",
           spine_start=(2026, 1), months=24, budget_start=(2027, 1), last_actuals=(2026, 8))
-seed = m.seed("R - <Co> <TAB> Seed", source_note="<file>, <date>", flags=<Act/For per history month>)
+seed = m.seed("D - <Co> <TAB> Seed", source_note="<file>, <date>", flags=<Act/For per history month>)
 seed.add("dr", "D&R", <FY2026 values>)
 t = m.schedule("<TAB>", name="… Schedule", template_id="<co>-<tab>-budget", description="…")
 t.section("Discounts & returns", "D&R as % of gross (default = FY2026 ratio).")
@@ -153,18 +196,20 @@ python3 scripts/validate_drivepointified.py <built.xlsx> --ties ties.json
   structure is still checked). Value checks and ties then need the recalculated file — say so in the hand-off.
 - Also re-open the file and eyeball the first screen of each tab: labels in C, dates in row 2, blue
   input cells only on Key Driver budget months.
+- **Re-run the whole gate after every later pass** on the model, not only after the first build.
 
 ### Phase 5 — Hand-off message
 
 Lead with what changed and why it's safe:
-1. Layout (spine range, where the budget starts, the seed tab, the summary tab).
-2. Key Drivers / Key Results per tab — name the drivers.
-3. What was a pasted value and is now a driver.
-4. Validation: "N monthly values and M totals tie to your file; validator 0 fail."
-5. Findings in their file (bridge gaps, basis mismatches, shifted blocks) — with the numbers.
-6. How to load it: upload as a plan in the Drivepoint app (Plans → Upload Plan); the add-in shows it
+1. Scope: the Phase 0 answers, and anything left out on purpose.
+2. Layout (spine range, where the budget starts, the seed tab, the summary tab).
+3. Key Drivers / Key Results per tab — name the drivers.
+4. What was a pasted value and is now a driver.
+5. Validation: "N monthly values and M totals tie to your file; validator 0 fail."
+6. Findings in their file (bridge gaps, basis mismatches, shifted blocks) — with the numbers.
+7. How to load it: upload as a plan in the Drivepoint app (Plans → Upload Plan); the add-in shows it
    as a SmartModel only after that registration.
-7. After upload, if the Drivepoint MCP connector is available, confirm Drivepoint itself reads it:
+8. After upload, if the Drivepoint MCP connector is available, confirm Drivepoint itself reads it:
    `list_company_plans` → `get_valid_plan_tabs` (every schedule tab must be listed) →
    `list_plan_key_drivers_and_results` (every marked row must come back with its id and label).
 
@@ -193,6 +238,11 @@ The user should never have to ask these. If any answer is "no", fix it first.
 - Are friendly names unique and in column C? Are A:B clean on every non-marked row?
 - Does every number tie, both years, and do the summary totals match the customer's totals?
 - What is wrong **in the source**, and have I said so?
+- Did the user confirm the tab set and depth (Phase 0)? Does every standard-named tab have its sections?
+- Is every cell coloured for what it does, in the workbook's own convention? Any run of bold "totals"?
+  Any row left unformatted? End of Schedule + Return to Top on every tab?
+- Could a customer read every formula? One pattern per row, no `=+`, no 12-tab SUMs?
+- Any "her", "src row", filename or parking section left in a label?
 
 ## Failure modes seen in real conversions
 
@@ -206,3 +256,10 @@ The user should never have to ask these. If any answer is "no", fix it first.
 | Settings header `value` (lower-case) | Add-in reads every setting as blank → "not a SmartModel" | Header literals; validator `PROTOCOL` |
 | Uncalculated workbook | Add-in reads NaN; Plan Save fails | Recalc; validator `CALC` |
 | Source bridge silently inherited | Customer's 1H/2H total was short a line | Non-negotiable 8; profiler "bridges" |
+| Their layout kept under our tab names | DTC / AMZN / Product lost their SKU, cohort and cost builds; reviewer can't find the Drivepoint tab | Phase 0 scope; standard sections |
+| Every cell that touched a seed painted one green | Actuals, links and calcs look the same; file "opens wrong" | Non-negotiable 10; engine role colours |
+| Rebuilt Home / v6 colours in an existing v5 model | Orange where the model uses gold; Home doesn't look like Drivepoint | Copy the host Home; its legend |
+| Assumption constants and "manual values" parked at the bottom of each tab | Inputs not on the spine; plugs invisible; nothing styled as input | Non-negotiable 12 |
+| "her" / "src row 79" / duplicate GL rows in labels | Working notes shipped to the customer | Non-negotiable 13 |
+| Cohort month 0 dropped (`IF($C<K$2,…)`) | Repurchase rates never start at 100% | Cohort rule in Phase 0 |
+| Seed named `R - …` | Reads as an add-in import | `D - ` prefix; engine refuses `R - ` |

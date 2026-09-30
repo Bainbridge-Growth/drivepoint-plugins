@@ -3,7 +3,7 @@
 drivepointify_engine.py — a small, dependency-light engine for building drivepointified workbooks.
 
 Writes, in one pass: Index, Settings (add-in header literals), one or more schedule tabs on a single
-month-end date spine starting at K2, a seed R-tab that feeds history into the same rows, a Budget
+month-end date spine starting at K2, a seed D-tab (the customer's own values) that feeds history into the same rows, a Budget
 Summary report tab, recalculated cached values (if the `formulas` package is available) and the
 Drivepoint add-in WebExtension part.
 
@@ -11,7 +11,7 @@ Drivepoint add-in WebExtension part.
 
     m = Model(company_id="acme", company_name="Acme", model_name="Acme Wholesale 2027 Budget",
               spine_start=(2026, 1), months=24, budget_start=(2027, 1), last_actuals=(2026, 8))
-    seed = m.seed("R - Acme WHL Seed", source_note="Customer template, 2026-09-24",
+    seed = m.seed("D - Acme WHL Seed", source_note="Customer template, 2026-09-24",
                   flags=["Act"] * 8 + ["For"] * 4)
     seed.add("grossWhl", "Wholesale", [..12 FY2026 values..])
 
@@ -72,11 +72,45 @@ F = {
     "b11b": Font(name="Calibri", size=11, bold=True), "gi": Font(name="Calibri", size=11, color=GRAY, italic=True),
     "g9i": Font(name="Calibri", size=9, color=GRAY, italic=True), "mono": Font(name="Menlo", size=10),
     "monowb": Font(name="Menlo", size=10, color="FFFFFF", bold=True), "input": Font(name="Calibri", size=11, color="4472C4"),
-    "actual": Font(name="Calibri", size=11, color="ED7D31"), "import": Font(name="Calibri", size=11, color="548235"),
+    "actual": Font(name="Calibri", size=11, color="ED7D31"), "external": Font(name="Calibri", size=11, color="F79646"),
+    "feeder": Font(name="Calibri", size=11, color="70AD47"),
 }
 BORDER_SECTION = Border(bottom=Side(style="thick", color=SECTION_BLUE))
 BORDER_TOTAL = Border(top=Side(style="thin", color="000000"))
 CENTER, LEFT, RIGHT = (Alignment(horizontal=h, vertical="center") for h in ("center", "left", "right"))
+# Cell roles (drivepoint-smartmodel-service style_donor/roles.json): colour by what the formula DOES.
+_SHEET, _CELL = r"(?:'[^']+'|[A-Za-z_][\w.]*)", r"\$?[A-Z]{1,3}\$?\d+"
+_PURE = re.compile(rf"{_SHEET}!{_CELL}")
+_LOOKUP = re.compile(r"(?:IFERROR\()?(?:SUMIFS|SUMIF|INDEX|XLOOKUP|VLOOKUP)\(", re.I)
+_GUARD = re.compile(r"IF\(ISNUMBER\(([^()]+)\),\1,", re.I)
+_R_REF = re.compile(r"'?[RD] ?- ?[^'!]*'?!")  # R = add-in import, D = the customer's seed data
+
+
+def end_of_schedule(ws, r: int, width: int) -> None:
+    """The template's closing block: 'End of Schedule' (C bold 15, thick rule) + a hyperlinked 'Return to Top'."""
+    ws.cell(r, 3, "End of Schedule").font = Font(name="Calibri", size=15, bold=True)
+    for c in range(2, width):
+        ws.cell(r, c).border = BORDER_SECTION
+    top = ws.cell(r + 1, 3, "Return to Top")
+    top.font = Font(name="Calibri", size=11, color="0563C1", underline="single")
+    top.hyperlink = f"#'{ws.title}'!A1"
+
+
+def formula_role(body: str) -> str:
+    """'external' (pulls an R-/D- tab), 'feeder' (pulls another schedule) or 'calculated' (does arithmetic)."""
+    pull = bool(_PURE.fullmatch(body) or _LOOKUP.match(body) or _GUARD.match(body))
+    if pull and _R_REF.search(body):
+        return "external"
+    return "feeder" if pull and "!" in body else "calculated"
+
+
+def role_font(body: str, *, actual: bool, bold: bool = False, editable: bool = False) -> Font:
+    role = formula_role(body)
+    color = {"external": "ED7D31" if actual else "F79646", "feeder": "70AD47",
+             "calculated": "4472C4" if editable else "000000"}[role]
+    return Font(name="Calibri", size=11, color=color, bold=bold)
+
+
 _TOKEN = re.compile(r"\{@(?:([^.}]+)\.)?([^}]+)\}")
 
 
@@ -308,7 +342,8 @@ class Model:
                 r += 1
                 continue
             bold = agg == "total"
-            ws.cell(r, 3, label).font = F["b11b"] if bold else F["b11"]
+            ws.cell(r, 3, label).font = (F["b11b"] if bold else
+                                         Font(name="Calibri", size=11, italic=True) if agg == "ratio" else F["b11"])
             if agg != "ratio":
                 out[arg] = r
                 mr = self.reg[(sheet, arg)]
@@ -326,7 +361,9 @@ class Model:
                 else:
                     num, den = arg
                     cell.value = f"=IFERROR({L}{out[num]}/{L}{out[den]},0)"
-                cell.font = Font(name="Calibri", size=11, color="548235", bold=bold)
+                cell.font = role_font(cell.value[1:], actual=False, bold=bold)
+                if agg == "ratio":
+                    cell.font = Font(name="Calibri", size=11, color=cell.font.color, italic=True)
                 if bold:
                     cell.border = BORDER_TOTAL
             var_cols = [L for L, _l, s, _e in periods if s is None]
@@ -337,9 +374,11 @@ class Model:
                 if agg != "ratio":
                     h.value, h.number_format = f"=IFERROR({var_cols[0]}{r}/ABS({a}{r}),0)", FMT_PCT
             r += 1
+        end_of_schedule(ws, r + 1, 20)
         ws.freeze_panes = "E13"
         for c, w in (("A", 6), ("B", 30), ("C", 44), ("D", 3)):
             ws.column_dimensions[c].width = w
+        ws.column_dimensions["B"].outline_level = 1
         for L, *_ in periods:
             ws.column_dimensions[L].width = 14
         self.summary_rows = out
@@ -357,11 +396,16 @@ def default_periods(m: Model) -> list:
 
 
 class Seed:
-    """R-tab holding the customer's history on the model spine; schedule rows read it with SUMIFS on the id."""
+    """D-tab (Data) holding the customer's own values on the model spine; schedule rows read it with SUMIFS on the id.
+
+    Not an R-tab: 'R - ' means an add-in import, and this tab is the customer's plan/actuals until the imports land.
+    Plan sync and Roll Forward skip it either way (row 3 has no 'Period Type' / Actual-Forecast markers).
+    """
 
     def __init__(self, model: Model, title: str, note: str, flags: list[str]):
-        if not re.match(r"^R\s*-\s*", title):
-            raise ValueError("seed tab titles must start with 'R - ' (plan sync ignores R-tabs as roll tabs)")
+        if not re.match(r"^D\s*-\s*", title):
+            raise ValueError("seed tab titles must start with 'D - ' (Data: the customer's own values). "
+                             "'R - ' is reserved for add-in imports")
         self.m, self.title, self.note, self.flags = model, title, note, flags
         self.rows: list[tuple[str, str, list]] = []
 
@@ -442,6 +486,7 @@ class Schedule:
         m, ws = self.m, self.ws
         width = SPINE_COL + m.months
         n_bud = m.months - m.budget_idx
+        n_act = _idx(m.spine_start, m.last_actuals)  # index of the last booked month
         for s in self.specs:
             r = s["row"]
             if s["kind"] == "section":
@@ -466,19 +511,25 @@ class Schedule:
                 cell.number_format = s["fmt"]
                 if i < m.budget_idx:
                     if s["hist"]:
-                        cell.value = "=" + m.render(s["hist"], self.title, i)
-                        cell.font = F["import"] if "'R -" in s["hist"] or "'R-" in s["hist"] else F["b11"]
+                        body = m.render(s["hist"], self.title, i)
+                        cell.value = "=" + body
+                        cell.font = role_font(body, actual=i <= n_act)
                 elif vals is not None:
                     v = vals[i - m.budget_idx]
                     cell.value = 0 if v is None else v
                     cell.font, cell.fill = F["input"], _fill(LIGHT)
                 elif s["bud"]:
-                    cell.value = "=" + m.render(s["bud"], self.title, i)
-                    cell.font = F["b11"]
+                    body = m.render(s["bud"], self.title, i)
+                    cell.value = "=" + body
+                    editable = s["kind"] == "driver"  # a driver's formula default is still an input
+                    cell.font = role_font(body, actual=False, editable=editable)
+                    if editable:
+                        cell.fill = _fill(LIGHT)
                 if s["total"]:
                     cell.border = BORDER_TOTAL
                 if s["total"] or s["bold"]:
                     cell.font = Font(name="Calibri", size=11, color=cell.font.color, bold=True)
+        end_of_schedule(ws, self.r + 1, width)
         ws.freeze_panes = "K5"
         ws.column_dimensions["A"].width = 15
         ws.column_dimensions["B"].width = 34

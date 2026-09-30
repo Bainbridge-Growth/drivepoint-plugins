@@ -172,7 +172,7 @@ def profile(path: str, sheet: str | None) -> str:
         out.append(f"- row {b.header_row} `{b.title}` · months {cl} · {len(b.rows)} numeric rows{fl}{dn}")
     if len(blocks) > 1:
         out += ["", "> **More than one month block.** Last-year / actuals blocks stacked under the budget must become the "
-                "HISTORY columns of ONE date spine (seed R-tab → same rows), not a second block. Map each LY row to its "
+                "HISTORY columns of ONE date spine (seed D-tab → same rows), not a second block. Map each LY row to its "
                 "budget row below."]
     if not blocks:
         return "\n".join(out)

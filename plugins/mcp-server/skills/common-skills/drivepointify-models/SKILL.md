@@ -55,10 +55,11 @@ Say "model", not "plan", to the user.
    the second with two leading spaces), B = a unique id (e.g. `whl_drWholesalePct`), C = the friendly
    name. Move labels the customer typed in column B into C. Marked rows need unique names: rename a
    second "Total" to "Total Distribution Expense". Calc and memo rows get no marker and no id.
-7. **History comes from a seed tab**, e.g. `R - <Company> <TAB> Seed`, laid out on the same spine, with
-   ids like `seed___grossWhl` in column B. Schedule history cells read
-   `=SUMIFS('R - … Seed'!K:K,'R - … Seed'!$B:$B,"seed___grossWhl")`. Tabs named `R - …` are never
-   treated as model tabs.
+7. **History comes from a seed tab**, `D - <Company> <TAB> Seed` (D = Data: the customer's own values),
+   laid out on the same spine, with ids like `seed___grossWhl` in column B. Schedule history cells read
+   `=SUMIFS('D - … Seed'!K:K,'D - … Seed'!$B:$B,"seed___grossWhl")`. Never name it `R - …`: that prefix
+   means an add-in import. Leave C3 blank on the seed (no `Period Type` / Actual-Forecast row) so the
+   model sync and Roll Forward never treat it as a model tab.
 8. **Protocol chrome.** Tabs: Index, Settings, the schedule tab(s), Budget Summary, the seed tab.
    - **Settings**: row 1 header is literally `id | Setting | Value | Description` in B:E (capital V and
      D; otherwise every setting reads blank). Required rows:
@@ -77,7 +78,20 @@ Say "model", not "plan", to the user.
      values in D.
    - **Freeze and file hygiene**: freeze panes at K5. Do not copy the source's hidden `Plan Settings`
      tab; it points at the customer's original file.
-9. **Ties are proof.** Every mapped row must equal the source in every month of both years, and the
+9. **Formatting says what each cell is.** Input = blue on grey, actual = the workbook's actual colour,
+   linked from another tab = green, calculated = black. Converting into the customer's existing
+   SmartModel means **its** conventions (its Home legend: v5 actuals are gold) and its Home tab,
+   copied, not rebuilt. Only a real sum is a bold total with a rule above; % rows are italic `0.0%`;
+   column B is grouped; every row is formatted; every schedule ends in **End of Schedule** with a
+   hyperlinked **Return to Top**.
+10. **The simplest formula that works.** One formula pattern per row across the forecast months; roll
+   up once (a total row per channel, or one SUMIFS on a category), never a hand-listed SUM of a dozen
+   cells on other tabs; no `=+`, empty arguments or numeric literals.
+11. **Inputs on the spine; no working notes.** A typed number that drives the model is a Key Driver row
+   by month on the tab that uses it. No "assumption constants" blocks and no parking sections for the
+   source's plugs. Labels say what the line is: no "her"/"his", "src row 79", ids like `_r79`, or file
+   names. One row per GL account.
+12. **Ties are proof.** Every mapped row must equal the source in every month of both years, and the
    summary must match the customer's own totals. A difference is a finding: fix yours, report theirs.
    Examples of theirs: a 1H/2H bridge that skips a line, an opening balance on a different basis, a
    sub-block dated one month off.
@@ -86,6 +100,13 @@ Say "model", not "plan", to the user.
 
 ## Steps
 
+0. **Scope, and wait for the answer.** Ask the user, for each area of their file: keep **their tab**
+   (their layout on our spine and formatting), use **our standard tab** (their numbers mapped in), or a
+   **blend**. Also ask where our tab has a build their file lacks: the wholesale bottoms-up build
+   (Doors × SKUs per Door × Units per SKU per Week), DTC / Amazon cohort retention and Sales by SKU,
+   SKU-level product cost, headcount vs department payroll, GL-account vs vendor opex rows. Give your
+   recommendation, but let the user decide. A tab with a standard name carries that tab's standard
+   sections. Cohort blocks: month 0 = initial orders (100%), cohorts from the spine start.
 1. **Profile.** Load the source twice with openpyxl (formulas, and `data_only=True` for values). Find
    every 12-month header row. The first block is the budget; blocks flagged Act/For or titled LY are
    history. For each typed budget row, run the rule-4 tests against every other row. List: stacked
@@ -94,8 +115,8 @@ Say "model", not "plan", to the user.
    column B, duplicate names, the columns after the months.
 2. **Spec.** One line per source row: source row → model row, Key Driver / Key Result / calc, budget
    formula or driver value, history source. Then the spine (range, budget start), every profiler
-   finding with its decision, and what the Budget Summary replaces. If the user already asked you to
-   build, show this and proceed; stop only for a genuine ambiguity.
+   finding with its decision, and what the Budget Summary replaces. Once the Step 0 scope is confirmed,
+   show this and proceed; stop only for a genuine ambiguity.
 3. **Build** with openpyxl in one script. Read the numbers from the source's cached values, never
    re-type them. Write the tabs in order: Index, Settings, schedule(s), Budget Summary, seed.
 4. **Recalculate.** If a formula engine is available (for example the `formulas` package), compute and
@@ -124,8 +145,11 @@ Say "model", not "plan", to the user.
    - no $ Key Driver that is an exact % of another row
    - unique names in C
    - every value tied to the source
+   - every cell coloured for its role, no runs of bold "totals", End of Schedule + Return to Top on
+     every tab, no working notes in labels, one formula pattern per row
 
-   Report the counts, e.g. "912 monthly values and 20 totals tie; 0 structural failures".
+   Report the counts, e.g. "912 monthly values and 20 totals tie; 0 structural failures". Re-run the
+   whole check after every later pass on the model, not only after the first build.
 6. **After the user uploads it** (Drivepoint app → Plans → Upload Plan):
    - `list_company_plans` to find the new model.
    - `get_valid_plan_tabs`: every schedule tab must be listed. If one is missing, its row 2/3 spine is
@@ -138,6 +162,7 @@ Say "model", not "plan", to the user.
 ## Answer format
 
 Lead with what changed:
+- the scope the user confirmed in Step 0
 - the timeline (range, where the budget starts, the seed tab, the summary tab)
 - the Key Drivers and Key Results per tab, naming the drivers, and which pasted values became % or
   growth drivers
