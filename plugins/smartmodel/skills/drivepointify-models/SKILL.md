@@ -1,6 +1,6 @@
 ---
 name: drivepointify-models
-description: Turn a customer's own Excel budget / forecast / department template into a Drivepoint SmartModel ("drivepointify" it) — one continuous date spine with actuals and forecast in the same rows, the customer's logic rebuilt as real Key Drivers and Key Results, a summary tab in place of Total / LY / variance columns, and every number tied back to the source. Use when a user says "drivepointify", "make this Drivepoint compatible", "convert this budget template", "turn this spreadsheet into a SmartModel", "add key drivers and results to this file", "make this work with the add-in", or uploads a non-SmartModel planning workbook. Ships a source profiler and a hand-off validator that must pass before delivery.
+description: Turn a customer's own Excel budget / forecast / department template into a Drivepoint SmartModel ("drivepointify" it) — one continuous date spine with actuals and forecast in the same rows, the customer's logic rebuilt as real Key Drivers and Key Results, a summary tab in place of Total / LY / variance columns, and every number tied back to the source. Use when a user says "drivepointify", "make this Drivepoint compatible", "convert this budget template", "turn this spreadsheet into a SmartModel", "add key drivers and results to this file", "make this work with the add-in", or uploads a non-SmartModel planning workbook. Ships a source profiler, a hand-off validator and Excel-integrity checks (no repair prompt, no circular references, no broken colour bands) that must pass before delivery.
 ---
 
 # Drivepointify Models
@@ -14,13 +14,16 @@ structural problems.
 For a whole-company model migration (many templates, imports, R-GL wiring), this skill covers the
 per-tab conversion; the wider programme is a model migration.
 
-**Scripts** (in `scripts/`, Python 3 + openpyxl):
+**Scripts** (in `scripts/`, Python 3 + openpyxl; the Gate 0 checkers also need lxml):
 
 | Script | When | What it does |
 |---|---|---|
 | `profile_source.py <src.xlsx> [--sheet S]` | **Before** writing the spec | Finds stacked LY / actuals blocks, pasted "% × base" values, "LY × factor" growth builds, rows that are copies of other rows, `=row + constant` adjustments, shifted date blocks, bridges that skip rows, opening balances that don't roll, labels in the wrong column, duplicate names, copied `Plan Settings` tabs. |
 | `drivepointify_engine.py` (import it) | Build | `Model` → `seed()` D-tab, `schedule()` tabs with `row()` templates, `summary()`, `save()` = Index + Settings + chrome + recalc (if the `formulas` package is present) + add-in WebExtension. Colours every cell by role (input / actual / linked / calculated) and closes every schedule with End of Schedule + a hyperlinked Return to Top. Refuses a Key Driver without budget inputs or a Key Result without a formula. New seeds are named `D - `; an existing build's `R - ` seed still works (with a warning). `python3 drivepointify_engine.py --inject-addin file.xlsx` injects the add-in part into any workbook. |
 | `validate_drivepointified.py <built.xlsx> [--ties ties.json] [--allow-uncalculated]` | **After** build + recalc, before hand-off | The gate. Fails on: broken / partial date spine, history not in the spine, stacked blocks under the budget, columns right of the spine, anything but markers in A:B, Key Drivers that are formulas, Key Results that are typed, $ drivers that are a pasted % of another row, errors, uncached formulas, protocol chrome. `--ties` compares every mapped row to the source. |
+| `lint_xlsx.py <built.xlsx>` | **Last**, on the exact file you deliver | Gate 0a: what Excel **repairs** on open ("We found a problem with some content… Removed Records: Cell information from /xl/worksheets/sheetN.xml"). That covers duplicate or out-of-order cells, bad shared formulas, formulas over Excel's limits, functions missing `_xlfn.`, relationships to missing parts (a deleted `calcChain.xml`), and external-workbook links (Excel's security bar). Names the tab behind each `sheetN.xml`. |
+| `find_circular.py <built.xlsx>` | Same | Gate 0b: every **circular reference** Excel would flag. Excel checks every reference, including the IF branch that is never taken. Lists each loop with sample formulas. |
+| `style_gaps.py <built.xlsx> [--allow "Tab!COL"]` | Same | Gate 0c: white **gaps in colour bands**, i.e. the header band or a section band breaking off for a few columns because cells there were never styled (typical after moving labels or the spine). |
 
 ---
 
@@ -98,6 +101,39 @@ user to ask.
     GL account.
 
 ---
+
+## Excel opens it clean — Gate 0
+
+openpyxl, LibreOffice, the validator above and `post_validate` all accept files that Excel then repairs on open,
+warns are circular, or shows with white gaps in the header band. A real conversion shipped all three
+(a full-company model: 20,344 duplicate cell records, 728 circular references, then a broken header band after
+the fix). The user should never be the one who finds these.
+
+- **One `<c>` record per address, cells in column order within each row.** Any step that moves cells (spine
+  remaps, label moves, stacked blocks) merges a cell that lands on an occupied address: the one with
+  content wins; with none, the moved cell wins; two with content is a bug, so stop. Excel deletes duplicate
+  records and reports only the part name (`sheet3.xml`), and `lint_xlsx.py` maps it to the tab.
+- **Deleting `calcChain.xml` also deletes its relationship and content-type override.** A relationship to a
+  missing part triggers the same repair.
+- **No circular references, including through an untaken IF branch.** `find_circular.py` must report 0.
+  Iterative calculation is not a fix. The patterns that keep coming back:
+
+  | Pattern | Fix |
+  |---|---|
+  | Summary column summing its own row: `SUMIFS(30:30,$2:$2,…)` in F30 | Sum the months only: `SUMIFS($K30:$DZ30,$K$2:$DZ$2,…)` |
+  | Checker reading a whole column it sits in: `SUMPRODUCT(($C:$C=…)*CM:CM)` in CM303 | Bound it to the rows above (`$C$16:$C$302`) |
+  | Toggle whose other branch feeds back: `IF(mode="Formula", top_down, SUM(children))`, each child a share of this cell | Drop the dead branch; it can never compute |
+  | Actual/forecast switch where the actual branch reads a row that reads this one (CAC ↔ new orders) | Read the actual source directly |
+  | `INDEX(block,…)` whose block contains the formula | End the block above the formula |
+
+- **Columns a move leaves empty have no style.** Run `style_gaps.py`, and style each empty gap cell like
+  the cell that closes the band on its right (the first month column). Pass deliberate one-column fills
+  (a divider, a grey input column) with `--allow "Tab!COL"` and name them in the hand-off.
+- **No external-workbook links.** Remove unused ones. Ask before removing one that formulas use.
+- **Prove the fix moved no numbers.** Recalculate before and after, compare every formula cell, and name
+  the cells that changed on purpose.
+- **Run Gate 0 last,** after recalculation and after any later pass, on the exact file you hand off. When
+  you can, open it once in desktop Excel; if you cannot, say so.
 
 ## Workflow
 
@@ -196,6 +232,12 @@ python3 scripts/validate_drivepointified.py <built.xlsx> --ties ties.json
   structure is still checked). Value checks and ties then need the recalculated file — say so in the hand-off.
 - Also re-open the file and eyeball the first screen of each tab: labels in C, dates in row 2, blue
   input cells only on Key Driver budget months.
+- **Gate 0, last, on the exact file you deliver:**
+  ```bash
+  python3 scripts/lint_xlsx.py <built.xlsx> && python3 scripts/find_circular.py <built.xlsx> \
+    && python3 scripts/style_gaps.py <built.xlsx>
+  ```
+  All three exit 0 (see "Excel opens it clean").
 - **Re-run the whole gate after every later pass** on the model, not only after the first build.
 
 ### Phase 5 — Hand-off message
@@ -205,7 +247,8 @@ Lead with what changed and why it's safe:
 2. Layout (spine range, where the budget starts, the seed tab, the summary tab).
 3. Key Drivers / Key Results per tab — name the drivers.
 4. What was a pasted value and is now a driver.
-5. Validation: "N monthly values and M totals tie to your file; validator 0 fail."
+5. Validation: "N monthly values and M totals tie to your file; validator 0 fail; opens in Excel without
+   repair, 0 circular references, no colour-band gaps (allowed: …)."
 6. Findings in their file (bridge gaps, basis mismatches, shifted blocks) — with the numbers.
 7. How to load it: upload as a plan in the Drivepoint app (Plans → Upload Plan); the add-in shows it
    as a SmartModel only after that registration.
@@ -243,6 +286,8 @@ The user should never have to ask these. If any answer is "no", fix it first.
   Any row left unformatted? End of Schedule + Return to Top on every tab?
 - Could a customer read every formula? One pattern per row, no `=+`, no 12-tab SUMs?
 - Any "her", "src row", filename or parking section left in a label?
+- Does Gate 0 pass on the file I am handing over: no Excel repair, 0 circular references, no colour-band
+  gaps, no external links? Did I re-run it after the last edit and the recalc?
 
 ## Failure modes seen in real conversions
 
@@ -263,3 +308,8 @@ The user should never have to ask these. If any answer is "no", fix it first.
 | "her" / "src row 79" / duplicate GL rows in labels | Working notes shipped to the customer | Non-negotiable 13 |
 | Cohort month 0 dropped (`IF($C<K$2,…)`) | Repurchase rates never start at 100% | Cohort rule in Phase 0 |
 | Seed named `R - …` | Reads as an add-in import | `D - ` prefix; engine refuses `R - ` |
+| Cell moves wrote a second record onto occupied addresses | Excel: "Removed Records: Cell information from /xl/worksheets/sheet3.xml" on open | Merge on move; `lint_xlsx.py` |
+| `calcChain.xml` deleted, its relationship kept | Excel repair prompt | Remove both; `lint_xlsx.py` |
+| Budget Summary `SUMIFS(30:30,…)` / IF toggles feeding back | Circular-reference warning on open, even through untaken branches | Bound the ranges; drop dead branches; `find_circular.py` |
+| Labels moved F:J → C:G, H:J left without cells | White gap in the blue header band and every section band | Style each gap cell like the band; `style_gaps.py` |
+| Unused external link inherited from the customer file | Excel's "links to external sources" bar on every open | Remove it; `lint_xlsx.py` |

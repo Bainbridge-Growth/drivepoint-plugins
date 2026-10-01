@@ -16,7 +16,7 @@ Read this whenever the user uploads a non-Drivepoint Excel file and asks to "dri
 |---|---|---|
 | The uploaded .xlsx + **code execution** (Python with openpyxl) | You read the customer's cached values and write the new workbook | Plan the conversion (mapping table, drivers, findings) and hand the plan back; do not pretend to produce a file |
 | The Drivepoint connector (this server) | Verify the uploaded model is read correctly (`get_valid_plan_tabs`, `list_plan_key_drivers_and_results`) and fix markers (`search_plan_row`, `mark_key_driver_or_result`) | Skip Step 6 and tell the user to verify in the add-in |
-| The SmartModel plugin's `drivepointify-models` scripts (Claude Code / Desktop) | `profile_source.py`, `drivepointify_engine.py`, `validate_drivepointified.py` do Steps 1, 4 and 5 for you | Write the equivalent code from the rules below |
+| The SmartModel plugin's `drivepointify-models` scripts (Claude Code / Desktop) | `profile_source.py`, `drivepointify_engine.py`, `validate_drivepointified.py` do Steps 1, 4 and 5 for you; `lint_xlsx.py`, `find_circular.py`, `style_gaps.py` do the Step 5 Excel-integrity checks | Write the equivalent code from the rules below |
 
 Say "model", not "plan", to the user.
 
@@ -95,6 +95,19 @@ Say "model", not "plan", to the user.
    summary must match the customer's own totals. A difference is a finding: fix yours, report theirs.
    Examples of theirs: a 1H/2H bridge that skips a line, an opening balance on a different basis, a
    sub-block dated one month off.
+13. **Excel opens it clean.** The file must open in Excel without a repair prompt, without a
+   circular-reference warning, and without white gaps in the header band. openpyxl and LibreOffice do
+   not report any of these:
+   - one cell record per address, cells in column order (a step that moves cells must merge a cell
+     that lands on an occupied address: content wins);
+   - deleting `calcChain.xml` also deletes its relationship and content-type override;
+   - no circular reference, including through an IF branch that is never taken. Excel checks every
+     reference. Budget Summary sums cover the months only (`SUMIFS($K30:$DZ30,$K$2:$DZ$2,…)`, never
+     `SUMIFS(30:30,$2:$2,…)` in the same row); a checker never reads the whole column it sits in; a
+     toggle never has a branch that feeds back into itself;
+   - every column inside a header or section band is styled with the band, including columns a move
+     left empty;
+   - no external-workbook links.
 
 ---
 
@@ -147,8 +160,14 @@ Say "model", not "plan", to the user.
    - every value tied to the source
    - every cell coloured for its role, no runs of bold "totals", End of Schedule + Return to Top on
      every tab, no working notes in labels, one formula pattern per row
+   - rule 13, on the exact file you return, after the last save and after the add-in parts are added:
+     parse each sheet's XML for duplicate or out-of-order cells; check every relationship target
+     exists; build the formula dependency graph (all IF branches, ranges, whole rows and columns) and
+     find its cycles; look for unstyled gaps inside fill bands. With the SmartModel plugin, run
+     `lint_xlsx.py`, `find_circular.py` and `style_gaps.py`, which must all exit 0.
 
-   Report the counts, e.g. "912 monthly values and 20 totals tie; 0 structural failures". Re-run the
+   Report the counts, e.g. "912 monthly values and 20 totals tie; 0 structural failures; opens without
+   repair, 0 circular references". Re-run the
    whole check after every later pass on the model, not only after the first build.
 6. **After the user uploads it** (Drivepoint app → Plans → Upload Plan):
    - `list_company_plans` to find the new model.
