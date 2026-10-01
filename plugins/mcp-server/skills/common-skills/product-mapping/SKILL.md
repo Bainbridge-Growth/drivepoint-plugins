@@ -171,8 +171,8 @@ Finally, split the product-bearing connections into two buckets:
   published today.
 - **Connected, not yet in the roster** — live product data exists in
   the warehouse but the dbt roster does not union it yet (3PL /
-  inventory streams such as Trackstar-Finale or Cin7 are the usual
-  case). You can *review* these read-only in this session, but
+  inventory streams such as Trackstar-Finale or Cin7, and QuickBooks
+  invoice line items, are the usual case). You can *review* these read-only in this session, but
   `save_product_mappings` drops any sourceKey that is not in the
   live roster (`staleSourceKeyCount`), so nothing can be persisted
   for them until the roster includes that stream. Say so plainly.
