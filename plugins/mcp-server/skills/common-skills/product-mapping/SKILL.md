@@ -90,10 +90,14 @@ menu, and if a new kind of connection shows up, it is.
    already sees.
 4. For each raw dataset that is **not** obviously already
    represented in the roster, call `list_tables` **once** to see what
-   it lands. A dataset whose tables are all finance / ads / analytics
-   (ledgers, invoices, campaigns, sessions) is a connection with no
-   product taxonomy — record it, but it will not be offered for
-   mapping.
+   it lands. Do not skip a dataset because its name is finance.
+   QuickBooks lands as `quickbooksRaw…` and mixes the general ledger
+   with optional product tables. A dataset is "no product taxonomy"
+   only when every table is ads, analytics, or the ledger itself
+   (campaigns, sessions, profit and loss, balance sheet, chart of
+   accounts, journal entries, transaction lists, payments). An
+   `invoices` table is not the ledger — keep that dataset and judge
+   it in D2.
 5. Confirm "live" cheaply. A dataset that exists but is empty or
    stale is not a live source. Where you need the signal, use
    `get_schema` (its `numRows`) or one small `run_query` aggregate
@@ -111,10 +115,31 @@ items. Judge from table names and, when a name is ambiguous, one
 - Table names like `products`, `product_variants`, `items`,
   `inventory_items`, `catalog`, `kits`, `bill_of_materials`,
   `sale_order_line`, `orders_line_items`, `shipments`,
-  `shipment_line_items`.
+  `shipment_line_items`, `invoices`.
 - Columns like `sku`, `title` / `name`, `product_type` / `category`,
   `upc` / `gtin`, `is_kit`, `inventory_items`, `unit_quantity`,
-  `case_pack` / `units_per_case`, `variant`.
+  `case_pack` / `units_per_case`, `variant`, or a nested item
+  reference on a line (`ItemRef`, `SalesItemLineDetail`).
+
+**QuickBooks invoice line items.** When a live `quickbooksRaw…`
+dataset (or any other live connection) has an `invoices` table with
+rows, that connection carries product information and **must be
+offered** in D3. Same rule as every other source: only when the
+table is actually there and live, never because QuickBooks is on a
+fixed menu. The grain is the product line, not the books:
+
+- Offer **invoice line items**: one product per sales-item line.
+  QuickBooks stores lines inside each `invoices` row as `Line` JSON.
+  A product line has `DetailType = SalesItemLineDetail` and an
+  `ItemRef` (`value` = item id, `name` = item name) plus `Qty`.
+  If an `items` table is also live, it is the item master (name,
+  type) for those lines — mention it in the same row, do not offer
+  it as a second dataset.
+- Do **not** offer the general ledger on that connection: profit and
+  loss, balance sheet, `accounts`, `journal_entries`,
+  `transaction_list*`, `payments`, invoice headers, and
+  `SubTotalLineDetail` / description-only lines. Those stay in the
+  "seen and skipped" line under the D3 table.
 
 For each product-bearing connection, note what it contributes to the
 mapping so the user can decide with eyes open:
@@ -123,6 +148,9 @@ mapping so the user can decide with eyes open:
   variants (storefronts, marketplaces, PIM-like inventory systems).
 - **Sales line items** — SKU + quantity sold per order (the channels
   the roster is built from today).
+- **Invoice line items** — product/item + quantity on an AR invoice
+  (QuickBooks `SalesItemLineDetail` / `ItemRef`). Wholesale and
+  finance-booked sales that never hit a storefront. Not the GL.
 - **3PL / warehouse shipments** — SKU + quantity shipped, usually per
   fulfillment rather than per sale; the same product often appears
   under a warehouse SKU / case-pack name.
@@ -160,9 +188,15 @@ connection:
 | Shopify · acme-store | live | catalog, sales line items | 312 | yes |
 | Amazon Seller · A1XYZ | live | sales line items | 88 | yes |
 | Trackstar-Finale · main warehouse | live | products (is_kit, unit_quantity), shipments | 0 | review only — not in roster yet |
+| QuickBooks · main | live | invoice line items (ItemRef, not the GL) | 0 | review only — not in roster yet |
 
-Below the table, list in one line the live connections you found that
-carry **no** product information (finance, ads, analytics) so the user
+The rows above are the shape of the table, not a menu. Omit any
+source discovery did not find, including QuickBooks when `invoices`
+is missing or empty.
+
+Below the table, list in one line the live connections — and the
+QuickBooks ledger tables — you found that carry **no** product
+information (general ledger, ads, analytics) so the user
 knows they were seen and skipped, and name any connection that exists
 but looks stale or empty.
 
@@ -193,7 +227,10 @@ Rules for this gate:
   user the remaining products stay New.
 - **For review-only sources the user included:** run one capped
   `run_query` (aggregate to distinct SKU / name / GTIN / kit flag /
-  case-pack field, at most a few hundred rows, never raw shipments),
+  case-pack field, at most a few hundred rows, never raw shipments
+  and never the general ledger). For QuickBooks invoice lines,
+  aggregate distinct `ItemRef` name and id from `SalesItemLineDetail`
+  lines only — do not select invoice headers, P&L, or accounts.
   then add a fifth artifact section, **"Connected, not in roster
   (review only)"**, proposing which roster canonical each warehouse
   SKU appears to be and the units-per-case value the source itself
@@ -937,9 +974,12 @@ above; save is step 10, and only after explicit approval.
 - **Never present a hardcoded menu of sources.** The menu is whatever
   discovery found for this company. Do not list Shopify / Amazon
   because "customers usually have them", and do not omit a live
-  Trackstar-Finale, Cin7, retail feed, or other connection because
-  the roster does not include it yet — show it, bucket it as
-  review-only, and let the user decide.
+  Trackstar-Finale, Cin7, retail feed, QuickBooks invoice line
+  items, or other connection because the roster does not include it
+  yet — show it, bucket it as review-only, and let the user decide.
+  Do not drop a live `invoices` table because the dataset is
+  QuickBooks or "finance"; the product grain is the sales-item line,
+  and the general ledger stays excluded.
 - **Never use the data-catalog tools after the user has chosen.**
   `list_datasets`, `list_tables`, `get_schema`, and `run_query` are
   discovery tools (plus the one capped aggregate for a review-only
