@@ -185,6 +185,9 @@ Say "model", not "plan", to the user.
    `save()` runs it automatically. Report the counts, e.g. "912 monthly values and 20 totals tie; 0
    structural failures; opens without repair, 0 circular references; flex test clean".
    Re-run the whole check after every later pass on the model, not only after the first build.
+   Before you call it done: roll it forward one month on a copy (lastDateActuals + 1, recalculate: 0 errors,
+   closed months unchanged), and confirm every R-tab is the destination of an installed import that the add-in can
+   refresh. A tab you filled that no import overwrites is a seed in disguise.
 6. **After the user uploads it** (Drivepoint app → Plans → Upload Plan):
    - `list_company_plans` to find the new model.
    - `get_valid_plan_tabs`: every schedule tab must be listed. If one is missing, its row 2/3 spine is

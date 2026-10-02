@@ -16,7 +16,9 @@ Steps (all on the exact file you deliver):
                                      (no white gaps in colour bands; --allow "Tab!COL" for deliberate fills)
   5. style (optional)              — drivepoint-customers tools/smartmodel-style check_cell_roles.py +
                                      check_format.py, when that repo is on disk (sibling or $SMARTMODEL_STYLE_TOOLS)
-  6. post_validate (optional)      — drivepoint-smartmodel-service's protocol check, when that repo is on disk
+  6. roll-forward                 — settings.lastDateActuals + 1 month on a copy, recalc: 0 errors, the month flips
+                                     to Actual on every tab, closed months unchanged
+  7. post_validate (optional)      — drivepoint-smartmodel-service's protocol check, when that repo is on disk
                                      (sibling checkout or $DRIVEPOINT_SMARTMODEL_SERVICE)
 
 Exit code 1 when any step fails. Paste the summary lines into the hand-off.
@@ -144,6 +146,60 @@ def _style(path):
     return [_script("roles", [d / "check_cell_roles.py", path]), _script("format", [d / "check_format.py", path])]
 
 
+def _roll_forward(path):
+    """Roll the model one month forward on a copy (settings.lastDateActuals + 1 month, as the add-in's Roll Forward
+    does), recalculate, and prove: 0 error cells, that month now reads Actual on every time-series tab, and nothing in
+    the months that were already closed moved."""
+    import calendar
+    from datetime import datetime
+    import openpyxl
+    import drivepointify_engine as eng
+    wf = openpyxl.load_workbook(path)
+    base = openpyxl.load_workbook(path, data_only=True)
+    st = wf["Settings"]
+    row = next((r for r in range(1, st.max_row + 1) if st.cell(r, 2).value == "settings.lastDateActuals"), None)
+    if row is None or not isinstance(st.cell(row, 4).value, datetime):
+        return True, "roll-fwd   skipped — no settings.lastDateActuals date"
+    old = st.cell(row, 4).value
+    y, m = (old.year + (old.month == 12), old.month % 12 + 1)
+    new = datetime(y, m, calendar.monthrange(y, m)[1])
+    st.cell(row, 4).value = new
+    with tempfile.TemporaryDirectory() as td:
+        raw, out = Path(td) / "rf_raw.xlsx", Path(td) / "rf.xlsx"
+        wf.save(raw)
+        if not eng.recalc_workbook(raw, out):
+            return True, "roll-fwd   skipped — `formulas` package not installed"
+        fx = openpyxl.load_workbook(out, data_only=True)
+        errs, moved, not_flipped, tabs = [], [], [], 0
+        for ws in base.worksheets:
+            spine = [ws.cell(2, SPINE_COL + i).value for i in range(200)]
+            if not isinstance(spine[0], datetime) or ws.cell(3, SPINE_COL).value not in ("Actual", "Forecast"):
+                continue
+            tabs += 1
+            n = next((i for i, d in enumerate(spine) if not isinstance(d, datetime)), len(spine))
+            closed = [SPINE_COL + i for i in range(n) if spine[i] <= old]
+            nxt = next((SPINE_COL + i for i in range(n) if old < spine[i] <= new), None)
+            fw = fx[ws.title]
+            if nxt and fw.cell(3, nxt).value != "Actual":
+                not_flipped.append(ws.title)
+            for r in range(4, ws.max_row + 1):
+                for c in range(SPINE_COL, SPINE_COL + n):
+                    b = fw.cell(r, c).value
+                    if isinstance(b, str) and b.startswith("#"):
+                        errs.append(f"{ws.title}!{fw.cell(r, c).coordinate}")
+                for c in closed:
+                    a, b = ws.cell(r, c).value, fw.cell(r, c).value
+                    if isinstance(a, (int, float)) and isinstance(b, (int, float)) and abs(a - b) > 1e-6 * max(1, abs(a)):
+                        moved.append(f"{ws.title}!{fw.cell(r, c).coordinate}")
+    ok = not errs and not moved and not not_flipped
+    msg = (f"roll-fwd   {old:%b-%y} → {new:%b-%y} on {tabs} tabs: {len(errs)} error cells, {len(moved)} closed-month "
+           f"cells moved, {len(not_flipped)} tabs not flipped to Actual")
+    for lab, xs in (("errors", errs), ("closed months moved", moved), ("row 3 not Actual", not_flipped)):
+        if xs:
+            msg += f"\n  FAIL {lab}: {xs[:5]}"
+    return ok, msg
+
+
 def _post_validate(path, company_id):
     roots = [os.environ.get("DRIVEPOINT_SMARTMODEL_SERVICE", "")] + [str(p / "drivepoint-smartmodel-service")
                                                                         for p in list(HERE.parents)[:8]]
@@ -168,6 +224,7 @@ def run_gate(path, *, ties=None, identities=None, flex=True, company_id=None, po
         steps += _style(path)
     if flex:
         steps.append(_flex(path))
+        steps.append(_roll_forward(path))
     if post:
         steps.append(_post_validate(path, company_id))
     ok = all(s[0] for s in steps)

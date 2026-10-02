@@ -225,6 +225,11 @@ class Model:
         self.wb.active = 2 if self.schedules else 0
         for ws in self.wb.worksheets:
             ws.sheet_view.tabSelected = ws.title == (self.schedules[0].title if self.schedules else "Index")
+        for ws in self.wb.worksheets:      # an empty-string cell is written as <c t="inlineStr"/>: Excel repairs it
+            for row in ws.iter_rows():
+                for c in row:
+                    if c.value == "":
+                        c.value = None
         self.wb.calculation = CalcProperties(fullCalcOnLoad=True)
         with tempfile.TemporaryDirectory() as td:
             raw = Path(td) / path.name
@@ -329,7 +334,7 @@ class Model:
             r = 2 + k
             ws.cell(r, 2, ident).font = F["mono"]
             ws.cell(r, 3, label)
-            v = ws.cell(r, 4, value)
+            v = ws.cell(r, 4, None if value == "" else value)   # "" → an empty inlineStr, which Excel repairs
             if isinstance(value, datetime):
                 v.number_format = "YYYY-MM-DD"
             elif ident in ("settings.smartmodelSpec", "settings.modelVersion"):
@@ -360,6 +365,10 @@ class Model:
             ws.cell(5 + k, 4, value)
         HDR_R, START, END = 10, 11, 12
         ws.cell(HDR_R, 3, "Period").font = F["b11b"]
+        from openpyxl.utils import column_index_from_string as _ci
+        cols = [_ci(L) for L, *_ in periods]
+        for c in range(min(cols), max(cols) + 1):          # spacer columns too: a white gap breaks the band
+            ws.cell(HDR_R, c).fill = _fill(HDR)
         for L, label, start, end in periods:
             h = ws[f"{L}{HDR_R}"]
             h.value, h.font, h.fill, h.alignment = label, F["b11b"], _fill(HDR), RIGHT

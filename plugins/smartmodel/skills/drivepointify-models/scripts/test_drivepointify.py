@@ -305,6 +305,15 @@ class DrivepointifyTests(unittest.TestCase):
         self.assertEqual(e.ImportTab(m, "R - X", ["a"], [], "").sumifs("a", a='x"y'), \
                          "SUMIFS('R - X'!$A$2:$A$1001,'R - X'!$A$2:$A$1001,\"x\"\"y\")")
 
+    def test_excel_clean_no_empty_inline_strings_and_full_summary_band(self):
+        # Settings "Stores" = "" used to be written as <c t="inlineStr"/> (Excel repairs it on open), and the Budget
+        # Summary's spacer columns broke the header fill band. Both are Gate 0 failures.
+        out = Path(self.td.name) / "clean.xlsx"
+        multi_tab_build(out)
+        self.assertEqual(run("lint_xlsx.py", out)[0], 0, run("lint_xlsx.py", out)[1])
+        self.assertEqual(run("style_gaps.py", out)[0], 0, run("style_gaps.py", out)[1])
+        self.assertEqual(run("find_circular.py", out)[0], 0)
+
     def test_audit_catches_cycle_broken_ref_and_hardcode(self):
         out = Path(self.td.name) / "broken.xlsx"
         multi_tab_build(out, break_it=True)
