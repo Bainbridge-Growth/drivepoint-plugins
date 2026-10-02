@@ -38,6 +38,7 @@ import re
 import sys
 import zipfile
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 import openpyxl
 from openpyxl.utils import column_index_from_string, get_column_letter
@@ -357,6 +358,9 @@ def check_ties(rep: Report, ties_path: str, wv):
         c1, c2 = (column_index_from_string(x) for x in t["cols"].split(":"))
         model = [ws.cell(row, c).value for c in range(c1, c2 + 1)]
         src_path = t["source"]
+        if not Path(src_path).exists():   # relative to cwd, else to the ties file's folder or any folder above it
+            base = Path(ties_path).resolve().parent
+            src_path = next((str(d / t["source"]) for d in [base, *base.parents] if (d / t["source"]).exists()), src_path)
         if src_path not in cache:
             cache[src_path] = openpyxl.load_workbook(src_path, data_only=True)
         ssheet, rng = t["range"].split("!", 1)

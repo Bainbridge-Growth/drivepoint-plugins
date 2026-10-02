@@ -16,7 +16,7 @@ Read this whenever the user uploads a non-Drivepoint Excel file and asks to "dri
 |---|---|---|
 | The uploaded .xlsx + **code execution** (Python with openpyxl) | You read the customer's cached values and write the new workbook | Plan the conversion (mapping table, drivers, findings) and hand the plan back; do not pretend to produce a file |
 | The Drivepoint connector (this server) | Verify the uploaded model is read correctly (`get_valid_plan_tabs`, `list_plan_key_drivers_and_results`) and fix markers (`search_plan_row`, `mark_key_driver_or_result`) | Skip Step 6 and tell the user to verify in the add-in |
-| The SmartModel plugin's `drivepointify-models` scripts (Claude Code / Desktop) | `profile_source.py`, `drivepointify_engine.py`, `validate_drivepointified.py` do Steps 1, 4 and 5 for you; `lint_xlsx.py`, `find_circular.py`, `style_gaps.py` do the Step 5 Excel-integrity checks | Write the equivalent code from the rules below |
+| The SmartModel plugin's `drivepointify-models` scripts (Claude Code / Desktop) | `profile_source.py`, `drivepointify_engine.py`, `validate_drivepointified.py` do Steps 1, 4 and 5 for you (`drivepointify_engine`'s `save()` runs the whole `gate.py` hand-off gate); `lint_xlsx.py`, `find_circular.py`, `style_gaps.py` do the Step 5 Excel-integrity checks | Write the equivalent code from the rules below |
 
 Say "model", not "plan", to the user.
 
@@ -157,7 +157,8 @@ Say "model", not "plan", to the user.
    - every Key Driver typed in every budget month, every Key Result a formula
    - no $ Key Driver that is an exact % of another row
    - unique names in C
-   - every value tied to the source
+   - every value tied to the source, with the expected values computed from the source itself, not
+     read back from the model
    - every cell coloured for its role, no runs of bold "totals", End of Schedule + Return to Top on
      every tab, no working notes in labels, one formula pattern per row
    - rule 13, on the exact file you return, after the last save and after the add-in parts are added:
@@ -166,9 +167,27 @@ Say "model", not "plan", to the user.
      find its cycles; look for unstyled gaps inside fill bands. With the SmartModel plugin, run
      `lint_xlsx.py`, `find_circular.py` and `style_gaps.py`, which must all exit 0.
 
-   Report the counts, e.g. "912 monthly values and 20 totals tie; 0 structural failures; opens without
-   repair, 0 circular references". Re-run the
-   whole check after every later pass on the model, not only after the first build.
+   Then audit whether the workbook **works**, across every formula on every tab:
+   - no error values, and every formula has a cached value
+   - no reference to a sheet that doesn't exist or to a cell outside the used range
+   - **no circular references** (build the cell dependency graph with ranges expanded, and look for
+     cycles)
+   - no seed row that nothing reads, and no numeric constant typed inside a formula (put it on an
+     input row)
+   - the Index has one row per template id (for many tabs on one template, join the sheets with ", ")
+   - the summary tab equals the sum of the spine for each period
+   - the identities hold: net = gross + deductions, the rollup = Σ tabs, and every allocated cost pool
+     = Σ its allocations
+   - the flex test: raise every Key Driver budget input by 10% on a copy and recalculate. There should
+     be 0 errors, the Actual months unchanged, and the Key Results moved.
+
+   With the SmartModel plugin, `gate.py` runs all of this plus rule 13, and `drivepointify_engine`'s
+   `save()` runs it automatically. Report the counts, e.g. "912 monthly values and 20 totals tie; 0
+   structural failures; opens without repair, 0 circular references; flex test clean".
+   Re-run the whole check after every later pass on the model, not only after the first build.
+   Before you call it done: roll it forward one month on a copy (lastDateActuals + 1, recalculate: 0 errors,
+   closed months unchanged), and confirm every R-tab is the destination of an installed import that the add-in can
+   refresh. A tab you filled that no import overwrites is a seed in disguise.
 6. **After the user uploads it** (Drivepoint app → Plans → Upload Plan):
    - `list_company_plans` to find the new model.
    - `get_valid_plan_tabs`: every schedule tab must be listed. If one is missing, its row 2/3 spine is
