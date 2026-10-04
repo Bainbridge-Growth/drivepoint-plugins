@@ -39,7 +39,7 @@ import warnings
 import tempfile
 import uuid
 import zipfile
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import openpyxl
@@ -134,12 +134,14 @@ class Model:
         self.spine_start, self.months, self.currency = spine_start, months, currency
         self.budget_idx = _idx(spine_start, budget_start)
         self.last_actuals, self.model_start = last_actuals, model_start or last_actuals
+        self.actual_idx = _idx(spine_start, last_actuals)
         self.source_file, self.snapshot = source_file, snapshot
         self.reg: dict[tuple[str, str], int] = {}
         self.wb = openpyxl.Workbook()
         self.wb.remove(self.wb.active)
         self.schedules: list[Schedule] = []
         self.seeds: list[Seed] = []
+        self.imports: list[ImportTab] = []
         self.templates: list[tuple[str, str, str]] = []
         self._summary = None
         if not 0 < self.budget_idx < months:
@@ -153,25 +155,42 @@ class Model:
     def last_col(self) -> str:
         return self.col(self.months - 1)
 
-    def render(self, template: str, sheet: str, i: int) -> str:
+    def render(self, template: str, sheet: str, i: int, *, zero_before_spine: bool = False) -> str:
+        if zero_before_spine:
+            # a back-reference that would land before the spine sits in an IF branch that never fires there
+            # (e.g. IF(ISNUMBER(actual), actual, AVERAGE({m1}{@x},{m2}{@x},{m3}{@x}))) — write 0, never a self-ref
+            def pre(mt):
+                tok = mt.group(1)
+                k = 12 if tok == "ly" else 1 if tok == "p" else int(tok[1:])
+                return "0" if i - k < 0 else mt.group(0)
+            template = re.sub(r"\{(ly|p|m\d{1,2})\}\{@[^}]+\}", pre, template)
+
         def sub(m):
             key = (m.group(1) or sheet, m.group(2))
             if key not in self.reg:
                 raise KeyError(f"unknown row {key[0]}.{key[1]} referenced from {sheet}")
             return str(self.reg[key])
         out = _TOKEN.sub(sub, template)
-        for tok, off in (("{ly}", 12), ("{m11}", 11), ("{p}", 1)):
+        for tok, off in [("{ly}", 12), ("{p}", 1)] + [(f"{{m{k}}}", k) for k in range(24, 0, -1)]:
             if tok in out:
                 if i - off < 0:
                     raise ValueError(f"{tok} used in month {i} of {sheet} (before the spine)")
                 out = out.replace(tok, self.col(i - off))
-        return out.replace("{c}", self.col(i))
+        return out.replace("{c}", self.col(i)).replace("{b0}", "$" + self.col(self.budget_idx))
 
     # -- builders ------------------------------------------------------------------------------
     def seed(self, title: str, *, source_note: str = "", flags: list[str] | None = None) -> "Seed":
         s = Seed(self, title, source_note, flags or [])
         self.seeds.append(s)
         return s
+
+    def import_tab(self, title: str, header: list, rows: list, *, source: str = "", capacity: int | None = None) -> "ImportTab":
+        """An R-tab exactly as the Drivepoint add-in writes it: row 1 = the import's column headers, data from row 2.
+        Fill it from the import's own output (its rendered SQL, or the tab of a plan the add-in refreshed) — the
+        first add-in refresh then overwrites it in place. Schedules read it with SUMIFS (see ImportTab.sumifs)."""
+        t = ImportTab(self, title, header, rows, source, capacity)
+        self.imports.append(t)
+        return t
 
     def schedule(self, title: str, *, name: str, template_id: str, description: str) -> "Schedule":
         s = Schedule(self, title, name, template_id, description)
@@ -183,7 +202,12 @@ class Model:
                 description: str = "", periods: list | None = None):
         self._summary = (sheet, rows, title, template_id or f"{self.company_id}-reports", description, periods)
 
-    def save(self, path: str | Path, *, recalc: bool = True) -> tuple[Path, bool]:
+    def save(self, path: str | Path, *, recalc: bool = True, gate: bool = True, ties: str | Path | None = None,
+             identities: str | Path | None = None, flex: bool = True, strict: bool = False,
+             allow_bands: str = "") -> tuple[Path, bool]:
+        """Write, recalculate, inject the add-in part — then run the hand-off gate (gate.py: structure validator +
+        audit: broken refs, circular references, orphans, hard-codes, identities; + a driver flex test) and print it.
+        The report is kept on `self.gate_report` / `self.gate_ok`; `strict=True` raises when the gate fails."""
         path = Path(path)
         self._index()
         self._settings()
@@ -193,12 +217,19 @@ class Model:
             self._write_summary(*self._summary)
         for s in self.seeds:
             s._write()
+        for t in self.imports:
+            t._write()
         order = ["Index", "Settings"] + [s.title for s in self.schedules] + ([self._summary[2]] if self._summary else []) \
-            + [s.title for s in self.seeds]
+            + [t.title for t in self.imports] + [s.title for s in self.seeds]
         self.wb._sheets = [self.wb[n] for n in order]
         self.wb.active = 2 if self.schedules else 0
         for ws in self.wb.worksheets:
             ws.sheet_view.tabSelected = ws.title == (self.schedules[0].title if self.schedules else "Index")
+        for ws in self.wb.worksheets:      # an empty-string cell is written as <c t="inlineStr"/>: Excel repairs it
+            for row in ws.iter_rows():
+                for c in row:
+                    if c.value == "":
+                        c.value = None
         self.wb.calculation = CalcProperties(fullCalcOnLoad=True)
         with tempfile.TemporaryDirectory() as td:
             raw = Path(td) / path.name
@@ -206,6 +237,16 @@ class Model:
             calc = Path(td) / ("calc_" + path.name)
             done = recalc and recalc_workbook(raw, calc)
             inject_webextension(calc if done else raw, path)
+        self.gate_ok, self.gate_report = None, ""
+        if gate:
+            import sys
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            from gate import run_gate  # gate.py next to this file
+            self.gate_ok, self.gate_report = run_gate(path, ties=ties, identities=identities, flex=flex and bool(done),
+                                                      company_id=self.company_id, allow_bands=allow_bands)
+            print(self.gate_report)
+            if strict and not self.gate_ok:
+                raise RuntimeError(f"hand-off gate failed for {path} — see the report above")
         return path, bool(done)
 
     # -- chrome --------------------------------------------------------------------------------
@@ -250,14 +291,18 @@ class Model:
         for k, h in enumerate(["Template ID", "Version", "Sheets", "Skill File", "Imports File"]):
             cell = ws.cell(12, 2 + k, h)
             cell.font, cell.fill = F["b11b"], _fill(HDR)
-        rows = list(self.templates) + ([(self._summary[3], self._summary[2], "Budget summary report")] if self._summary else [])
+        merged: dict[str, list] = {}
+        for tid, sheet, desc in list(self.templates) + ([(self._summary[3], self._summary[2], "Budget summary report")]
+                                                        if self._summary else []):
+            merged.setdefault(tid, [tid, [], desc])[1].append(sheet)
+        rows = [(tid, ", ".join(sheets), desc) for tid, sheets, desc in merged.values()]
         for n, (tid, sheet, _d) in enumerate(rows):
             r = 13 + n
             ws.cell(r, 2, tid).font = F["mono"]
             ws.cell(r, 3, "1.0.0")
             ws.cell(r, 4, sheet)
             ws.cell(r, 5, "(custom template)").font = F["gi"]
-            ws.cell(r, 6, ", ".join(s.title for s in self.seeds) or "—").font = F["gi"]
+            ws.cell(r, 6, ", ".join([t.title for t in self.imports] + [s.title for s in self.seeds]) or "—").font = F["gi"]
         ws.freeze_panes = "D5"
         for c, w in zip("ABCDEF", (6, 30, 14, 40, 30, 36)):
             ws.column_dimensions[c].width = w
@@ -289,7 +334,7 @@ class Model:
             r = 2 + k
             ws.cell(r, 2, ident).font = F["mono"]
             ws.cell(r, 3, label)
-            v = ws.cell(r, 4, value)
+            v = ws.cell(r, 4, None if value == "" else value)   # "" → an empty inlineStr, which Excel repairs
             if isinstance(value, datetime):
                 v.number_format = "YYYY-MM-DD"
             elif ident in ("settings.smartmodelSpec", "settings.modelVersion"):
@@ -320,6 +365,10 @@ class Model:
             ws.cell(5 + k, 4, value)
         HDR_R, START, END = 10, 11, 12
         ws.cell(HDR_R, 3, "Period").font = F["b11b"]
+        from openpyxl.utils import column_index_from_string as _ci
+        cols = [_ci(L) for L, *_ in periods]
+        for c in range(min(cols), max(cols) + 1):          # spacer columns too: a white gap breaks the band
+            ws.cell(HDR_R, c).fill = _fill(HDR)
         for L, label, start, end in periods:
             h = ws[f"{L}{HDR_R}"]
             h.value, h.font, h.fill, h.alignment = label, F["b11b"], _fill(HDR), RIGHT
@@ -418,6 +467,12 @@ class Seed:
         off = _idx(self.m.spine_start, start) if start else 0
         self.rows.append((key, label, [None] * off + list(values)))
 
+    def cell(self, key: str) -> str:
+        """Direct address of the seed row ('R - x'!{c}<row>) — use instead of ref() on large models: 10–100× faster
+        to recalculate than a whole-column SUMIFS per cell."""
+        idx = next(k for k, (kk, _l, _v) in enumerate(self.rows) if kk == key)
+        return f"'{self.title}'!{{c}}{6 + idx}"
+
     def ref(self, key: str) -> str:
         return f"SUMIFS('{self.title}'!{{c}}:{{c}},'{self.title}'!$B:$B,\"seed___{key}\")"
 
@@ -446,6 +501,58 @@ class Seed:
             ws.column_dimensions[c].width = w
 
 
+class ImportTab:
+    """A Drivepoint import R-tab in the add-in's own layout (header row 1, data from row 2)."""
+
+    def __init__(self, model: Model, title: str, header: list, rows: list, source: str, capacity: int | None = None):
+        if not re.match(r"^R\s*-\s*", title):
+            raise ValueError("import tab titles start with 'R - ' / 'R- ' exactly as the import's destination_tab")
+        self.m, self.title, self.header, self.rows, self.source = model, title, list(header), list(rows), source
+        self.col = {h: get_column_letter(k + 1) for k, h in enumerate(self.header) if isinstance(h, str)}
+        # ranges are bounded (fast recalc) with headroom for later refreshes; check_capacity() flags an overflow
+        self.capacity = capacity or max(3 * len(self.rows), 1000)
+
+    def rng(self, header: str, n: int | None = None) -> str:
+        """Bounded absolute range of one column, e.g. 'R - GL'!$D$2:$D$263 (bounded = fast to recalc)."""
+        c, last = self.col[header], 1 + (n or self.capacity)
+        return f"'{self.title}'!${c}$2:${c}${last}"
+
+    def sumifs(self, value: str, **crit) -> str:
+        """SUMIFS over this tab. value = a header name, or '{c}' for the wide month column in the same letter as
+        the schedule cell (wide tabs put month K = historicalStartDate). crit: header=criterion (string or cell)."""
+        last = 1 + self.capacity
+        v = f"'{self.title}'!{{c}}$2:{{c}}${last}" if value == "{c}" else self.rng(value)
+        parts = [v]
+        for h, x in crit.items():
+            h = h.replace("__", " ")
+            if isinstance(x, (int, float)):
+                crit_v = str(x)
+            elif x.startswith(("{", "$")) or "!" in x or re.match(r"^[A-Z]+\$?\d+$", x):
+                crit_v = x                                    # a cell / row-token reference
+            else:
+                crit_v = '"' + x.replace('"', '""') + '"'
+            parts += [self.rng(h), crit_v]
+        return "SUMIFS(" + ",".join(parts) + ")"
+
+    def check_capacity(self, capacity_cell: str) -> str:
+        """Formula: rows left before this tab outgrows its bounded ranges (must stay > 0 after every refresh).
+        capacity_cell holds self.capacity (e.g. a param row: $D${@cap}) so the formula carries no literal."""
+        return f"{capacity_cell}-COUNTA('{self.title}'!$A$2:$A${1 + 4 * self.capacity})"
+
+    def _write(self):
+        ws = self.m.wb.create_sheet(self.title)
+        ws.sheet_view.showGridLines = False
+        for k, h in enumerate(self.header):
+            c = ws.cell(1, k + 1, h)
+            if isinstance(h, (datetime, date)):
+                c.number_format = FMT_DATE
+        for r, row in enumerate(self.rows, start=2):
+            for k, v in enumerate(row):
+                if v is not None and v != "":
+                    ws.cell(r, k + 1, v)
+        ws.freeze_panes = "A2"
+
+
 class Schedule:
     def __init__(self, model: Model, title: str, name: str, template_id: str, description: str):
         self.m, self.title = model, title
@@ -467,11 +574,23 @@ class Schedule:
         self.specs.append(dict(kind="section", title=title, note=note, row=self.r))
         self.r += 3 if note else 2
 
+    def param(self, key: str, label: str, value):
+        """A labelled setting for this tab: label in C, value in D (an input). Formulas read it as $D${@key} —
+        e.g. the import criteria a tab filters on, so a new account = typing its name, not editing formulas."""
+        self.specs.append(dict(kind="param", key=key, label=label, value=value, row=self.r))
+        self.m.reg[(self.title, key)] = self.r
+        self.r += 1
+
     def blank(self, n: int = 1):
         self.r += n
 
     def row(self, key: str | None, kind: str, label: str, *, ident: str | None = None, hist: str | None = None,
-            bud: str | None = None, values=None, fmt: str = FMT_USD, total: bool = False, bold: bool = False):
+            bud: str | None = None, values=None, fmt: str = FMT_USD, total: bool = False, bold: bool = False,
+            zero_before_spine: bool = False, fcst: str | None = None, fcst_start: tuple[int, int] | None = None):
+        """hist = actual months (import SUMIFS); fcst = the history-window months from fcst_start (default: the month
+        after lastDateActuals) to the budget — e.g. '{c}{@rate}*{c}{@base}' with the rate reading {b0} (the first
+        budget month's input); bud = budget months. values = the budget inputs, or one value per spine month for an
+        input row typed across the whole spine (hist then ignored)."""
         if kind not in ("driver", "result", "calc"):
             raise ValueError("kind is driver | result | calc")
         if kind in ("driver", "result") and not ident:
@@ -481,7 +600,8 @@ class Schedule:
         if kind == "result" and bud is None:
             raise ValueError(f"{label}: a Key Result's budget months are formulas — pass bud=")
         self.specs.append(dict(kind=kind, key=key, label=label, ident=ident, hist=hist, bud=bud, values=values,
-                               fmt=fmt, total=total, bold=bold, row=self.r))
+                               fmt=fmt, total=total, bold=bold, row=self.r, zbs=zero_before_spine, fcst=fcst,
+                               fcst_idx=(_idx(self.m.spine_start, fcst_start) if fcst_start else self.m.actual_idx + 1)))
         if key:
             self.m.reg[(self.title, key)] = self.r
         self.r += 1
@@ -500,6 +620,11 @@ class Schedule:
                 if s["note"]:
                     ws.cell(r + 1, 3, s["note"]).font = F["gi"]
                 continue
+            if s["kind"] == "param":
+                ws.cell(r, 3, s["label"]).font = F["b11"]
+                c = ws.cell(r, 4, s["value"])
+                c.font, c.fill = F["input"], _fill(LIGHT)
+                continue
             if s["kind"] != "calc":
                 a = ws.cell(r, 1, KD if s["kind"] == "driver" else KR)
                 a.font, a.alignment = F["b11"], LEFT
@@ -508,14 +633,22 @@ class Schedule:
             vals = s["values"]
             if vals is not None and not isinstance(vals, (list, tuple)):
                 vals = [vals] * n_bud
-            if vals is not None and len(vals) != n_bud:
+            full = vals is not None and len(vals) == m.months != n_bud      # typed across the whole spine
+            if vals is not None and not full and len(vals) != n_bud:
                 raise ValueError(f"{self.title}.{s['label']}: {len(vals)} budget values, spine has {n_bud}")
             for i in range(m.months):
                 cell = ws.cell(r, SPINE_COL + i)
                 cell.number_format = s["fmt"]
-                if i < m.budget_idx:
+                if full:
+                    cell.value = 0 if vals[i] is None else vals[i]
+                    cell.font, cell.fill = F["input"], _fill(LIGHT)
+                elif i < m.budget_idx and s["fcst"] and i >= s["fcst_idx"]:
+                    body = m.render(s["fcst"], self.title, i, zero_before_spine=s["zbs"])
+                    cell.value = "=" + body
+                    cell.font = role_font(body, actual=False)
+                elif i < m.budget_idx:
                     if s["hist"]:
-                        body = m.render(s["hist"], self.title, i)
+                        body = m.render(s["hist"], self.title, i, zero_before_spine=s["zbs"])
                         cell.value = "=" + body
                         cell.font = role_font(body, actual=i <= n_act)
                 elif vals is not None:
@@ -523,7 +656,7 @@ class Schedule:
                     cell.value = 0 if v is None else v
                     cell.font, cell.fill = F["input"], _fill(LIGHT)
                 elif s["bud"]:
-                    body = m.render(s["bud"], self.title, i)
+                    body = m.render(s["bud"], self.title, i, zero_before_spine=s["zbs"])
                     cell.value = "=" + body
                     editable = s["kind"] == "driver"  # a driver's formula default is still an input
                     cell.font = role_font(body, actual=False, editable=editable)
@@ -588,7 +721,7 @@ def recalc_workbook(src: Path, dst: Path) -> bool:
         for mt in re.finditer(r'<sheet [^>]*name="([^"]+)"[^>]*r:id="([^"]+)"', wbxml):
             tgt = rid[mt.group(2)]
             files[tgt if tgt.startswith("xl/") else "xl/" + tgt] = mt.group(1).replace("&amp;", "&").upper()
-        cell_re = re.compile(r'<c r="([A-Z]+[0-9]+)"([^>]*)><f>(.*?)</f><v ?/>(</c>)', re.S)
+        cell_re = re.compile(r'<c r="([A-Z]+[0-9]+)"([^>]*)><f>(.*?)</f>(?:<v ?/>|<v></v>)(</c>)', re.S)
         n = 0
         with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zout:
             for item in zin.infolist():

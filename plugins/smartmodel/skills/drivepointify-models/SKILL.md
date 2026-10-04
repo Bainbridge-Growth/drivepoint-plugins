@@ -1,6 +1,6 @@
 ---
 name: drivepointify-models
-description: Turn a customer's own Excel budget / forecast / department template into a Drivepoint SmartModel ("drivepointify" it) — one continuous date spine with actuals and forecast in the same rows, the customer's logic rebuilt as real Key Drivers and Key Results, a summary tab in place of Total / LY / variance columns, and every number tied back to the source. Use when a user says "drivepointify", "make this Drivepoint compatible", "convert this budget template", "turn this spreadsheet into a SmartModel", "add key drivers and results to this file", "make this work with the add-in", or uploads a non-SmartModel planning workbook. Ships a source profiler, a hand-off validator and Excel-integrity checks (no repair prompt, no circular references, no broken colour bands) that must pass before delivery.
+description: Turn a customer's own Excel budget / forecast / department template into a Drivepoint SmartModel ("drivepointify" it) — one continuous date spine with actuals and forecast in the same rows, the customer's logic rebuilt as real Key Drivers and Key Results, a summary tab in place of Total / LY / variance columns, and every number tied back to the source. Use when a user says "drivepointify", "make this Drivepoint compatible", "convert this budget template", "turn this spreadsheet into a SmartModel", "add key drivers and results to this file", "make this work with the add-in", or uploads a non-SmartModel planning workbook. Ships a source profiler, a hand-off validator and an automatic hand-off gate — structure validator, workbook audit (broken refs, circular references, orphans, hard-codes, identities), Excel-integrity checks (no repair prompt, no circular references, no broken colour bands) and a driver flex test — that must pass before delivery.
 ---
 
 # Drivepointify Models
@@ -19,9 +19,11 @@ per-tab conversion; the wider programme is a model migration.
 | Script | When | What it does |
 |---|---|---|
 | `profile_source.py <src.xlsx> [--sheet S]` | **Before** writing the spec | Finds stacked LY / actuals blocks, pasted "% × base" values, "LY × factor" growth builds, rows that are copies of other rows, `=row + constant` adjustments, shifted date blocks, bridges that skip rows, opening balances that don't roll, labels in the wrong column, duplicate names, copied `Plan Settings` tabs. |
-| `drivepointify_engine.py` (import it) | Build | `Model` → `seed()` D-tab, `schedule()` tabs with `row()` templates, `summary()`, `save()` = Index + Settings + chrome + recalc (if the `formulas` package is present) + add-in WebExtension. Colours every cell by role (input / actual / linked / calculated) and closes every schedule with End of Schedule + a hyperlinked Return to Top. Refuses a Key Driver without budget inputs or a Key Result without a formula. New seeds are named `D - `; an existing build's `R - ` seed still works (with a warning). `python3 drivepointify_engine.py --inject-addin file.xlsx` injects the add-in part into any workbook. |
-| `validate_drivepointified.py <built.xlsx> [--ties ties.json] [--allow-uncalculated]` | **After** build + recalc, before hand-off | The gate. Fails on: broken / partial date spine, history not in the spine, stacked blocks under the budget, columns right of the spine, anything but markers in A:B, Key Drivers that are formulas, Key Results that are typed, $ drivers that are a pasted % of another row, errors, uncached formulas, protocol chrome. `--ties` compares every mapped row to the source. |
-| `lint_xlsx.py <built.xlsx>` | **Last**, on the exact file you deliver | Gate 0a: what Excel **repairs** on open ("We found a problem with some content… Removed Records: Cell information from /xl/worksheets/sheetN.xml"). That covers duplicate or out-of-order cells, bad shared formulas, formulas over Excel's limits, functions missing `_xlfn.`, relationships to missing parts (a deleted `calcChain.xml`), and external-workbook links (Excel's security bar). Names the tab behind each `sheetN.xml`. |
+| `drivepointify_engine.py` (import it) | Build | `Model` → `seed()` D-tab, `schedule()` tabs with `row()` templates, `summary()`, `save()` = Index + Settings + chrome + recalc (if the `formulas` package is present) + add-in WebExtension. Colours every cell by role (input / actual / linked / calculated) and closes every schedule with End of Schedule + a hyperlinked Return to Top. Refuses a Key Driver without budget inputs or a Key Result without a formula. New seeds are named `D - `; an existing build's `R - ` seed still works (with a warning). `import_tab()` writes an add-in import R-tab (e.g. `R - GL`) in its own layout, and `ImportTab.sumifs()` reads it. `python3 drivepointify_engine.py --inject-addin file.xlsx` injects the add-in part into any workbook. |
+| `gate.py <built.xlsx> [--ties ties.json] [--identities identities.json] [--company-id ID] [--no-flex]` | **Automatic**: `Model.save()` runs it; run it by hand on any file you edited after the build | The whole hand-off gate in one call. Runs the validator, the audit, Gate 0 (`lint_xlsx.py`, `find_circular.py`, `style_gaps.py`), the drivepoint-customers style checks (`check_cell_roles.py`, `check_format.py`) when that repo is a sibling checkout (or `$SMARTMODEL_STYLE_TOOLS`), a roll-forward test (`lastDateActuals` + 1 month on a copy: 0 errors, the month flips to Actual on every tab, closed months unchanged), a flex test (every Key Driver budget input ×1.1 on a copy, then recalc: 0 error cells, Actual months unchanged, Key Results move) and, when `drivepoint-smartmodel-service` is on disk (sibling checkout or `$DRIVEPOINT_SMARTMODEL_SERVICE`), `post_validate`. Exits 1 on any failure. Paste its summary lines into the hand-off. |
+| `audit_drivepointified.py <built.xlsx> [--identities identities.json]` | Inside the gate; run it alone while fixing | Checks that the workbook **works**, across every formula on every tab. It fails on: a reference to a missing sheet or an out-of-range cell; **circular references** (Tarjan over the full cell graph, with ranges expanded); error values; uncached formulas; Index gaps or duplicate template rows; a split spine or Actual/Forecast boundary; a seed row nothing reads; a Key Driver that moves nothing; numeric literals inside formulas; a Budget Summary cell ≠ Σ spine; and any broken identity from the JSON. It lists single-cell refs to empty cells, which is fine when guarded with `IF(ISNUMBER(…))`. |
+| `validate_drivepointified.py <built.xlsx> [--ties ties.json] [--allow-uncalculated]` | Inside the gate | Structure, per tab. Fails on: broken / partial date spine, history not in the spine, stacked blocks under the budget, columns right of the spine, anything but markers in A:B, Key Drivers that are formulas, Key Results that are typed, $ drivers that are a pasted % of another row, errors, uncached formulas, protocol chrome. `--ties` compares every mapped row to the source. |
+| `lint_xlsx.py <built.xlsx>` | Inside the gate (last); run alone while fixing | Gate 0a: what Excel **repairs** on open ("We found a problem with some content… Removed Records: Cell information from /xl/worksheets/sheetN.xml"). That covers duplicate or out-of-order cells, bad shared formulas, formulas over Excel's limits, functions missing `_xlfn.`, relationships to missing parts (a deleted `calcChain.xml`), and external-workbook links (Excel's security bar). Names the tab behind each `sheetN.xml`. |
 | `find_circular.py <built.xlsx>` | Same | Gate 0b: every **circular reference** Excel would flag. Excel checks every reference, including the IF branch that is never taken. Lists each loop with sample formulas. |
 | `style_gaps.py <built.xlsx> [--allow "Tab!COL"]` | Same | Gate 0c: white **gaps in colour bands**, i.e. the header band or a section band breaking off for a few columns because cells there were never styled (typical after moving labels or the spine). |
 
@@ -203,28 +205,108 @@ t = m.schedule("<TAB>", name="… Schedule", template_id="<co>-<tab>-budget", de
 t.section("Discounts & returns", "D&R as % of gross (default = FY2026 ratio).")
 t.row("drPct", "driver", "D&R % of gross", ident="<tab>_drPct",
       hist="IFERROR({c}{@dr}/{c}{@gross},0)", values=<the customer's exact %>, fmt=FMT_PCT)
-t.row("dr", "result", "D&R", ident="<tab>_dr", hist=seed.ref("dr"), bud="{c}{@gross}*{c}{@drPct}")
+t.row("dr", "result", "D&R", ident="<tab>_dr", hist=seed.cell("dr"), bud="{c}{@gross}*{c}{@drPct}")
 m.summary("<TAB>", [("Net Sales", "total", "net", FMT_USD), ("D&R %", "ratio", ("dr", "gross"), FMT_PCT)])
-path, recalculated = m.save("<TAB>_2027_Template_drivepointified.xlsx")
+path, recalculated = m.save("<TAB>_2027_Template_drivepointified.xlsx", ties="ties.json")  # runs the gate
 ```
 
 Tokens: `{c}` this column · `{ly}` same month last year · `{p}` previous column (roll-forwards) ·
-`{m11}` 11 back (trailing-12) · `{@key}` / `{@Tab.key}` row lookup. `hist` fills the history months,
-`bud`/`values` the budget months. Section order follows the customer's tab.
+`{m1}`…`{m24}` N columns back (trailing averages, e.g. `AVERAGE({m1}{@x},{m2}{@x},{m3}{@x})`) ·
+`{@key}` / `{@Tab.key}` row lookup. `{@Tab.key}` returns the **row number only**, so write the sheet
+yourself: `'Pool'!{c}{@Pool.total}`. `hist` fills the history months and `bud`/`values` the budget months.
+Section order follows the customer's tab.
 
-### Phase 3 — Recalc + chrome
+- A back-reference that falls before the spine start (`{ly}` in year 1, `{m3}` in February) raises.
+  Pass `row(..., zero_before_spine=True)` to turn those references into `0`. Do this only when a
+  trailing average or LY link over the first months is really meant to count as zero.
+- **System data comes from import R-tabs, never a seed tab.** `m.import_tab("R - GL", header, rows)` writes the tab
+  exactly as the add-in does: row 1 = the import's headers, data from row 2, wide month columns from K =
+  `historicalStartDate`. Fill it with that import's own output: its rendered SQL run in the warehouse, or the
+  R-tab of a plan the add-in already refreshed. The first add-in refresh then overwrites it in place.
+  Formulas read it through `tab.sumifs("{c}", Financial__Report__Name="5405 Retail Fulfillment")`
+  (`__` = space; `"{c}"` = the month column in the same letter). If no import carries the data, write one first
+  (custom import: Firestore `table_definitions`) and wire to its `destination_tab`. A `D - ` seed
+  (`m.seed()`) is only for values that live in the customer's own file and no system holds, such as their
+  typed budget. Never use one for GL, Confido, Shopify or any other data an import can bring.
+- **Import criteria live in cells.** `t.param("cust", "Confido customer", "Target")` writes the label in C and the
+  value in D. Formulas read `$D${@cust}`, so every account tab has one formula shape.
+- **Actual vs forecast months inside the history window:** `row(..., hist=<import SUMIFS>, fcst=<driver formula>,
+  fcst_start=(y, m))`. `fcst` fills from `fcst_start` (default: the month after `lastDateActuals`) up to the
+  budget. `{b0}` = the first budget month's column (absolute), e.g. a rate that reads its Jan input:
+  `fcst="{b0}{@rate}"`. `values=` with one value per spine month types an input across the whole spine.
+- **Seed refs:** `seed.cell("key")` gives a direct address (`'R - X Seed'!{c}6`). Use it by default:
+  it recalculates 10–100× faster than `seed.ref()`, a whole-column SUMIFS per cell. On a 40-tab model,
+  `ref()` makes the `formulas` recalc take hours. Keep `ref()` for the case where the add-in's import
+  will re-order the R-tab rows.
+- Guard seed refs for **open months**, where the GL isn't closed yet:
+  `IF(ISNUMBER(<seed cell>),<seed cell>,<forecast>)`. This avoids a checker that reads an empty cell as 0.
+- **No literals in formulas.** A rate, a share, a year-to-date ratio or a fallback % goes on an input row,
+  and the formula references it. The audit fails on stray constants. It allows 0, 1, 2, 3, 7, 12, 100 and 0.5.
 
-`Model.save()` recalculates when the `formulas` package is installed and always injects the add-in
-WebExtension. Without `formulas` (e.g. a chat sandbox without package installs) the file is saved
+### Many entities, one template (retailer / channel / entity P&Ls)
+
+When the brief is "the same P&L for each of N accounts", build **one** template id with many tabs:
+call `m.schedule(title, template_id="<co>-retail-account", …)` in a loop. `save()` writes a single
+Index row for the template, with the sheets comma-separated; the protocol wants one row per template id.
+Then add:
+- a **rollup** tab that sums every account tab (plus subtotals by group, e.g. Direct / KeHE / UNFI);
+- **pool** tabs for costs the GL can't split by account. Each pool tab publishes one **rate** (cost per
+  unit, or % of gross), and each account line is `rate × its own base`: `='Freight Allocation'!W26*W21`.
+  Don't put `IFERROR(pool*units/Σunits,0)` on every tab. With a rate, conservation holds by construction.
+  A pool's history is one seed link. Compute any seeded forecast months (e.g. a trailing average) in the
+  build, labelled; don't nest `IF(ISNUMBER(seed),…,AVERAGE(…))` in every cell. Say in the spec which base
+  allocates each pool. An account that doesn't carry a line gets an **unmarked** `=0` row with the reason
+  in its label, never a Key Result constant;
+- a **hierarchical rollup**: All = group subtotals (3 terms), each group = its tabs' same row. Not 3D sums:
+  the `formulas` recalc can't parse `'A:B'!W22`, and tab reorders break them;
+- a **checker** tab: model vs source system vs GL by month. A gap is a finding, not a plug;
+- an `identities.json` for the gate. It covers the row identities per tab (net = gross + deductions,
+  GP = net − COGS, CM = GP − opex), rollup = Σ tabs, and every pool fully allocated (pool total = Σ the
+  account allocation rows). Pass it to `save(..., identities=...)`:
+
+```json
+[{"type": "row", "name": "cm = gp − opex", "sheets": "Retail - *", "lhs": "contributionMargin",
+  "rhs": [["+", "grossProfit"], ["-", "operatingCosts"]]},
+ {"type": "sum", "name": "freight fully allocated", "target": "Freight Allocation!freight_fulTotal",
+  "sources": "Retail - *!ful", "tol": 1}]
+```
+
+Ids match exactly or by the suffix `_<id>`; `sheets` and `sources` take globs. `"missing_as_zero": true`
+counts an id a tab doesn't carry (the unmarked `=0` line) as 0.
+
+**Keep every formula one idea long.** Passing the gate doesn't make a model simple. Before hand-off,
+count the nested IFs, the `IFERROR`s and the longest formula per tab. A checker's difference row
+subtracts the two rows above it, with the source total seeded, not re-added from 35 cells. A reviewer
+sent back a retailer model that passed every gate as "extremely complex". The rewrite cut its longest
+checker formula from 962 characters to 68 and changed no revenue number.
+
+If the customer's own "model" is a spec workbook (reference tables plus orange tabs with no formulas
+linking them), build the brief's design. Read the reference tables (prices, unit costs, customer lists)
+as data. Don't convert the tabs cell by cell.
+
+### Phase 3 — Recalc + chrome + gate (one call)
+
+`Model.save(path, ties=..., identities=...)` recalculates when the `formulas` package is installed,
+injects the add-in WebExtension, and **runs the hand-off gate on the saved file**. The report prints
+and is kept on `m.gate_ok` / `m.gate_report`. Pass `strict=True` to raise instead. Pass `gate=False`
+only when a later step edits the file; then run `python3 scripts/gate.py` on the final file yourself.
+The flex step needs the recalculated file, so it is skipped when recalc didn't run. Without `formulas` (e.g. a chat sandbox without package installs) the file is saved
 with `fullCalcOnLoad`: the user must open it in Excel, press `Ctrl+Alt+F9`, and save **before** uploading,
 because the add-in reads uncached formulas as NaN.
 
-### Phase 4 — Validate (the gate)
+### Phase 4 — Read the gate, fix, rebuild
+
+The gate already ran in `save()`. Re-run it by hand after any edit:
 
 ```bash
-python3 scripts/validate_drivepointified.py <built.xlsx> --ties ties.json
+python3 scripts/gate.py <built.xlsx> --ties ties.json --identities identities.json --company-id <tenant>
 ```
 
+- **Write `ties.json` from the build script, computed independently of the model.** Aggregate the
+  source CSVs or cells yourself (pandas, a dict). Never read the model's own output back as the
+  expected value. A relative `source` resolves against the ties file's folder.
+- Tolerance is for **documented source rounding** only. Example: a source system whose Net column
+  carries cents of rounding against its own revenue − trade. Write the reason into the spec.
 - `ties.json` covers **every** mapped row: budget columns vs the source budget range, history columns
   vs the source LY range, plus summary cells vs the source totals.
 - **0 FAIL required.** Explain every WARN in the hand-off (e.g. "growth factors have no history — expected").
@@ -247,8 +329,9 @@ Lead with what changed and why it's safe:
 2. Layout (spine range, where the budget starts, the seed tab, the summary tab).
 3. Key Drivers / Key Results per tab — name the drivers.
 4. What was a pasted value and is now a driver.
-5. Validation: "N monthly values and M totals tie to your file; validator 0 fail; opens in Excel without
-   repair, 0 circular references, no colour-band gaps (allowed: …)."
+5. Validation: paste the gate's summary. For example: "N values tie to your file. Gate PASS: validator
+   0 fail, audit 0 fail, Excel opens without repair, 0 circular references, no colour-band gaps (allowed: …),
+   flex test 0 errors, post_validate 0 errors."
 6. Findings in their file (bridge gaps, basis mismatches, shifted blocks) — with the numbers.
 7. How to load it: upload as a plan in the Drivepoint app (Plans → Upload Plan); the add-in shows it
    as a SmartModel only after that registration.
@@ -288,6 +371,14 @@ The user should never have to ask these. If any answer is "no", fix it first.
 - Any "her", "src row", filename or parking section left in a label?
 - Does Gate 0 pass on the file I am handing over: no Excel repair, 0 circular references, no colour-band
   gaps, no external links? Did I re-run it after the last edit and the recalc?
+- Did the gate print **PASS** on the exact file I'm delivering (not an earlier build)?
+- Has someone **opened it in desktop Excel** (no repair prompt, no circular warning)? Gate 0 catches the known
+  causes, but only Excel proves it. If nobody could, say so in the hand-off.
+- **Does every R-tab refresh from the add-in?** Each must be the `destination_tab` of an installed import (stock or
+  custom), in the import's own layout. A tab Claude filled that no import can overwrite is a seed in disguise:
+  install the import, register the plan, refresh, and re-run the gate before calling it done.
+- Does changing a driver move the budget and leave the Actual months alone (the flex line)?
+- For multi-entity models: rollup = Σ tabs, and is every pool fully allocated (identities)?
 
 ## Failure modes seen in real conversions
 
@@ -313,3 +404,17 @@ The user should never have to ask these. If any answer is "no", fix it first.
 | Budget Summary `SUMIFS(30:30,…)` / IF toggles feeding back | Circular-reference warning on open, even through untaken branches | Bound the ranges; drop dead branches; `find_circular.py` |
 | Labels moved F:J → C:G, H:J left without cells | White gap in the blue header band and every section band | Style each gap cell like the band; `style_gaps.py` |
 | Unused external link inherited from the customer file | Excel's "links to external sources" bar on every open | Remove it; `lint_xlsx.py` |
+| `recalculated=False` with `formulas` installed | openpyxl ≥3.1 writes `<v></v>`; the cache writer only matched `<v/>` and shipped uncached files | Fixed in the engine; a test asserts recalc |
+| One Index row per tab for a shared template | The protocol wants one row per template id | `save()` merges; audit `INDEX` |
+| Hard-coded rate in a formula (`*0.0262`) | A reviewer can't find or change it; it silently goes stale | Put it on an input row; audit `HARDCODE` |
+| Forecast % carried from the last actual month | A one-month spike becomes the run-rate (broker % Aug → Sep–Dec) | Use a Jan–YTD ratio, or read the row's first budget input |
+| Checker reads an open-month GL cell as 0 | A false gap in the month the GL isn't closed | `IF(ISNUMBER(…))` guard; audit `REFS` lists empty targets |
+| Unit cost / price missing for a SKU → $0 COGS | The margin looks great and is wrong | Proxy from a sibling SKU or the source's implied value, labelled "(implied)", and list it as a finding |
+| `seed.ref()` SUMIFS on a 40-tab model | The `formulas` recalc runs for hours | `seed.cell()` direct refs |
+| Raw data on a seed tab built from CSV exports | Can't refresh; the reviewer can't trace it ("where is this pulling from?") | `import_tab()` in the add-in layout + `sumifs()`; a custom import where none exists |
+| Gate-clean but "extremely complex" (nested `IF(ISNUMBER)`, per-tab `IFERROR(pool*x/Σx)`, 35-term checker chains) | Nobody can audit or change it | Pool rate × base; seed the source totals; hierarchical rollup; measure formula length |
+| Section note starting with "=" | Written as a formula → `#REF!` | Start notes with a word; the gate's CALC catches it |
+| A setting written as `""` | openpyxl writes `<c t="inlineStr"/>`; Excel repairs the sheet on open | The engine writes `None`; Gate 0 `lint_xlsx` |
+| Budget Summary spacer columns left unstyled | White gaps in the header band | The engine fills the whole band; Gate 0 `style_gaps` |
+| A person's name or "her list" in a label | A working note shipped to the customer | Name the company's table, not the person; `check_format` leaks |
+| Import tabs shipped pre-filled, never refreshed | Looks wired; first refresh may land elsewhere (Claude-made `IS_src` / `BS_src` tabs) | Hand-off question above; register + refresh before go-live |
