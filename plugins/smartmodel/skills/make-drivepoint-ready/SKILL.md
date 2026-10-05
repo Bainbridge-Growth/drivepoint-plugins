@@ -99,7 +99,7 @@ Show the audit and the planned changes, then wait for a go-ahead.
 - Delete a copied `Plan Settings` tab.
 
 **b. Make room, with Excel's own insert only.** Insert rows and columns in Excel (desktop Excel, or Office.js `range.insert(...)` through the add-in) so every formula, name, chart and validation follows. **Never use openpyxl `insert_rows` / `insert_cols` or write cells into new positions**: they don't update references, and the model breaks silently.
-- If row 2 isn't free for the spine, insert 3 rows at the top. The customer's own header row moves down and stays as it was.
+- If rows 1–3 are not already valid Drivepoint chrome or contain any customer content, insert 3 rows at the top. The customer's existing rows move down and stay as they were.
 - If the first used column on the tab is A or B, insert columns at A until it is C.
 - If the first month column is then left of K, insert columns just before it until it is K.
 - If there is a Total, quarter or half-year column **between** months, stop and ask. It has to move to the right of the months, or the tab can't pass.
