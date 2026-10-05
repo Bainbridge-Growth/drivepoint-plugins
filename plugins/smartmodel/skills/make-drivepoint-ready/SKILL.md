@@ -84,6 +84,8 @@ Show the audit and the planned changes, then wait for a go-ahead.
 
 | id | Setting | Value |
 |---|---|---|
+| `settings.smartmodelSpec` | Protocol Version | `6.0` (text) |
+| `settings.modelType` | Model Type | `model` |
 | `settings.modelVersion` | Model Version | `1.0.0` (text, `x.y.z`) |
 | `settings.modelName` | Model Name | e.g. `Acme 2027 Budget` |
 | `settings.modelStartDate` | ProForma Start Date | real date, first day of the first forecast month |
