@@ -69,7 +69,7 @@ Every SmartModel workbook uses a consistent tab color system:
 
 **R- sheets** (prefix "R-"): Data import layer. One R- sheet per import declaration. Populated by the add-in from connected data sources, or manually by the user. Template formula sheets reference R- sheets dynamically via Excel formulas. The agent does not need to declare wiring between templates — connections are discerned at runtime by reading the formula layer.
 
-**Settings tab**: Machine-readable key-value configuration. Column A is reserved/empty; columns B–E contain `id`, `setting`, `value`, `description`. Add-in owned, never user-edited directly.
+**Settings tab**: Machine-readable key-value configuration. Column A is reserved/empty; columns B–E carry the header `id`, `Setting`, `Value`, `Description` (capital V and D — see Settings Tab Structure). Add-in owned, never user-edited directly.
 
 ---
 
@@ -79,9 +79,16 @@ The Settings tab stores model configuration as a key-value table. The agent read
 
 **Column layout**: Column A is reserved (narrow, empty). Data starts at column B:
 - Column B: `id` — dot-notation identifier (monospace font), e.g. `settings.smartmodelSpec`
-- Column C: `setting` — human-readable label
-- Column D: `value` — the stored value
-- Column E: `description` — explanatory note
+- Column C: `Setting` — human-readable label
+- Column D: `Value` — the stored value
+- Column E: `Description` — explanatory note
+
+**Header row (row 1) literals are `id`, `Setting`, `Value`, `Description` — capital V and D.** The add-in
+locates the id and value columns by scanning for a header row that contains the literal strings `id` and
+`Value` (`ModelSettings.findHeaderColumnIndices`). If it finds none it falls back to fixed offsets inside the
+used range, and because column A is empty that reads column C as the id and column E as the value: every
+`settings.*` parses blank and the workbook is reported as "not a Drivepoint SmartModel". A lowercase `value`
+header is a defect, not a style choice.
 
 Required settings fields:
 
@@ -408,10 +415,12 @@ When the user asks a question that would benefit from a structured workflow, use
 | "monthly report", "monthly summary", "monthly recap", "monthly writeup", "monthly close", "do the [month] numbers", "[customer]'s [month] writeup" | monthly-report |
 | "board deck", "board report", "investor update", "package this up" | build-report |
 | "build a schedule", "revenue build", "COGS schedule", "headcount plan", "payroll tab" | build-schedule |
+| "drivepointify", "make this Drivepoint compatible", "convert this budget template", "turn this spreadsheet into a SmartModel", "add key drivers to this file" | drivepointify-models |
 | "what is this", "overview", "stand up the model", "orient" | summarize-model |
 | "where does that number come from", "trace", "what's driving that line" | interrogate-model |
 | "QA the financials", "QA the GL", "QA R-GL", "QA RGL", "QA the import", "tie out the GL", "reconcile GL", "check NetSuite import", "verify the import for [month]" | qa-financials |
 | "audit", "something looks off", "validate", "sanity check", "numbers don't look right" | audit-model |
+| "will this break", "can I rename", "is it safe to", "can I hardcode", "what's breakable", "don't-dos", "what should I avoid" | change-safety |
 | "clean up", "fix the model", "#REF errors", "broken formulas" | clean-model |
 | "slow", "lagging", "file is huge", "speed up", "reduce file size" | optimize-model |
 | "investor-ready", "due diligence", "DD prep", "Series A", "data room", "share with VCs" | investor-readiness-analysis |
@@ -505,6 +514,7 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 | Skill | Path | Purpose |
 |-------|------|---------|
 | Build Schedule | `../build-schedule/SKILL.md` | Construct a new schedule sheet from scratch — data-first flow, any model version |
+| Drivepointify Models | `../drivepointify-models/SKILL.md` | Convert a customer's own budget / forecast template into a SmartModel tab — one date spine with history, real Key Drivers, profiler + hand-off validator |
 | Monthly Report | `../monthly-report/SKILL.md` | Produce the Drivepoint-style monthly summary & variance report for a CPG customer |
 | Build Report | `../build-report/SKILL.md` | Create a blue report tab — board reports, monthly close reports, investor updates |
 | Create Scenario | `../create-scenario/SKILL.md` | Build a named what-if scenario by adjusting Key Driver assumptions |
@@ -530,6 +540,7 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 | Interrogate Model | `../interrogate-model/SKILL.md` | Trace any number back through its formula and driver chain |
 | Audit Model | `../audit-model/SKILL.md` | Structural integrity, formula errors, protocol compliance checklist |
 | QA Financials | `../qa-financials/SKILL.md` | Tie out a customer's raw GL export against R-GL line-by-line for a given period |
+| Change Safety | `../change-safety/SKILL.md` | Pre-flight a proposed edit — what it breaks, checked against this workbook's own formulas |
 | Clean Model | `../clean-model/SKILL.md` | Fix errors, restore protocol structure, standardize formatting |
 | Optimize Model | `../optimize-model/SKILL.md` | Resolve slow calculation, phantom range bloat, volatile formulas |
 

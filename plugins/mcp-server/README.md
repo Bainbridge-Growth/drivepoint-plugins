@@ -47,6 +47,12 @@ MCP-specific skills live in `skills/<name>/SKILL.md`:
   ~70-row alias map, and a CPG finance primer (gross-to-net, contribution-margin
   tiers, trade spend/deductions, channel economics, working capital).
 
+Server-served skills (what `list_skills` / `get_skill` return to every connected chat) live in
+`skills/common-skills/<name>/` — `SKILL.md` is the content, `README.md` the one-line catalog entry.
+Only the markdown is delivered (no scripts), so these must be self-contained; e.g.
+`common-skills/drivepointify-models` inlines the layout rules and add-in parts that the SmartModel
+plugin's `drivepointify-models` scripts implement.
+
 > **Delivery.** This is a marketplace **plugin** skill (Claude Code / Desktop).
 > How it loads into other Drivepoint surfaces depends on each surface's skill
 > configuration.
