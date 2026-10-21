@@ -213,9 +213,11 @@ marker │  identifier formula             │  human label         │  time-se
 
 **Column A — Storage marker**: Determines whether this row is stored to the database and how users interact with it. Three possible values:
 
-- `•` (bullet, blue `#4472C4`): Visual only. Not stored. Used for supporting inputs or reference values.
-- `•⚡ Key Driver` (bullet + lightning + "Key Driver", black text): Stored to database as a **user input**. These are the cells the user edits to drive the model.
-- `  ⚡ Key Result` (two spaces + lightning + "Key Result", black text): Stored to database as a **calculated result**. These cells contain Excel formulas — never hardcoded values.
+- Blank: a supporting or calculation row. Not stored.
+- `⚡ Key Driver`: Stored to database as a **user input**. These are the cells the user edits to drive the model.
+- `⚡ Key Result`: Stored to database as a **calculated result**. These cells contain Excel formulas — never hardcoded values.
+
+The add-in writes the marker when the user marks a row (right-click → Drivepoint 2.0 → Enable key driver / key result); it may write a leading `•` or spaces before the `⚡`. **Match on the text `Key Driver` / `Key Result`, never on the exact string.** There is no separate blue `•` assumption-dot step and no standalone `•` marker: the add-in no longer needs it, so never tell a user to add one.
 
 **Column B — Identifier**: Contains a formula that generates the row's machine-readable identifier string. Example: `="hydrating-serum_orders"` — this displays the string `hydrating-serum_orders`. The identifier follows the pattern declared in `settings___identifier_structure`: `{dimension-slug}_{measure-code}`. Always monospace font.
 
@@ -237,11 +239,10 @@ The separator border uses `'thin'` style, not `'thick'`.
 
 ## Cell Role Styling
 
-Every cell on a schedule sheet carries a visual cue that signals its **role** — whether it's an assumption marker, a user input, an imported value, an actual financial value extracted from the source of truth, or a calculated output. The role catalog is identical across every SmartModel template.
+Every cell on a schedule sheet carries a visual cue that signals its **role** — whether it's a user input, an imported value, an actual financial value extracted from the source of truth, or a calculated output. The role catalog is identical across every SmartModel template.
 
 | Role | Where it appears | Visual cue | Semantic |
 |------|------------------|-----------|----------|
-| `assumption_marker` | Column A on assumption rows | Blue bullet `•` (`#4472C4`), no fill | Indicates the row contains an assumption the user may edit. Visual only — not stored. |
 | `assumption_above_marker` | Column A below assumption blocks | Blue arrow `↑` (`#4472C4`), no fill | Indicates assumption rows above may be collapsed for display. |
 | `actual` | Actual-period time-series cells | Orange text (`#ED7D31`), no fill | Value extracted from the customer's accounting source of truth. Read-only — never overwrite. |
 | `input` | Forecast-period cells on Key Driver rows | Blue text (`#4472C4`) on light grey fill (`#F2F2F2`) | User input. Editable. |
@@ -502,7 +503,7 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 5. **Settings block** → What fiscal year dates and other parameters are configured?
 6. **Dimension registry** → What entities are being modeled?
 7. **Measure registry** → What metrics are tracked?
-8. **Data sections** → What does column A say? If `•⚡ Key Driver`, it's user input. If `  ⚡ Key Result`, it's calculated.
+8. **Data sections** → What does column A say? If it contains `Key Driver`, it's user input. If it contains `Key Result`, it's calculated. Blank means a supporting row that isn't stored.
 9. **Column B** → What is the machine identifier for this specific row?
 10. **R- sheets** → What real data is imported and feeding this model?
 

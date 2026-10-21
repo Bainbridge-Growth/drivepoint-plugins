@@ -51,8 +51,8 @@ Say "model", not "plan", to the user.
 5. **Key Driver vs Key Result by meaning.** A driver is an assumption a planner changes, and its budget
    months are inputs. A result is computed, and its budget months are formulas. A driver may show its
    implied value (result ÷ base) in the history months.
-6. **Columns A:B hold markers and ids only.** A = `•⚡ Key Driver` or `  ⚡ Key Result` (exact strings,
-   the second with two leading spaces), B = a unique id (e.g. `whl_drWholesalePct`), C = the friendly
+6. **Columns A:B hold markers and ids only.** A = `⚡ Key Driver` or `⚡ Key Result` (match on the
+   text; the add-in may add a leading `•` or spaces, and there is no separate dot step), B = a unique id (e.g. `whl_drWholesalePct`), C = the friendly
    name. Move labels the customer typed in column B into C. Marked rows need unique names: rename a
    second "Total" to "Total Distribution Expense". Calc and memo rows get no marker and no id.
 7. **History comes from a seed tab**, `D - <Company> <TAB> Seed` (D = Data: the customer's own values),

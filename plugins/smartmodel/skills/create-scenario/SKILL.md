@@ -54,7 +54,7 @@ Settings, index, and date spine are already loaded by the protocol's auto-orient
 
 **Step 2.2 — Find the Key Driver rows**
 Call `read_smartmodel_data_section` on each affected sheet. For each variable being changed:
-1. Locate the Key Driver row (column A = `•⚡ Key Driver`)
+1. Locate the Key Driver row (column A contains `Key Driver`)
 2. Note the current value for the affected periods from the data section response — do not make a separate `read_range` call for data already returned
 3. Identify downstream Key Result rows that reference this driver
 

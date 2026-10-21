@@ -58,7 +58,7 @@ If formulas reference renamed or deleted sheets, call `read_range` to identify t
 
 ### 3.1 — Hardcoded Key Result cells
 
-Call `read_smartmodel_data_section` to find Key Result rows (column A = `  ⚡ Key Result`) with hardcoded values instead of formulas. Use the protocol-accurate markers when matching: `•⚡ Key Driver` for drivers (bullet prefix) and `  ⚡ Key Result` for results (two leading spaces). For each:
+Call `read_smartmodel_data_section` to find Key Result rows (column A contains `Key Result`) with hardcoded values instead of formulas. Match markers on their text: column A contains `Key Driver` for drivers and `Key Result` for results (the add-in may write a leading `•` or spaces, so never match the exact string). For each:
 - Ask the user: "Row [id] is a Key Result but has hardcoded value [X]. What formula should it use?"
 - Call `insert_formula` with the correct formula after confirmation.
 

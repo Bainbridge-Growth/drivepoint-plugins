@@ -173,7 +173,7 @@ First Forecast period in the model:     [Month Year, column letter]
 The user-stated month and the row-2 date in the named column must match exactly. **Never name a column from memory and never infer a column from the month name alone** — the agent has been observed naming the wrong column (e.g., reporting "BN is June" when BL was June). If the user's effective period is earlier than the first Forecast period, stop — price changes apply to Forecast periods only. Any ambiguity (a boundary month, a relative phrase like "next month"), confirm with the user before writing.
 
 **Step 5.3 — Confirm Key Driver markers before every write**
-For every target cell, confirm column A is `•⚡ Key Driver`. If column A reads `  ⚡ Key Result`, the cell contains a formula — **do not overwrite it**. Surface this to the user and stop. Overwriting a formula cell with a hardcoded value breaks the model's calculation chain.
+For every target cell, confirm column A contains `Key Driver`. If column A contains `Key Result`, the cell contains a formula — **do not overwrite it**. Surface this to the user and stop. Overwriting a formula cell with a hardcoded value breaks the model's calculation chain.
 
 **Step 5.4 — Write the AOV updates (Type B/C)**
 Use `bulk_write_smartmodel_drivers` with one entry per (sheet, identifier, period). For permanent changes, write to every Forecast column from the effective period forward — do not assume Excel will propagate the change.

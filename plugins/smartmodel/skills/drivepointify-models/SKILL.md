@@ -70,7 +70,7 @@ user to ask.
    factor, %, price, a typed $ line). A Key Result is a line computed from drivers. "It's a constant" or
    "it's a formula" is not the test. A driver row may show its implied history (`result ÷ base`) in the
    actual months; its budget months are inputs.
-6. **Columns A:B are markers and ids only.** A = `•⚡ Key Driver` / `  ⚡ Key Result` (or empty),
+6. **Columns A:B are markers and ids only.** A = `⚡ Key Driver` / `⚡ Key Result` (or empty; no standalone `•` dot),
    B = the row id, C = the friendly name. Move labels the customer typed in B into C. Friendly names of
    marked rows are unique (rename "Total" → "Total Selling Expenses", second "Ending Inventory" →
    "FG Ending Inventory"). Calc/memo rows get no marker and no id.
