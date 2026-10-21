@@ -36,7 +36,7 @@ Three things in a SmartModel carry machine meaning. Everything else is presentat
 
 | Zone | What it is | If the user changes it |
 |---|---|---|
-| **Column A marker** | The storage contract. `•` = visual only, not stored. `•⚡ Key Driver` = stored as a user input. `⚡ Key Result` = stored as a calculated result. | Changes whether the row exists to Drivepoint at all. Never change silently. |
+| **Column A marker** | The storage contract. Blank = not stored. `⚡ Key Driver` = stored as a user input. `⚡ Key Result` = stored as a calculated result. (No `•` dot: the add-in no longer needs one.) | Changes whether the row exists to Drivepoint at all. Never change silently. |
 | **Column B identifier** | The machine address — a formula producing e.g. `="hydrating-serum_orders"`. This, not the label, is the row's identity. | Breaks the row's link to the database, the add-in, reports and scenario planning. |
 | **Cell role** (font colour + fill) | Data lineage. Orange = actual from the accounting source of truth. Blue on grey = the user's input. Green on grey = an actualized import. Green, no fill = a reference to another sheet. Black, no fill = calculated. | Repainting a cell is never cosmetic — the role encodes lineage. Writing a forecast into an orange `actual` cell is a structural error. |
 

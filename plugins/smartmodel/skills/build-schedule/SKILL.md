@@ -108,7 +108,7 @@ For each section confirmed in Phase 1:
 2. Subheader row (gray italic description in Col C)
 3. Blank spacing row
 4. Data rows via `write_range`, one per dimension × measure combination:
-   - Col A: correct marker — `•`, `•⚡ Key Driver`, or `  ⚡ Key Result`
+   - Col A: blank, or `⚡ Key Driver` / `⚡ Key Result` on rows to be stored (no standalone `•` dot; it's no longer used)
    - Col B: identifier formula matching `settings___identifier_structure` — monospace font
    - Col C: human-readable label
    - Cols D–J: leave empty
