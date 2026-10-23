@@ -98,7 +98,9 @@ Order- and return-grain ecommerce. Source of truth for order-level totals.
 | `order_status` | STRING | |
 | `fulfillment_channel` | STRING | |
 | `discount_code` | STRING | |
-| `app_id`, `app_name` | STRING | Shopify app provenance |
+| `app_id`, `app_name` | STRING | Shopify app provenance. Owned-store sales are `app_name = 'Point Of Sale'`. Discover the exact strings with `SELECT DISTINCT app_name`. |
+| `pos_location_id` | STRING | Shopify POS location id. Populated on Point of Sale orders (and their return rows); NULL on web orders and every other channel. Sales by owned store group by this id. Repeated on every line of `ecommerce_transactions_line_item_level`. |
+| `pos_location_name` | STRING | Store name for `pos_location_id`, from the Shopify locations sync. NULL when `pos_location_id` is NULL. Also NULL when that sync has not landed for the customer, or the id is not in it yet. If `get_schema` does not list this column, it is not on the mart: group by `pos_location_id` and say the store name is not in the warehouse. Do not invent a name for an id. A new location, pop-up, or sample-sale store gets its name from Shopify on the next locations sync, with no manual map. Repeated on every line of `ecommerce_transactions_line_item_level`. |
 | `payment_gateway` | STRING | |
 | `referring_site`, `landing_site` | STRING | |
 | `units_sold` | INT64 | |
