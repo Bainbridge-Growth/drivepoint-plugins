@@ -5,8 +5,10 @@ P&L, an inventory plan) into a Drivepoint SmartModel tab, keeping every one of t
 and how to check the result with this server's model tools once it is uploaded.
 
 Read this whenever the user uploads a non-Drivepoint Excel file and asks to "drivepointify" it,
-"make it Drivepoint compatible", "turn it into a SmartModel", "add key drivers and results", or
-"make it work with the add-in".
+"turn it into a SmartModel", or "rebuild the key drivers". When they want the file to connect and
+the formulas left alone ("make this Drivepoint ready", "make it work with the add-in"), use
+`make-drivepoint-ready` instead. Any `.xlsx` already connects. Prep runs unless `settings.companyId`
+and a Key Driver or Key Result marker are already present.
 
 ---
 
@@ -30,9 +32,12 @@ Say "model", not "plan", to the user.
    History sits in the **same rows** as the budget. Never leave a "last year" / "actuals" block stacked
    under the budget. If the user asked for "the budget to start at column K" and the file has history,
    tell them up front that history must sit in the timeline, so the budget starts later (e.g. column W).
-2. **Row 3** = `=IF(<col>2<=Settings!$D$14,"Actual","Forecast")` across the spine. C2 = `End of Period`,
-   C3 = `Period Type`. **Nothing** in rows 2–3 right of the last date. The model sync rejects a row-3
-   value without a row-2 date.
+2. **Row 3** = `=IF(<col>2<=Settings!$D$14,"Actual","Forecast")` across the spine (`lastDateActuals`).
+   Drivepoint also accepts `=IF(<col>2<Settings!$D$6,"Actual","Forecast")` (`modelStartDate`). Both pass.
+   Do not rewrite a working formula from one into the other. Only a gap of more than one month between
+   those dates is flagged. There is no 12-month history minimum. C2 = `End of Period`,
+   C3 = `Period Type` — schedules are found by those labels, not only by a yellow tab. **Nothing** in
+   rows 2–3 right of the last date. Sync fails on an Actual/Forecast with no row-2 date.
 3. **No Total / LY / variance / 1H-2H columns next to the months.** Put them on a separate
    `Budget Summary` tab that SUMIFS the spine by period (FY history vs FY budget, variance, quarters,
    halves; balances take the period-end value).
@@ -60,24 +65,36 @@ Say "model", not "plan", to the user.
    `=SUMIFS('D - … Seed'!K:K,'D - … Seed'!$B:$B,"seed___grossWhl")`. Never name it `R - …`: that prefix
    means an add-in import. Leave C3 blank on the seed (no `Period Type` / Actual-Forecast row) so the
    model sync and Roll Forward never treat it as a model tab.
-8. **Protocol chrome.** Tabs: Index, Settings, the schedule tab(s), Budget Summary, the seed tab.
-   - **Settings**: row 1 header is literally `id | Setting | Value | Description` in B:E (capital V and
-     D; otherwise every setting reads blank). Required rows:
+8. **What this rebuild writes.** Tabs this skill creates: Index, Settings, the schedule tab(s),
+   Budget Summary, the seed tab. Index and the metadata block are house style. Sync does not read
+   Index, and a missing one is a warning. Upload prep does not add an Index; it adds minimum Settings,
+   a synced `Key Drivers + Results` tab, and the web extension, and it does not rewrite other sheets.
+   A customer tab named `Settings` is renamed `Settings (original)`.
+   - **Settings**: row 1 header is literally `id | Setting | Value | Description` in B:E (capital V;
+     a lowercase `value` makes every setting blank). Sync reads by id, not by cell. This skill's
+     layout, which both conventions share:
 
      | Cell | Setting | Value |
      |---|---|---|
-     | D2 | `settings.smartmodelSpec` | `6.0`, as text |
+     | D2 | `settings.smartmodelSpec` | `6.0`, as text. Turns on v6 add-in behaviour. Does not gate connect or sync |
      | D6 | `settings.modelStartDate` | first day of the transition month |
      | D7 | `settings.historicalStartDate` | first spine month |
-     | D8 | `settings.companyId` | the Drivepoint tenant id (from `get_drivepoint_user` or the company context) |
+     | D8 | `settings.companyId` | the tenant id. Blank or `flavorfusion` is filled from the tenant. Another tenant fails sync |
      | D14 | `settings.lastDateActuals` | last booked month-end |
 
-     Dates must be real Excel dates.
-   - **Schedule tab metadata**: B9 `metadata___name`, B10 `metadata___template_id`,
+     Dates must be real Excel dates or serials, never text. `companyName` and `stores` follow the same
+     blank-or-`flavorfusion` fill. Other non-blank values stay.
+   - **Schedule tab metadata** (convention, not a sync gate): B9 `metadata___name`, B10 `metadata___template_id`,
      B11 `metadata___template_version`, B12 `metadata___description`, B13 `metadata___type`, with the
-     values in D.
-   - **Freeze and file hygiene**: freeze panes at K5. Do not copy the source's hidden `Plan Settings`
-     tab; it points at the customer's original file.
+     values in D. Sync reads column A/B markers.
+   - **Freeze**: not validated. K5 is the old template convention; the layout stamper uses D5. Do not
+     fail either. Do not copy the source's hidden `Plan Settings` tab; it points at the customer's original file.
+   - **Errors vs warnings.** Errors: unreadable Settings header, duplicate ids, text dates, another
+     tenant's `companyId`, Actual/Forecast with no date, formulas with no cached values, broken panes.
+     Warnings: missing Settings or Index, protocol ids, gridlines, `#REF!`, calc mode, freeze position,
+     history shorter than 12 months. Unpicked v6 channels are hidden and zeroed in Settings (`qsPct*`
+     and the per-channel rates), never deleted. TikTok has no v6 tab. Create recalculates cached values
+     through the service.
 9. **Formatting says what each cell is.** Input = blue on grey, actual = the workbook's actual colour,
    linked from another tab = green, calculated = black. Converting into the customer's existing
    SmartModel means **its** conventions (its Home legend: v5 actuals are gold) and its Home tab,
@@ -121,8 +138,9 @@ Say "model", not "plan", to the user.
    recommendation, but let the user decide. A tab with a standard name carries that tab's standard
    sections. Cohort blocks: month 0 = initial orders (100%), cohorts from the spine start.
 1. **Profile.** Load the source twice with openpyxl (formulas, and `data_only=True` for values). Find
-   every 12-month header row. The first block is the budget; blocks flagged Act/For or titled LY are
-   history. For each typed budget row, run the rule-4 tests against every other row. List: stacked
+   every run of about 12 month headers. That is how you find a stacked year block in the source, not a
+   minimum history length. The first block is the budget; blocks flagged Act/For or titled LY are
+   history. Drivepoint does not require 12 months of history. For each typed budget row, run the rule-4 tests against every other row. List: stacked
    blocks, pasted %, growth builds, copies, `row + constant` adjustments, openings that don't roll,
    date rows that start in a different month than the header, SUM bridges that skip a row, labels in
    column B, duplicate names, the columns after the months.
@@ -132,6 +150,7 @@ Say "model", not "plan", to the user.
    show this and proceed; stop only for a genuine ambiguity.
 3. **Build** with openpyxl in one script. Read the numbers from the source's cached values, never
    re-type them. Write the tabs in order: Index, Settings, schedule(s), Budget Summary, seed.
+   Index is house style for this rebuild. Do not add one to a file you are only making Drivepoint-ready.
 4. **Recalculate.** If a formula engine is available (for example the `formulas` package), compute and
    store cached values. Otherwise save with full-calc-on-load and tell the user to open the file in
    Excel, press Ctrl+Alt+F9 and save **before** uploading, because uncalculated formulas read as blank.
@@ -174,12 +193,14 @@ Say "model", not "plan", to the user.
      cycles)
    - no seed row that nothing reads, and no numeric constant typed inside a formula (put it on an
      input row)
-   - the Index has one row per template id (for many tabs on one template, join the sheets with ", ")
+   - when this rebuild wrote an Index, it has one row per template id (for many tabs on one template, join the sheets with ", "). A missing Index is a warning, not a failed connect
    - the summary tab equals the sum of the spine for each period
    - the identities hold: net = gross + deductions, the rollup = Σ tabs, and every allocated cost pool
      = Σ its allocations
    - the flex test: raise every Key Driver budget input by 10% on a copy and recalculate. There should
-     be 0 errors, the Actual months unchanged, and the Key Results moved.
+     be 0 Excel error cells, the Actual months unchanged, and the Key Results moved. That is not the
+     old validation gate: missing Index, gridlines, `#REF!` already in the source, calc mode, freeze
+     position, and a history under 12 months are warnings.
 
    With the SmartModel plugin, `gate.py` runs all of this plus rule 13, and `drivepointify_engine`'s
    `save()` runs it automatically. Report the counts, e.g. "912 monthly values and 20 totals tie; 0

@@ -17,7 +17,7 @@ Start by checking what data is available. Do not ask the user to describe the st
 ### Step 1.1 — Greet and identify the schedule type
 
 Ask: "What type of schedule are we building?" Accept free-form answers. Common types:
-- **Revenue schedule** (by channel: DTC, Amazon, Wholesale, TikTok)
+- **Revenue schedule** (by channel: DTC, Amazon, Wholesale). TikTok has no v6 schedule tab — do not create one unless the user already has their own sheet for it
 - **COGS / product cost schedule** (unit-level cost build)
 - **Operating expense schedule** (marketing, payroll, G&A)
 - **Headcount / payroll schedule** (employee-level compensation)
@@ -77,13 +77,13 @@ Data source:      [import used, CSV, or manual]
 Build the sheet block by block. Each step references the protocol grammar for exact spec details — do not re-derive colors, fonts, or border styles here.
 
 **Step 1 — Create the sheet**
-Call `create_sheet` with the confirmed tab name. Apply yellow tab color via `format_range`. Position after any existing schedule sheets.
+Call `create_sheet` with the confirmed tab name. Yellow tab color is house style for a sheet this skill creates; Drivepoint finds schedules by `End of Period` / `Period Type`, not by yellow. Position after any existing schedule sheets. Do not recolor customer sheets that are already schedules.
 
 **Step 2 — Header Block (Rows 1–8)**
 Call `write_range` to populate per the Header Block spec in the protocol:
 - Row 1: Title bar (light blue `#64B1FF`, white text, `≡` in Col A, `=D9` formula in Col C)
 - Row 2: Date spine (black background, white bold, "End of Period" in Col C, month-end dates starting at Col K). Use `convert_string_to_excel_date` if converting date strings.
-- Row 3: Period type (gray `#808080`, white text, "Actual" or "Forecast" starting at Col K). Read the boundary from an existing sheet via `read_smartmodel_date_spine`.
+- Row 3: Period type (gray `#808080`, white text, "Actual" or "Forecast" starting at Col K). Copy the boundary formula from an existing schedule. Both `lastDateActuals` (`<=` that date) and `modelStartDate` (`<` that date) pass. Do not switch a working formula from one to the other. Nothing in row 3 to the right of the last date.
 - Row 4: Status bar
 - Rows 5–6: Blank
 - Row 7: Template title (`=D9` in Col C, thick blue bottom border from Col B to last data column)

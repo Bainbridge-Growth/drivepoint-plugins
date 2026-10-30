@@ -53,7 +53,8 @@ drivepoint-plugins/                          ← marketplace root
       skills/
         smartmodel-protocol/SKILL.md         ← canonical protocol spec (plugin entry point)
         build-schedule/SKILL.md              ← Builders
-        drivepointify-models/                ← convert a customer's own template (+ scripts/ profiler & validator)
+        drivepointify-models/                ← rebuild a customer's own template (+ scripts/ profiler & validator)
+        make-drivepoint-ready/SKILL.md       ← keep their formulas; minimum structure so a plan publishes
         build-report/SKILL.md
         create-scenario/SKILL.md
         variance-analysis/SKILL.md           ← Analysis

@@ -144,7 +144,7 @@ Call `write_range` to add narrative text cells below or alongside the tables. Us
 1. **Formulas**: Confirm all data cells contain formulas referencing source sheets, not hardcoded values
 2. **Period accuracy**: Confirm all data is from the intended period (check against date spine)
 3. **Actual vs. Forecast labeling**: Confirm there's no mixing of Actual and Forecast periods without explicit labeling
-4. **Tab registration**: Do not manually update the Index manifest — the add-in maintains the manifest automatically. If a dedicated registration API/tool becomes available, use that instead
+4. **Tab registration**: Index is optional and sync does not read it. Do not create or edit an Index just to register this report. If an Index is already there, leave it — the add-in maintains that manifest.
 
 ---
 

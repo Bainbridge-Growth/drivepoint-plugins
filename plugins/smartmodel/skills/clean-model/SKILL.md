@@ -38,7 +38,9 @@ Never batch all destructive operations without individual confirmations.
 
 ### 2.1 — Formula errors
 
-Call `sheet_error_find` to get the full list of errors by location. For each error:
+`#REF!`, `#DIV/0!`, `#NAME?`, and `#VALUE!` are warnings. They do not block connect or sync. Fix them when the user asked to clean the model, and say they are warnings. The Drivepoint blockers to fix first are: formulas with no cached values, an `Actual`/`Forecast` with no date, an unreadable Settings header, duplicate Settings ids, a text date, another tenant's `companyId`, and dangling pane selections. Do not "fix" gridlines, calc mode, or the freeze cell (K5 and D5 are both fine).
+
+Call `sheet_error_find` to get the full list of errors by location. For each error the user wants fixed:
 
 **#REF! errors**: Call `read_range` on the cell → read the broken formula → identify what it should reference → call `insert_formula` with the corrected formula.
 
@@ -64,21 +66,15 @@ Call `read_smartmodel_data_section` to find Key Result rows (column A contains `
 
 ### 3.2 — Missing metadata
 
-Call `read_smartmodel_sheet_metadata` on each schedule sheet. For sheets missing `metadata___template_id`:
-- Propose a template ID based on the sheet name and content
-- Confirm with user, then call `write_range` to populate the metadata block.
+`metadata___template_id` is convention. Sync does not read it. Do not invent one unless the user asked for v6 template skills on that sheet. If they did, propose an id from the sheet name, confirm, then `write_range`.
 
 ### 3.3 — Tab colors
 
-Call `get_sheet_names` to list all tabs. For any tab with incorrect color:
-- Schedule sheets (not yellow): call `format_range` to apply yellow tab color `#FFD966`
-- Report sheets (not blue): call `format_range` to apply blue tab color `#4472C4`
+Tab color does not decide what syncs. Schedules are found by `End of Period` / `Period Type`. Do not recolor a customer tab just because it is not yellow. Recolor only when the user asked for house colors: yellow `#FFD966` for a schedule, blue `#4472C4` for a report.
 
 ### 3.4 — Settings gaps
 
-Call `read_smartmodel_settings`. For any required field that is blank:
-- Ask the user for the correct value
-- Call `write_range` to populate the Settings tab.
+Call `read_smartmodel_settings`. Fill only blank or `flavorfusion` `companyId`, `companyName`, and `stores` from the tenant. Leave every other non-blank value. Do not add protocol ids (`author`, `smartmodelSpec`, `modelVersion`) unless the user asked. Keep the header literals `id` and `Value`. If the customer has their own Settings tab, it belongs at `Settings (original)` — do not overwrite it.
 
 ---
 
@@ -113,18 +109,18 @@ Call `sheet_clear_phantom_rows_columns` on each sheet to remove empty formatting
 
 ### 5.2 — Orphan sheets (with confirmation)
 
-For any sheet not referenced by any template in the Index manifest:
-- Present a list of orphan sheets to the user
-- Ask: "These sheets are not referenced by any template. Delete them?"
-- Call `delete_sheet` only after explicit confirmation for each sheet.
+Index is optional, and a sheet missing from it is not an orphan. Hidden channel tabs are unpicked v6 channels (zeroed in Settings, not deleted) — never delete those, and do not delete a tab to "remove" TikTok; v6 has no TikTok tab. Only offer to delete a sheet the user has already called unused:
+- Name the sheet and what you think it is
+- Ask before each delete
+- Call `delete_sheet` only after an explicit yes for that sheet
 
 ---
 
 ## Phase 6 — Verify
 
 After completing all fixes:
-1. Call `sheet_validate` → confirm no structural errors remain
-2. Call `sheet_error_find` → confirm no formula errors remain
+1. Call `sheet_validate` → confirm the Drivepoint errors are gone (header, duplicate ids, text dates, wrong `companyId`, Actual/Forecast with no date, uncached formulas, broken panes). Warnings may remain
+2. Call `sheet_error_find` → report remaining `#REF!` and other formula errors as warnings, not as a failed clean
 3. Call `read_smartmodel_data_section` on the consolidation sheet → spot-check key totals are calculating correctly
 
 ---
@@ -154,7 +150,7 @@ After completing all fixes:
 
 ## Verification
 - Formula errors: [count remaining, or "None"]
-- Protocol compliance: [Pass / Fail with details]
+- Drivepoint errors: [none, or the remaining FAILs]. Warnings (Index, #REF!, gridlines, freeze, short history) may remain
 - Consolidation tie: [Pass / Fail]
 ```
 

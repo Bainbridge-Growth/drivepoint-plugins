@@ -15,9 +15,35 @@ allowed-tools: Read Grep Glob
 
 ## What is a SmartModel?
 
-A SmartModel is an Excel (.xlsx) workbook that follows a strict structural grammar — identifiers in column B, storage markers in column A, a date spine in row 2, and a Settings tab with model metadata. When the Drivepoint add-in opens a SmartModel (detected via `settings.smartmodelSpec = "6.0"` in the Settings tab), it reads each sheet's `metadata___template_id`, fetches the corresponding skills and import declarations from the Drivepoint API, and provides them to the AI agent as context.
+A SmartModel is an Excel (`.xlsx`) workbook. Any `.xlsx` connects to Drivepoint as a plan. The grammar in this document — identifiers in column B, storage markers in column A, a date spine in row 2, a Settings tab — is the house convention. Most of it is optional. When `settings.smartmodelSpec = "6.0"`, the add-in turns on v6 behaviour: it reads each sheet's `metadata___template_id`, fetches the corresponding skills and import declarations, and passes them to the agent. Plan sync does not read `smartmodelSpec`. A workbook without it still connects.
 
 The agent's job is to help users understand their model, populate it with data, roll it forward in time, diagnose errors, and answer questions about the business metrics it represents.
+
+### What Drivepoint actually requires
+
+Upload prep runs by default unless the file already has `settings.companyId` and a column A marker containing `Key Driver` or `Key Result`. Prep injects a minimum Settings tab, a `Key Drivers + Results` tab, and the add-in web extension. It does not rewrite other customer sheets, and it does not add an Index. A customer tab already named `Settings` is renamed `Settings (original)`. Blank values, and the placeholder `flavorfusion`, for `companyId`, `companyName`, and `stores` are filled from the tenant. Other non-blank values stay.
+
+**Errors** — these change what Drivepoint does:
+
+- Settings header cannot be read. The header literals are `id` and `Value` (capital V). A lowercase `value` makes every setting blank.
+- Duplicate Settings ids.
+- A date setting stored as text. Excel dates and serials are fine.
+- `settings.companyId` belonging to another tenant. Sync fails. A blank id only skips publish.
+- `Actual` or `Forecast` in row 3 with no row-2 date.
+- Formulas with no cached values. Sync and the add-in read NaN or blank.
+- Dangling pane selections. Excel asks to repair the file.
+
+**Warnings** — report them, never block on them: missing Settings, missing Index, missing protocol ids (`smartmodelSpec`, `modelVersion`, `modelName`, `modelType`, `companyName`, `author`), gridlines, `#REF!`, calculation mode, freeze position. There is no 12-month history minimum.
+
+**To publish**, the workbook also needs `settings.companyId` (the tenant or a company-group id), `settings.modelStartDate`, and at least one timeseries tab. Without them the plan still connects and the publish is skipped.
+
+A timeseries tab has dates in row 2 and `Actual` / `Forecast` under those dates in row 3. Row 3 may compare the row-2 date with `settings.lastDateActuals` or with `settings.modelStartDate`. Both pass. Only a gap of more than one month between those two dates is flagged. Drivepoint finds schedules by the header labels `End of Period` and `Period Type`, not only by a yellow tab. Sync reads column A and column B on those tabs: column A matches the substrings `Key Driver` and `Key Result`; column B is a unique id with no `.` or `___`.
+
+Never treated as timeseries: `Settings`, `Plan Settings`, `Home`, `Drivepoint Agent Log`, `Key Drivers and Results`, and any name containing `R -` or `F -`. The prep tab `Key Drivers + Results` is synced on purpose. It is not on that list.
+
+**v6 channels.** Unpicked channels are hidden and zeroed in Settings (`qsPct*` and the per-channel rates), never deleted. Create recalculates cached formula values through the SmartModel service. TikTok has no v6 schedule tab.
+
+For the minimum-edit path (keep the customer's formulas), load `make-drivepoint-ready`. For a full rebuild, load `drivepointify-models`.
 
 ---
 
@@ -31,7 +57,7 @@ A SmartModel xlsx is a standard Excel zip archive. The file's job is to be a wel
 |-----------|--------|
 | Settings tab | Model identity, protocol version, configuration |
 | Index tab | Template registry — lists all templates and their sheets |
-| Schedule sheets (yellow) | Primary financial modeling sheets |
+| Schedule sheets | Primary financial modeling sheets. Found by `End of Period` / `Period Type`, not only by a yellow tab |
 | Report sheets (blue) | Derived output reports |
 | R- sheets (default) | Data import layer — one per import declaration |
 | WebExtension | Embedded add-in reference (prompts install from AppSource) |
@@ -51,7 +77,7 @@ The WebExtension is the only custom content injected into the xlsx zip structure
 
 ## Sheet Types and Tab Colors
 
-Every SmartModel workbook uses a consistent tab color system:
+Drivepoint-built workbooks use this tab color system. Color is convention. A schedule that is not yellow still syncs when it has `End of Period` and `Period Type`:
 
 | Tab Color   | Sheet Type  | Purpose |
 |-------------|-------------|--------|
@@ -67,9 +93,9 @@ Every SmartModel workbook uses a consistent tab color system:
 
 **Report tabs**: Derived outputs. Reference schedule sheets. Read-only for most users.
 
-**R- sheets** (prefix "R-"): Data import layer. One R- sheet per import declaration. Populated by the add-in from connected data sources, or manually by the user. Template formula sheets reference R- sheets dynamically via Excel formulas. The agent does not need to declare wiring between templates — connections are discerned at runtime by reading the formula layer.
+**R- sheets** (tab name contains `R - `, with spaces, e.g. `R - GL`): Data import layer. One R- sheet per import declaration. Populated by the add-in from connected data sources, or manually by the user. Template formula sheets reference R- sheets dynamically via Excel formulas. The agent does not need to declare wiring between templates — connections are discerned at runtime by reading the formula layer. A name containing `R - ` or `F - ` is never a timeseries tab.
 
-**Settings tab**: Machine-readable key-value configuration. Column A is reserved/empty; columns B–E carry the header `id`, `Setting`, `Value`, `Description` (capital V and D — see Settings Tab Structure). Add-in owned, never user-edited directly.
+**Settings tab**: Machine-readable key-value configuration. Column A is reserved/empty; columns B–E carry the header `id`, `Setting`, `Value`, `Description` (capital V and D — see Settings Tab Structure). Sync reads this tab. Do not overwrite a non-blank value. Blank or `flavorfusion` `companyId`, `companyName`, and `stores` are filled from the tenant. A customer's own Settings tab is renamed `Settings (original)`.
 
 ---
 
@@ -90,7 +116,7 @@ used range, and because column A is empty that reads column C as the id and colu
 `settings.*` parses blank and the workbook is reported as "not a Drivepoint SmartModel". A lowercase `value`
 header is a defect, not a style choice.
 
-Required settings fields:
+Standard settings fields. Only `companyId` and `modelStartDate` gate the warehouse publish. `smartmodelSpec = "6.0"` switches on v6 add-in behaviour. The rest are conventional. Blank or `flavorfusion` `companyId`, `companyName`, and `stores` are filled from the tenant during prep; other non-blank values stay. Sync parses by id, not by row number.
 
 | ID | Setting | Value |
 |----|---------|------|
@@ -108,7 +134,7 @@ Required settings fields:
 
 Settings IDs use dot notation (`settings.fieldName`). These are distinct from the identifier system used inside schedule sheets, which uses triple-underscore notation (described below).
 
-`settings.smartmodelSpec = "6.0"` is the detection gate — the add-in checks this value to determine whether the workbook follows v6 protocol conventions.
+`settings.smartmodelSpec = "6.0"` turns on v6 add-in behaviour (template skills and imports). It is not the gate for connecting a plan or for sync.
 
 ---
 
@@ -306,13 +332,13 @@ The agent receives import declarations as part of the skill context provided by 
 
 ### Core Rules
 
-1. **Identify the model.** When a conversation opens or the user asks "what model is this?", call `read_smartmodel_settings` to retrieve the model name, company, protocol version, and date range. This is your source of truth for model identity.
+1. **Identify the model.** When a conversation opens or the user asks "what model is this?", call `read_smartmodel_settings`. `companyId` and `modelStartDate` are what publish needs. `smartmodelSpec` only says whether v6 add-in behaviour is on. A file with no Settings still connects.
 
-2. **Read the Index tab first.** Before answering any question or making any edit, call `read_smartmodel_index` to obtain the full list of templates and their owned sheets. This is your map of the workbook.
+2. **Find the schedules.** Index is optional and sync does not read it. When an Index exists, call `read_smartmodel_index`. When it does not, find timeseries tabs by the headers `End of Period` and `Period Type`, then read column A/B markers. Do not treat a missing Index as a broken model.
 
 3. **Identify the period type before writing.** Each column in a schedule is either an Actual (historical, locked) or a Forecast (editable) period. Read the date spine with `read_smartmodel_date_spine` before writing any value. Never write to an Actual-period column.
 
-4. **Respect the Key Driver / Key Result distinction.** Only cells whose column A marker is `key_driver` (bullet + zap symbol) may be written. Cells marked `key_result` are formula outputs — never overwrite them.
+4. **Respect the Key Driver / Key Result distinction.** Sync matches the substrings `Key Driver` and `Key Result` in column A. The bullet, lightning, and spaces are house style. Write only rows whose marker contains `Key Driver`. A marker containing `Key Result` is a formula output — never overwrite it.
 
 5. **Use durable identifiers, not row numbers.** Address cells by their `durable_id` (column B), not by row number. Row positions can shift when templates are added or removed.
 
@@ -416,7 +442,8 @@ When the user asks a question that would benefit from a structured workflow, use
 | "monthly report", "monthly summary", "monthly recap", "monthly writeup", "monthly close", "do the [month] numbers", "[customer]'s [month] writeup" | monthly-report |
 | "board deck", "board report", "investor update", "package this up" | build-report |
 | "build a schedule", "revenue build", "COGS schedule", "headcount plan", "payroll tab" | build-schedule |
-| "drivepointify", "make this Drivepoint compatible", "convert this budget template", "turn this spreadsheet into a SmartModel", "add key drivers to this file" | drivepointify-models |
+| "drivepointify", "convert this budget template", "turn this spreadsheet into a SmartModel", "rebuild the drivers", "add key drivers and results" (full rebuild) | drivepointify-models |
+| "make this Drivepoint ready", "make this model work with Drivepoint", "add the settings tab", "fix the date spine", "why won't this tab show up / sync" (keep their formulas) | make-drivepoint-ready |
 | "what is this", "overview", "stand up the model", "orient" | summarize-model |
 | "where does that number come from", "trace", "what's driving that line" | interrogate-model |
 | "QA the financials", "QA the GL", "QA R-GL", "QA RGL", "QA the import", "tie out the GL", "reconcile GL", "check NetSuite import", "verify the import for [month]" | qa-financials |
@@ -432,14 +459,14 @@ If the question doesn't clearly match one skill, answer directly from the model 
 
 ## Multi-Template Workbooks
 
-A working SmartModel is typically 5–8 templates stitched together in a single workbook. Multi-template workbooks are first-class — each schedule sheet declares its template via `metadata___template_id` in its metadata block, and the Index tab provides a manifest of all templates for fast discovery.
+A Drivepoint-built SmartModel is typically 5–8 templates stitched together in a single workbook. Multi-template workbooks are first-class — each schedule sheet may declare its template via `metadata___template_id`, and an Index tab, when present, lists them. A customer workbook with neither still connects.
 
-**How it works:**
+**How v6 discovery works, when `settings.smartmodelSpec` is `6.0`:**
 
-1. Workbook opens → add-in reads Settings tab → `settings.smartmodelSpec = "6.0"` confirms v6
-2. Add-in reads the Index tab template manifest (single table read — no sheet scanning)
-3. Extracts template IDs, versions, and skill/import file references
-4. Fetches skills and import declarations for all templates in one API call
+1. Workbook opens → add-in reads Settings → `settings.smartmodelSpec = "6.0"` turns on v6 behaviour. Without it, the plan still connects and syncs
+2. When an Index exists, the add-in reads its template manifest. Upload prep does not create one, so a brought-in file often has no Index — discover schedules by `End of Period` / `Period Type` instead
+3. From that manifest, extracts template IDs, versions, and skill/import file references
+4. Fetches skills and import declarations for those templates in one API call
 5. Caches skills in memory, passes them to the AI agent on chat open
 
 Cross-template connections are standard Excel formulas — one schedule sheet referencing cells in another. The agent discovers these at runtime by reading the formula layer, not from any configuration file.
@@ -448,7 +475,7 @@ Cross-template connections are standard Excel formulas — one schedule sheet re
 
 ## Index Tab as Template Registry
 
-The Index tab contains a structured template manifest — a machine-readable table that lists every template in the workbook. This is the **primary discovery mechanism** for both the add-in and the AI agent.
+When an Index tab exists, it contains a structured template manifest — a table of every template in the workbook. It is a convenience, not a requirement. Sync never reads it. If it is missing, discover timeseries tabs by their headers and column A/B markers.
 
 ### Manifest Table Structure
 
@@ -475,11 +502,11 @@ consolidation        1.0.0    M - Monthly                               consolid
 
 ### How it's used
 
-- **Add-in**: Reads the manifest on workbook open. Extracts template IDs, versions, and file references. Sends one API request to fetch all skills and imports. No sheet scanning required.
-- **AI agent**: Reads the manifest to understand what templates are present, which sheets belong to which template, and what skills are available. This is the agent's map of the workbook.
-- **Maintenance**: The add-in updates the manifest when templates are added or removed. The manifest is the source of truth for what's in the workbook.
+- **Add-in**: When the manifest exists and `smartmodelSpec` is `6.0`, reads template ids and fetches skills and imports. A file with no Index still connects.
+- **AI agent**: Use the manifest when it is there. Otherwise map the workbook from schedule headers and column A/B markers.
+- **Maintenance**: The add-in updates the manifest when templates are added or removed. Do not create an Index just to register a sheet. Upload prep does not add one.
 
-Each schedule sheet still declares `metadata___template_id` in its metadata block — this is the per-sheet identity that the agent uses when working on a specific sheet. The Index tab manifest is the workbook-level registry for discovery and fetching.
+Each schedule sheet may declare `metadata___template_id` in its metadata block. That block is convention. Sync reads the column A marker and the column B id.
 
 ---
 
@@ -515,7 +542,8 @@ When you open an unfamiliar SmartModel schedule sheet and need to orient quickly
 | Skill | Path | Purpose |
 |-------|------|---------|
 | Build Schedule | `../build-schedule/SKILL.md` | Construct a new schedule sheet from scratch — data-first flow, any model version |
-| Drivepointify Models | `../drivepointify-models/SKILL.md` | Convert a customer's own budget / forecast template into a SmartModel tab — one date spine with history, real Key Drivers, profiler + hand-off validator |
+| Drivepointify Models | `../drivepointify-models/SKILL.md` | Rebuild a customer's own budget / forecast template into a SmartModel tab — one date spine with history, real Key Drivers, profiler + hand-off validator |
+| Make Drivepoint Ready | `../make-drivepoint-ready/SKILL.md` | Keep an existing model. Prep and the minimum Settings / marker / spine fixes so it publishes. Does not rewrite other sheets |
 | Monthly Report | `../monthly-report/SKILL.md` | Produce the Drivepoint-style monthly summary & variance report for a CPG customer |
 | Build Report | `../build-report/SKILL.md` | Create a blue report tab — board reports, monthly close reports, investor updates |
 | Create Scenario | `../create-scenario/SKILL.md` | Build a named what-if scenario by adjusting Key Driver assumptions |

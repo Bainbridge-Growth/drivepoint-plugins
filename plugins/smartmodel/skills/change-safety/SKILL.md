@@ -73,7 +73,7 @@ Restate the user's proposed edit in one line, then place it:
 | Inserting or deleting a row | **Check required.** Addressing is by durable id, so shifts are tolerated — but SUMIFS ranges, section totals and cross-sheet references may not be. |
 | Renaming or deleting a sheet | **Check required, high risk.** Every cross-sheet formula referencing it breaks. |
 | Editing an `R-` sheet by hand | **Pointless and unsafe** — overwritten on next import. |
-| Editing the Settings tab | **Never.** Add-in owned. `settings.smartmodelSpec` is the detection gate; a wrong value makes the workbook stop being recognised as a SmartModel. |
+| Editing the Settings tab | **Check required.** Any `.xlsx` connects. `settings.smartmodelSpec = "6.0"` only turns on v6 add-in behaviour. A `companyId` for another tenant fails sync; a blank id skips publish. Do not overwrite a non-blank value. Blank or `flavorfusion` `companyId`, `companyName`, and `stores` are filled from the tenant. After prep, a customer's old Settings tab is `Settings (original)` — edit the Drivepoint `Settings` tab, and keep the `id` / `Value` header. |
 
 A posture is a starting point, not the answer. Everything marked *check required* — and every hardcode —
 goes to Phase 2 before you say a word to the user.

@@ -38,11 +38,13 @@ Call `sheet_validate` → flag any structural errors before the investor readine
 
 Read date spine data (from Phase 1.3) and assess:
 
-| Requirement | Minimum | Preferred |
+Drivepoint does not require 12 months of history. A new brand with a short spine still connects. Score the rows below as investor preferences, not as model errors.
+
+| Investor preference | Thin for a fundraise | Comfortable |
 |-------------|---------|-----------|
-| Historical actuals | 12 months | 24+ months |
-| Forward forecast | 18 months | 36 months |
-| YTD actuals current | Within 1 month of today | Current month |
+| Historical actuals | under 12 months | 24+ months |
+| Forward forecast | under 18 months | 36 months |
+| How current the actuals are | more than a month behind | current month |
 
 Call `get_todays_date` to verify how stale the actuals are.
 
@@ -71,7 +73,7 @@ Call `read_smartmodel_data_section` on the **consolidation sheet (M - Monthly)**
 
 **Cross-sheet consistency (from the same read):**
 - Verify totals reconcile (revenue, COGS should tie)
-- Flag any #REF! or #VALUE! errors
+- Flag any #REF! or #VALUE! errors as diligence notes. They are warnings for Drivepoint, not a failed connect
 
 ### 2.3 — Revenue quality check (only if channel detail needed)
 

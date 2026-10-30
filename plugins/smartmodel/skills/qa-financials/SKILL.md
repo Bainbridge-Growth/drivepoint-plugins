@@ -23,7 +23,7 @@ This skill compares **external source** to **imported model data**. It is not th
 
 ## Phase 1 — Orient
 
-Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, note: `companyName`, `currency`, the most recently closed Actual month, and the R-GL sheet name from the Index manifest (typically `R - GL`).
+Settings, index, and date spine are already loaded by the protocol's auto-orient. From the model context, note: `companyName`, `currency`, the most recently closed Actual month, and the GL sheet. Find it by name, typically `R - GL`. Index is optional — a missing Index does not mean the import is missing.
 
 **Confirm the target period** from the user's request. Default to the most recently closed Actual month if unspecified.
 
@@ -33,7 +33,7 @@ Settings, index, and date spine are already loaded by the protocol's auto-orient
 QA: [Customer] [Month Year] — source export vs. R-GL after roll-forward
 ```
 
-If R-GL doesn't exist in the Index, stop and tell the user — this skill requires a GL-level import to compare against.
+If no sheet named `R - GL` (or the customer's GL import tab) exists, stop and tell the user — this skill requires a GL-level import to compare against. Do not stop just because the Index is missing.
 
 ---
 
