@@ -361,9 +361,10 @@ Lead with what changed and why it's safe:
 
 Works when the conversation has **file upload + code execution** and this skill (the SmartModel plugin)
 is loaded: upload the customer's .xlsx, run the profiler, build with the engine, validate, and return
-the file. Chat users who only have the Drivepoint MCP connector get the procedure as the
-`drivepointify-models` skill via `get_skill`; without code execution Claude can plan the conversion
-and check a registered plan with the connector tools, but cannot write the workbook.
+the file. These conversion rules live only in this skill. The MCP `drivepointify-models` skill
+(`get_skill`) is the post-upload check: `list_company_plans`, `get_valid_plan_tabs`,
+`list_plan_key_drivers_and_results`. A chat that only has the connector can run that check, and
+cannot write the workbook.
 
 ---
 
