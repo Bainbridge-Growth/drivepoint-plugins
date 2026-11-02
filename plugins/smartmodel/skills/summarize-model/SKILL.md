@@ -26,7 +26,7 @@ Settings, index, and date spine are already loaded by the protocol's auto-orient
 
 | Field | What it tells you |
 |-------|------------------|
-| `settings.smartmodelSpec` | Protocol version — confirms this is a SmartModel |
+| `settings.smartmodelSpec` | `6.0` turns on v6 add-in behaviour. Missing does not mean the file is not a plan |
 | `settings.modelName` | Human-readable name |
 | `settings.modelVersion` | Model version (semver) |
 | `settings.modelType` | "model" (full workbook) or "template" (single-purpose) |
@@ -35,7 +35,7 @@ Settings, index, and date spine are already loaded by the protocol's auto-orient
 | `settings.modelStartDate` | Forecast start date |
 | `settings.historicalStartDate` | How far back actuals go |
 
-If `settings.smartmodelSpec` is not "6.0", note the protocol version and proceed cautiously — some structural assumptions in this skill are v6-specific.
+If `settings.smartmodelSpec` is not "6.0", say that v6 template skills and imports are off and keep going. The plan still connects. Do not treat a missing spec as "not a SmartModel".
 
 The model context also includes the full template manifest from the index (template IDs, owned sheets, skill references, import references) and the date spine (time range, Actual/Forecast boundary).
 
@@ -47,12 +47,13 @@ Call `get_sheet_names` → get the full list of tabs. Categorize each:
 
 | Category | How to identify | What to report |
 |----------|----------------|---------------|
-| Schedule sheets | Yellow tabs | List each with template name from D9 |
-| Report sheets | Blue tabs | List each |
-| R- sheets | "R-" prefix, default color | List each; note populated vs. empty |
-| Consolidation | Black tab or "M - Monthly" | Note if present |
-| Settings | Dark gray tab | Already read |
-| Index | White tab, first position | Already read |
+| Schedule sheets | Header labels `End of Period` and `Period Type`. Yellow is only a hint | List each. Read column A/B markers. Do not skip a tab because it is not yellow |
+| Report sheets | Blue tabs, or a tab with no date spine that only references schedules | List each |
+| R- sheets | Name contains `R - ` | List each; note populated vs. empty. These are not timeseries |
+| Consolidation | `M - Monthly`, when present | Note if present. Not required |
+| Settings | Tab named `Settings` | Already read. A customer copy may sit at `Settings (original)` |
+| Key Drivers + Results | That exact name | Prep adds it. It is synced. It is not the ignored tab `Key Drivers and Results` |
+| Index | Tab named `Index`, when present | Optional. Missing is not a defect |
 
 **Data population check**: For each R- sheet, call `read_smartmodel_sheet_metadata` to check if it has data beyond headers. Report as "Populated" or "Empty" — this tells the user which data imports have run and which analyses are possible.
 
@@ -71,7 +72,7 @@ Call `get_todays_date` to assess how current the actuals are. Flag if actuals ar
 
 ## Phase 4 — Read Key Dimensions
 
-For schedule sheets where the Index indicates dimensions exist, call `read_smartmodel_registries` → extract `dim_` entries. Only read registries on sheets that the Index references as having dimensions — do not read every schedule sheet. Report what entities are being modeled (e.g., "DTC sheet models 3 channels: Shopify, Subscription, Retail").
+When an Index lists sheets with dimensions, call `read_smartmodel_registries` on those sheets only. When there is no Index, call it on schedule tabs whose metadata or first rows show a `dim_` registry — do not assume every schedule has one. Report what entities are being modeled (e.g., "DTC sheet models 3 channels: Shopify, Subscription, Retail"). TikTok has no v6 tab; do not invent one.
 
 ---
 
@@ -80,13 +81,15 @@ For schedule sheets where the Index indicates dimensions exist, call `read_smart
 Call `sheet_validate` → capture any structural validation errors.
 Also call `sheet_error_find` → check for formula errors (#REF!, #DIV/0!, etc.) across all sheets.
 
-Flag:
-- Settings fields that are blank or use default values
+Separate Drivepoint errors from warnings. Errors: unreadable Settings header, duplicate ids, text dates, another tenant's `companyId`, `Actual`/`Forecast` with no date, formulas with no cached values, broken panes. Warnings, including these:
+- Blank Settings fields, or `companyId` / `companyName` / `stores` still `flavorfusion` (prep fills those three from the tenant)
+- Missing Settings, missing Index, missing `smartmodelSpec`
 - R- sheets that are empty (data not imported — limits analysis)
 - Actual/Forecast boundary that is stale (>2 months behind today)
-- Sheets referenced in the Index that don't exist
-- Template version mismatches
-- Any formula errors found
+- History shorter than 12 months (allowed)
+- Sheets referenced in an Index that don't exist
+- `#REF!` and other formula errors
+- Hidden channel tabs: unpicked v6 channels, zeroed in Settings, not deleted. TikTok has no v6 tab
 
 ---
 
@@ -154,7 +157,7 @@ Present in this format:
 ## Guardrails
 
 - This skill reads only — it never writes to the workbook
-- If the workbook is not a SmartModel (no Settings tab or `settings.smartmodelSpec` missing), note this and offer to run `/convert-to-smartmodel` or provide a limited analysis based on available structure
+- Any `.xlsx` connects. If Settings or `settings.smartmodelSpec` is missing, summarize what is there. Offer `/make-drivepoint-ready` when the user wants the minimum structure, and `/drivepointify-models` only when they want the logic rebuilt. Do not offer a convert step just because the spec is blank
 
 ---
 

@@ -16,24 +16,23 @@ Once connected, the Drivepoint MCP server exposes tools such as:
 - `get_plan` / `list_company_plans` — Drivepoint financial plans
 - `get_drivepoint_user` — the connected user's context
 
-## Configuration — required before use
+## Configuration
 
-`.mcp.json` ships with a **placeholder** endpoint:
+`.mcp.json` points at the production Drivepoint MCP server:
 
 ```json
 {
   "mcpServers": {
     "drivepoint": {
       "type": "http",
-      "url": "https://YOUR-DRIVEPOINT-MCP-ENDPOINT"
+      "url": "https://mcp.drivepoint.ai/mcp"
     }
   }
 }
 ```
 
-Replace `https://YOUR-DRIVEPOINT-MCP-ENDPOINT` with the real Drivepoint MCP
-server URL (production). The server uses Streamable HTTP transport;
-authentication is handled by the MCP host's connector flow.
+The server uses Streamable HTTP transport; authentication is handled by the
+MCP host's connector flow.
 
 ## Skills
 
@@ -49,10 +48,10 @@ MCP-specific skills live in `skills/<name>/SKILL.md`:
 
 Server-served skills (what `list_skills` / `get_skill` return to every connected chat) live in
 `skills/common-skills/<name>/` — `SKILL.md` is the content, `README.md` the one-line catalog entry.
-Only the markdown is delivered (no scripts), so these must be self-contained; e.g.
-`common-skills/drivepointify-models` inlines the layout rules and add-in parts that the SmartModel
-plugin's `drivepointify-models` scripts implement.
+Only the markdown is delivered (no scripts). `common-skills/drivepointify-models` is the
+post-upload plan check. The conversion rules and scripts stay in the SmartModel plugin's
+`drivepointify-models` skill.
 
-> **Delivery.** This is a marketplace **plugin** skill (Claude Code / Desktop).
-> How it loads into other Drivepoint surfaces depends on each surface's skill
-> configuration.
+> **Delivery.** `cpg-finance-context` is a marketplace **plugin** skill (Claude Code / Desktop).
+> `common-skills/` is what `list_skills` / `get_skill` return. How either loads into other
+> Drivepoint surfaces depends on each surface's skill configuration.

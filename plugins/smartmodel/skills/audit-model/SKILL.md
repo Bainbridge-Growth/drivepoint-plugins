@@ -33,32 +33,37 @@ Call `get_sheet_names` → get all actual sheets and compare to Index manifest f
 
 Run checks in order. For each: record Pass, Warning, or Fail with location and detail.
 
-### Check 1 — Protocol Compliance
+### Check 1 — What breaks Drivepoint (FAIL)
 
-Use settings data from Phase 1 (already read). Verify:
-- [ ] `settings.smartmodelSpec` = "6.0"
-- [ ] `settings.modelType` is "model" or "template" (not blank)
-- [ ] `settings.modelVersion` is valid semver (e.g., "1.0.0")
-- [ ] `settings.companyName` is not blank
-- [ ] `settings.modelStartDate` is a valid date
-- [ ] `settings.historicalStartDate` is a valid date and precedes `modelStartDate`
+These are the only structural FAILs. Anything else in this checklist is a warning.
+- [ ] Settings header can be read: literals `id` and `Value` (capital V). A lowercase `value` is a FAIL
+- [ ] Settings ids are unique. A duplicate is a FAIL
+- [ ] Date settings are Excel dates or serials, not text. Text is a FAIL
+- [ ] `settings.companyId` is this tenant or a company-group id. Another tenant is a FAIL. Blank, or the placeholder `flavorfusion`, is a WARNING (publish skipped; prep fills blank and `flavorfusion`)
+- [ ] No row-3 `Actual` / `Forecast` without a row-2 date. That is a FAIL
+- [ ] Formulas have cached values. A missing cache is a FAIL
+- [ ] No dangling pane selections. A broken pane is a FAIL
 
-### Check 2 — Sheet Structure
+`settings.smartmodelSpec = "6.0"` turns on v6 add-in behaviour. It is not required for the plan to connect. Missing spec, `modelType`, `modelVersion`, or `companyName` is a WARNING.
 
-Compare `get_sheet_names` output to `read_smartmodel_index` manifest:
-- [ ] Index tab exists
-- [ ] Settings tab exists with dark gray tab color
-- [ ] Every sheet referenced in Index manifest actually exists
-- [ ] Tab colors follow convention (yellow = schedule, blue = report, default = R-)
-- [ ] No orphan sheets (tabs present but not referenced in any template)
+### Check 2 — Sheet structure (WARNING unless Check 1 already failed)
+
+Find schedule tabs by the header labels `End of Period` and `Period Type`, not by yellow. Compare `get_sheet_names` to the Index manifest when an Index exists. Index is optional — sync does not read it, and upload prep does not add one.
+- [ ] A missing Index is a WARNING, not a FAIL
+- [ ] A missing Settings tab is a WARNING (publish skipped). Dark gray tab color is convention
+- [ ] Every sheet named in an Index manifest exists. A missing sheet is a WARNING
+- [ ] Tab color is convention. A schedule that is not yellow is not a defect
+- [ ] Tabs that are not in the Index are not orphans to delete. Hidden channel tabs are unpicked v6 channels: zeroed in Settings (`qsPct*` and the per-channel rates), never deleted. TikTok has no v6 tab
+- [ ] `Key Drivers + Results` is a synced tab. `Key Drivers and Results` (the word "and") is on the roll-forward ignore list and is a different name
 
 ### Check 3 — Date Spine Integrity
 
-Call `read_smartmodel_date_spine` on each schedule sheet:
-- [ ] Row 2 has contiguous monthly dates with no gaps
-- [ ] All schedule sheets share the same date range
-- [ ] Row 3 has "Actual" or "Forecast" in every column that has a date
-- [ ] The Actual/Forecast boundary is consistent across all schedule sheets
+Find each schedule by `End of Period` / `Period Type`, then call `read_smartmodel_date_spine`:
+- [ ] Row 2 dates are contiguous. A gap is a WARNING. There is no 12-month minimum
+- [ ] Schedule sheets that share a plan usually share a date range. A mismatch is a WARNING
+- [ ] Row 3 has "Actual" or "Forecast" under every date. A label with no date is a FAIL (Check 1)
+- [ ] Row 3 may use `lastDateActuals` or `modelStartDate`. Both pass. Flag only a gap of more than one month between those two dates
+- [ ] The Actual/Forecast boundary differs across sheets — WARNING, unless one of them is the no-date FAIL
 
 Call `get_todays_date` to assess:
 - [ ] Actuals are not more than 2 months stale
@@ -75,15 +80,15 @@ Call `read_smartmodel_data_section` on a sample of schedule sheets:
 
 ### Check 5 — Formula Integrity
 
-Call `sheet_error_find` → scan all sheets for formula errors. Check for:
-- [ ] No #REF! errors anywhere
-- [ ] No #DIV/0! errors in the visible data range
-- [ ] No #NAME? errors
-- [ ] No #VALUE! errors
+Call `sheet_error_find` → scan all sheets for formula errors. `#REF!`, `#DIV/0!`, `#NAME?`, and `#VALUE!` are WARNINGS. They do not block connect or sync. Still list every one — a displayed number can be wrong.
+- [ ] No #REF! errors (WARNING)
+- [ ] No #DIV/0! errors in the visible data range (WARNING)
+- [ ] No #NAME? errors (WARNING)
+- [ ] No #VALUE! errors (WARNING)
 
 Call `read_smartmodel_data_section` on schedule sheets and verify:
-- [ ] Key Result rows (column A contains `Key Result`) contain formulas, not hardcoded values
-- [ ] Key Driver rows (column A contains `Key Driver`) contain user-entered values or import formulas
+- [ ] Key Result rows (column A contains `Key Result`) contain formulas, not hardcoded values. A hardcoded result is a WARNING — sync still stores the cached value
+- [ ] Key Driver rows (column A contains `Key Driver`) contain user-entered values or import formulas. Sync reads these column A/B markers
 - [ ] Don't flag a Key Driver for a missing `•` dot in column A: the dot is no longer used
 
 ### Check 6 — Cross-Sheet Consistency
@@ -95,11 +100,11 @@ Call `read_smartmodel_data_section` on consolidation (M - Monthly):
 
 ### Check 7 — Metadata Integrity
 
-Call `read_smartmodel_sheet_metadata` on each schedule sheet:
-- [ ] Every schedule sheet has `metadata___template_id` in column B
-- [ ] Template IDs match what's declared in the Index tab manifest
-- [ ] No two sheets share the same `metadata___template_id`
-- [ ] `settings___identifier_structure` is declared on each sheet
+Call `read_smartmodel_sheet_metadata` on each schedule sheet. All of these are WARNINGS. Sync reads column A/B markers, not the metadata block.
+- [ ] A schedule sheet may have `metadata___template_id` in column B. Missing is fine on a customer file
+- [ ] When an Index exists, template ids in it match the sheets. A mismatch is a WARNING
+- [ ] Two sheets sharing one `metadata___template_id` is a WARNING, not a broken plan
+- [ ] `settings___identifier_structure` is convention
 
 Call `read_smartmodel_registries` on sheets with dimension/measure registries:
 - [ ] Dimension registries are populated (not empty)
@@ -113,8 +118,8 @@ Call `read_smartmodel_registries` on sheets with dimension/measure registries:
 
 | Level | Meaning | Examples |
 |-------|---------|---------|
-| FAIL | Model is broken or producing wrong numbers | #REF! errors, missing sheets, broken consolidation tie, hardcoded Key Results |
-| WARNING | Model works but something is off or incomplete | Empty R- sheets, stale actuals, missing optional metadata fields |
+| FAIL | Drivepoint cannot publish or sync, or a consolidation total does not tie | Unreadable Settings header, duplicate ids, text dates, another tenant's companyId, Actual/Forecast with no date, no cached values, broken panes, consolidation that does not tie |
+| WARNING | The plan still connects. Something is incomplete or ugly | Missing Settings or Index, missing protocol ids, gridlines, #REF! and other formula errors, calc mode, freeze position, short history, empty R- sheets, stale actuals, a schedule that is not yellow |
 | INFO | Observation, not an error | Cosmetic inconsistencies, minor formatting deviations |
 
 ### Output format
@@ -162,7 +167,7 @@ Reference `/optimize-model` for performance improvements.
 1. Don't just check the first sheet — errors hide in mid-workbook templates
 2. Don't skip the consolidation tie-out — it's the most common source of material errors
 3. Don't report cosmetic issues as Fails — prioritize data accuracy issues
-4. Don't declare the model clean until the formula error check passes — a single #REF! can corrupt downstream calculations silently
+4. Don't call the model a Drivepoint failure because of `#REF!`, a missing Index, gridlines, calc mode, or the freeze cell. Those are warnings. Do report `#REF!` — it can still show a wrong number
 5. Don't ignore stale actuals — a model where actuals are months old will produce misleading variance analysis
 
 ---

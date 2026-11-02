@@ -12,8 +12,8 @@ The output is **markdown content returned in-chat**. Do not create files or modi
 ## Before you start
 
 1. **Confirm the reporting month and customer.** Customer name is readable from `settings.companyName`. Reporting month defaults to the most recently closed Actual period — infer it from the date spine on the consolidation sheet. Only ask the user if genuinely ambiguous.
-2. **Read the Index tab** to discover which templates (and therefore which channels) are present. This determines the shape of the report — a two-channel customer gets a different table of contents than a five-channel customer.
-3. **Read the monthly consolidation sheet** (typically `M - Monthly` — check Index) for headline numbers. Read channel-specific schedule sheets for channel-level commentary.
+2. **Find the channels from the schedule tabs**, using the `End of Period` / `Period Type` headers. Use the Index when it exists; a missing Index is normal. Hidden channel tabs are unpicked v6 channels — they are zeroed in Settings (`qsPct*` and the per-channel rates), not deleted, and they are not active channels in this report. TikTok has no v6 tab, so do not expect one. The channel set decides the shape of the report.
+3. **Read the monthly consolidation sheet** (typically `M - Monthly`) for headline numbers. Read the visible channel schedule sheets for channel-level commentary.
 
 If the workbook uses SmartModel v6 protocol, the `smartmodel-protocol` skill should already be loaded. Use it.
 

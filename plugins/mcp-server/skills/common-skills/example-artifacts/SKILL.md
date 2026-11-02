@@ -1010,6 +1010,12 @@ report — follow `report-creation-guide.md` instead of this template.
 **Triggered by:** "Write a model update guide for my SmartModel — what to
 change on each tab."
 
+v6 has no TikTok schedule tab. The TikTok entries in the sample below are an
+older layout illustration, not a v6 sheet to create. Unpicked v6 channels
+(DTC, Amazon, Wholesale) are hidden and zeroed in Settings (`qsPct*` and the
+per-channel rates). They are not deleted. Find real schedule tabs by
+`End of Period` / `Period Type`, not only by a yellow tab.
+
 **Tier:** Customer-built compact — `CompactHeader` + `BuiltWithFooter`.
 
 **Chips (three kinds, not interchangeable):**

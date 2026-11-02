@@ -7,7 +7,7 @@ Drivepoint's Claude products as separate, independently-installable plugins.
 
 | Plugin | What it does | Version |
 |--------|--------------|---------|
-| **`smartmodel`** | SmartModel Protocol v6.0 — the AI-readable grammar for Drivepoint Excel financial models, plus the full SmartModel skill library (builders, analysis, model ops, scenarios). This repo is the **canonical home** of the SmartModel Protocol specification. | 1.5.1 |
+| **`smartmodel`** | SmartModel Protocol v6.0 — the AI-readable grammar for Drivepoint Excel financial models, plus the full SmartModel skill library (builders, analysis, model ops, scenarios). This repo is the **canonical home** of the SmartModel Protocol specification. | 1.6.0 |
 | **`mcp-server`** | The Drivepoint MCP server — connects Claude to a brand's Drivepoint analytics data (read-only, BigQuery-backed marts, skills, and plans). | 0.1.4 |
 
 ## Install
@@ -53,7 +53,8 @@ drivepoint-plugins/                          ← marketplace root
       skills/
         smartmodel-protocol/SKILL.md         ← canonical protocol spec (plugin entry point)
         build-schedule/SKILL.md              ← Builders
-        drivepointify-models/                ← convert a customer's own template (+ scripts/ profiler & validator)
+        drivepointify-models/                ← rebuild a customer's own template (+ scripts/ profiler & validator)
+        make-drivepoint-ready/SKILL.md       ← keep their formulas; minimum structure so a plan publishes
         build-report/SKILL.md
         create-scenario/SKILL.md
         variance-analysis/SKILL.md           ← Analysis
@@ -77,10 +78,27 @@ drivepoint-plugins/                          ← marketplace root
         compare-scenarios/SKILL.md           ← Scenarios
     mcp-server/                              ← Drivepoint MCP plugin
       .claude-plugin/plugin.json
-      .mcp.json                              ← MCP server declaration (endpoint placeholder)
-      skills/
-        cpg-finance-context/SKILL.md         ← CPG finance vocabulary + concepts bridge
+      .mcp.json                              ← https://mcp.drivepoint.ai/mcp
       README.md                              ← setup + endpoint configuration
+      skills/
+        cpg-finance-context/SKILL.md         ← Claude plugin skill: CPG finance vocabulary
+        brand-contract.json                  ← pinned brand values for artifact skills
+        tool-names.json                      ← pinned MCP tool names for common-skills
+        common-skills/                       ← list_skills / get_skill (markdown only)
+          analysis-skills-guide/
+          artifact-style-guide/
+          data-dictionary/
+          drivepointify-models/              ← post-upload plan check; rules stay in the smartmodel skill
+          example-artifacts/
+          import-data/
+          product-mapping/
+          report-catalog/
+          report-creation-guide/
+          sample-queries/
+          saved-reports-guide/
+          scenario-planning/
+          starter-prompt/
+          system-prompt/
   trial/
     welcome.md                               ← guided trial experience for prospects
   README.md
@@ -118,9 +136,9 @@ Packages the Drivepoint MCP server so a Claude session can connect directly to a
 brand's Drivepoint analytics data (read-only). See
 `plugins/mcp-server/README.md` for the tool surface and endpoint configuration.
 
-> **Note:** the endpoint in `plugins/mcp-server/.mcp.json` is currently a
-> placeholder (`https://YOUR-DRIVEPOINT-MCP-ENDPOINT`). Set it to the real
-> Drivepoint MCP URL before the plugin will connect.
+> **Note:** `plugins/mcp-server/.mcp.json` points at
+> `https://mcp.drivepoint.ai/mcp` (Streamable HTTP). See
+> `plugins/mcp-server/README.md` for the tool surface.
 
 ## Try Drivepoint (Trial Experience)
 

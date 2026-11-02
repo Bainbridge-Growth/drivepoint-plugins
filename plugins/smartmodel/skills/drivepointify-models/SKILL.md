@@ -1,6 +1,6 @@
 ---
 name: drivepointify-models
-description: Turn a customer's own Excel budget / forecast / department template into a Drivepoint SmartModel ("drivepointify" it) — one continuous date spine with actuals and forecast in the same rows, the customer's logic rebuilt as real Key Drivers and Key Results, a summary tab in place of Total / LY / variance columns, and every number tied back to the source. Use when a user says "drivepointify", "make this Drivepoint compatible", "convert this budget template", "turn this spreadsheet into a SmartModel", "add key drivers and results to this file", "make this work with the add-in", or uploads a non-SmartModel planning workbook. Ships a source profiler, a hand-off validator and an automatic hand-off gate — structure validator, workbook audit (broken refs, circular references, orphans, hard-codes, identities), Excel-integrity checks (no repair prompt, no circular references, no broken colour bands) and a driver flex test — that must pass before delivery.
+description: Turn a customer's own Excel budget / forecast / department template into a Drivepoint SmartModel ("drivepointify" it) — one continuous date spine with actuals and forecast in the same rows, the customer's logic rebuilt as real Key Drivers and Key Results, a summary tab in place of Total / LY / variance columns, and every number tied back to the source. Use when a user says "drivepointify", "convert this budget template", "turn this spreadsheet into a SmartModel", or "rebuild the key drivers". For "make this Drivepoint ready" or "make this work with Drivepoint" when the formulas should stay, use make-drivepoint-ready instead. Ships a source profiler, a hand-off validator and an automatic hand-off gate — structure validator, workbook audit (broken refs, circular references, orphans, hard-codes, identities), Excel-integrity checks (no repair prompt, no circular references, no broken colour bands) and a driver flex test — that must pass before delivery.
 ---
 
 # Drivepointify Models
@@ -20,7 +20,7 @@ per-tab conversion; the wider programme is a model migration.
 |---|---|---|
 | `profile_source.py <src.xlsx> [--sheet S]` | **Before** writing the spec | Finds stacked LY / actuals blocks, pasted "% × base" values, "LY × factor" growth builds, rows that are copies of other rows, `=row + constant` adjustments, shifted date blocks, bridges that skip rows, opening balances that don't roll, labels in the wrong column, duplicate names, copied `Plan Settings` tabs. |
 | `drivepointify_engine.py` (import it) | Build | `Model` → `seed()` D-tab, `schedule()` tabs with `row()` templates, `summary()`, `save()` = Index + Settings + chrome + recalc (if the `formulas` package is present) + add-in WebExtension. Colours every cell by role (input / actual / linked / calculated) and closes every schedule with End of Schedule + a hyperlinked Return to Top. Refuses a Key Driver without budget inputs or a Key Result without a formula. New seeds are named `D - `; an existing build's `R - ` seed still works (with a warning). `import_tab()` writes an add-in import R-tab (e.g. `R - GL`) in its own layout, and `ImportTab.sumifs()` reads it. `python3 drivepointify_engine.py --inject-addin file.xlsx` injects the add-in part into any workbook. |
-| `gate.py <built.xlsx> [--ties ties.json] [--identities identities.json] [--company-id ID] [--no-flex]` | **Automatic**: `Model.save()` runs it; run it by hand on any file you edited after the build | The whole hand-off gate in one call. Runs the validator, the audit, Gate 0 (`lint_xlsx.py`, `find_circular.py`, `style_gaps.py`), the drivepoint-customers style checks (`check_cell_roles.py`, `check_format.py`) when that repo is a sibling checkout (or `$SMARTMODEL_STYLE_TOOLS`), a roll-forward test (`lastDateActuals` + 1 month on a copy: 0 errors, the month flips to Actual on every tab, closed months unchanged), a flex test (every Key Driver budget input ×1.1 on a copy, then recalc: 0 error cells, Actual months unchanged, Key Results move) and, when `drivepoint-smartmodel-service` is on disk (sibling checkout or `$DRIVEPOINT_SMARTMODEL_SERVICE`), `post_validate`. Exits 1 on any failure. Paste its summary lines into the hand-off. |
+| `gate.py <built.xlsx> [--ties ties.json] [--identities identities.json] [--company-id ID] [--no-flex]` | **Automatic**: `Model.save()` runs it; run it by hand on any file you edited after the build | The whole hand-off gate in one call. Runs the validator, the audit, Gate 0 (`lint_xlsx.py`, `find_circular.py`, `style_gaps.py`), the drivepoint-customers style checks (`check_cell_roles.py`, `check_format.py`) when that repo is a sibling checkout (or `$SMARTMODEL_STYLE_TOOLS`), a roll-forward test (`lastDateActuals` + 1 month on a copy: 0 Excel error cells, the month flips to Actual on every tab, closed months unchanged), a flex test (every Key Driver budget input ×1.1 on a copy, then recalc: 0 error cells, Actual months unchanged, Key Results move) and, when `drivepoint-smartmodel-service` is on disk (sibling checkout or `$DRIVEPOINT_SMARTMODEL_SERVICE`), `post_validate`. A non-zero exit blocks the hand-off for ties, circular references, uncached formulas, this skill's structure rules, and the Drivepoint error list below. `post_validate` warnings — missing Index, missing protocol ids, gridlines, `#REF!`, calc mode, freeze position, history shorter than 12 months — are explained, not rebuilt. An older service that still reports those as errors is wrong; record them as warnings and do not insert header rows, force freeze at K5, or demand 12 months to clear them. |
 | `audit_drivepointified.py <built.xlsx> [--identities identities.json]` | Inside the gate; run it alone while fixing | Checks that the workbook **works**, across every formula on every tab. It fails on: a reference to a missing sheet or an out-of-range cell; **circular references** (Tarjan over the full cell graph, with ranges expanded); error values; uncached formulas; Index gaps or duplicate template rows; a split spine or Actual/Forecast boundary; a seed row nothing reads; a Key Driver that moves nothing; numeric literals inside formulas; a Budget Summary cell ≠ Σ spine; and any broken identity from the JSON. It lists single-cell refs to empty cells, which is fine when guarded with `IF(ISNUMBER(…))`. |
 | `validate_drivepointified.py <built.xlsx> [--ties ties.json] [--allow-uncalculated]` | Inside the gate | Structure, per tab. Fails on: broken / partial date spine, history not in the spine, stacked blocks under the budget, columns right of the spine, anything but markers in A:B, Key Drivers that are formulas, Key Results that are typed, $ drivers that are a pasted % of another row, errors, uncached formulas, protocol chrome. `--ties` compares every mapped row to the source. |
 | `lint_xlsx.py <built.xlsx>` | Inside the gate (last); run alone while fixing | Gate 0a: what Excel **repairs** on open ("We found a problem with some content… Removed Records: Cell information from /xl/worksheets/sheetN.xml"). That covers duplicate or out-of-order cells, bad shared formulas, formulas over Excel's limits, functions missing `_xlfn.`, relationships to missing parts (a deleted `calcChain.xml`), and external-workbook links (Excel's security bar). Names the tab behind each `sheetN.xml`. |
@@ -45,8 +45,13 @@ user to ask.
      (e.g. W), because history must be in the series. Build a budget-only spine at K only if the user
      confirms they want history off the time series.
    - Every schedule tab in the workbook uses the **same** spine (same K2 start, same months).
-2. **Row 3** is `Actual` for months ≤ `settings.lastDateActuals`, then `Forecast`, formula-driven.
-   Nothing in rows 2–3 right of the last spine date (plan sync rejects a row-3 value without a date).
+2. **Row 3** is `Actual` then `Forecast`, formula-driven. This skill writes
+   `=IF(<col>2<=Settings!$D$14,"Actual","Forecast")` against `settings.lastDateActuals`, and the gate
+   rolls forward by moving `lastDateActuals`. Drivepoint also accepts
+   `=IF(<col>2<Settings!$D$6,"Actual","Forecast")` against `settings.modelStartDate`. Both pass.
+   Do not rewrite a working file from one formula into the other. Only a gap of more than one month
+   between those two dates is flagged. There is no 12-month history minimum.
+   Nothing in rows 2–3 right of the last spine date (an Actual/Forecast with no row-2 date fails sync).
 3. **No Total / LY / variance / 1H-2H columns on the schedule.** Those become a **Budget Summary**
    report tab (blue) that SUMIFS the spine by period: FY history vs FY budget, variance $ / %,
    quarters, halves. Flows are summed; balances take the period-end value; openings take the first month.
@@ -80,10 +85,20 @@ user to ask.
 8. **Source bugs are reported, not silently inherited.** If the rebuilt summary disagrees with a bridge
    in the source (e.g. a 1H/2H block that skips a line), keep the correct number and tell the user
    exactly what their bridge left out. Same for basis mismatches and shifted date blocks.
-9. **Protocol chrome**: Settings header literally `id | Setting | Value | Description`;
-   `settings.companyId` = the Drivepoint tenant id; real Excel dates; Index manifest; metadata block
-   B9:B16; recalculated (cached values present); add-in WebExtension part; **do not copy the source's
-   hidden `Plan Settings` tab** (it pins the other file's SharePoint id).
+9. **What this rebuild writes, and what Drivepoint actually enforces.** Header literally
+   `id | Setting | Value | Description` (capital V — a lowercase `value` makes every setting blank).
+   `settings.companyId` is the tenant id. Blank or `flavorfusion` `companyId`, `companyName`, and
+   `stores` are filled from the tenant; other non-blank values stay. If the customer already has a
+   tab named `Settings`, rename it `Settings (original)` before writing the Drivepoint tab. Dates are
+   real Excel dates or serials, never text. Sync parses Settings by id, not by row.
+   `save()` still writes an Index and a metadata block — that is house style. A missing Index does
+   not block connect or sync, and upload prep does not add one. Cached formula values are required.
+   The add-in WebExtension part is required for the add-in to appear. **Do not copy the source's
+   hidden `Plan Settings` tab** (it pins the other file's SharePoint id). Freeze position is not
+   validated. Do not fail a file for K5 versus D5.
+   Drivepoint errors, and only these: unreadable Settings header, duplicate ids, text dates, another
+   tenant's `companyId`, Actual/Forecast with no date, formulas with no cached values, broken panes.
+   Missing Settings/Index, protocol ids, gridlines, `#REF!`, calc mode, and freeze position are warnings.
 10. **Formatting says what each cell is.** Colour every cell by role: input = blue on grey, actual =
     the workbook's actual colour, linked from another tab = green, calculated = black. Building into
     an existing SmartModel means **its** conventions (read its Home legend; v5 actuals are gold), and
@@ -150,7 +165,8 @@ recommendation. Record the answers in the spec:
 2. **Depth.** Where our standard tab has a build their file lacks, ask whether they want it:
    - Wholesale: the bottoms-up retail build (Doors × SKUs per Door × Units per SKU per Week, i.e.
      velocity by SKU, then unit sales by product).
-   - DTC / TikTok / Amazon: cohort retention and Sales by SKU.
+   - DTC / Amazon: cohort retention and Sales by SKU. TikTok has no v6 schedule tab — do not offer one.
+     Unpicked v6 channels are hidden and zeroed in Settings (`qsPct*` and the per-channel rates), never deleted.
    - Product: SKU-level landed cost.
    - Payroll: headcount schedule vs their department payroll.
    - Opex: one row per GL account vs vendor lines.
@@ -247,7 +263,7 @@ Section order follows the customer's tab.
 
 When the brief is "the same P&L for each of N accounts", build **one** template id with many tabs:
 call `m.schedule(title, template_id="<co>-retail-account", …)` in a loop. `save()` writes a single
-Index row for the template, with the sheets comma-separated; the protocol wants one row per template id.
+Index row for the template, with the sheets comma-separated. One row per template id is house style. Sync does not read Index.
 Then add:
 - a **rollup** tab that sums every account tab (plus subtotals by group, e.g. Direct / KeHE / UNFI);
 - **pool** tabs for costs the GL can't split by account. Each pool tab publishes one **rate** (cost per
@@ -309,7 +325,7 @@ python3 scripts/gate.py <built.xlsx> --ties ties.json --identities identities.js
   carries cents of rounding against its own revenue − trade. Write the reason into the spec.
 - `ties.json` covers **every** mapped row: budget columns vs the source budget range, history columns
   vs the source LY range, plus summary cells vs the source totals.
-- **0 FAIL required.** Explain every WARN in the hand-off (e.g. "growth factors have no history — expected").
+- **0 FAIL required on this skill's own checks** (ties, spine, markers, circular references, uncached formulas, the Drivepoint error list). Explain every WARN. A `post_validate` hit for missing Index, protocol ids, gridlines, `#REF!`, calc mode, freeze position, or a history under 12 months is a WARN, even if an older service binary still labels it an error.
 - No formula engine available: run with `--allow-uncalculated` (the spine is evaluated from its formulas so
   structure is still checked). Value checks and ties then need the recalculated file — say so in the hand-off.
 - Also re-open the file and eyeball the first screen of each tab: labels in C, dates in row 2, blue
@@ -331,10 +347,12 @@ Lead with what changed and why it's safe:
 4. What was a pasted value and is now a driver.
 5. Validation: paste the gate's summary. For example: "N values tie to your file. Gate PASS: validator
    0 fail, audit 0 fail, Excel opens without repair, 0 circular references, no colour-band gaps (allowed: …),
-   flex test 0 errors, post_validate 0 errors."
+   flex test 0 Excel error cells, post_validate 0 Drivepoint errors (warnings listed)."
 6. Findings in their file (bridge gaps, basis mismatches, shifted blocks) — with the numbers.
-7. How to load it: upload as a plan in the Drivepoint app (Plans → Upload Plan); the add-in shows it
-   as a SmartModel only after that registration.
+7. How to load it: upload as a plan in the Drivepoint app (Plans → Upload Plan). Any `.xlsx` connects.
+   Prep runs unless `settings.companyId` and a Key Driver or Key Result marker are already there.
+   Prep adds minimum Settings, `Key Drivers + Results` (that tab is synced; `Key Drivers and Results`
+   is a different, ignored name), and the web extension. It does not rewrite the other sheets.
 8. After upload, if the Drivepoint MCP connector is available, confirm Drivepoint itself reads it:
    `list_company_plans` → `get_valid_plan_tabs` (every schedule tab must be listed) →
    `list_plan_key_drivers_and_results` (every marked row must come back with its id and label).
@@ -343,9 +361,10 @@ Lead with what changed and why it's safe:
 
 Works when the conversation has **file upload + code execution** and this skill (the SmartModel plugin)
 is loaded: upload the customer's .xlsx, run the profiler, build with the engine, validate, and return
-the file. Chat users who only have the Drivepoint MCP connector get the procedure as the
-`drivepointify-models` skill via `get_skill`; without code execution Claude can plan the conversion
-and check a registered plan with the connector tools, but cannot write the workbook.
+the file. These conversion rules live only in this skill. The MCP `drivepointify-models` skill
+(`get_skill`) is the post-upload check: `list_company_plans`, `get_valid_plan_tabs`,
+`list_plan_key_drivers_and_results`. A chat that only has the connector can run that check, and
+cannot write the workbook.
 
 ---
 
@@ -384,12 +403,12 @@ The user should never have to ask these. If any answer is "no", fix it first.
 
 | What went wrong | Why it's wrong | Guard |
 |---|---|---|
-| Cells shifted so the budget lands in K:V, LY block left underneath | Not a time series; plan sync / scenarios see no history; reviewer rejects | Non-negotiable 1; validator `HISTORY` |
+| Cells shifted so the budget lands in K:V, LY block left underneath | Not this skill's time series. Drivepoint still connects a short spine — there is no 12-month minimum — but the rebuild is not done until history sits in the series | Non-negotiable 1; validator `HISTORY` |
 | Key Driver = "hard-keyed", Key Result = "formula" | Pasted % rows become $ "drivers", LY-plus-adjustment rows become "results" | Non-negotiables 4–5; validator `MEANING` |
 | Totals / 2026 FC / variance columns kept beside the months | Row 2/3 must stop at the spine; values there break sync | Summary tab; validator `HISTORY` |
 | Growth factors left as a side block with revenue pasted | Changing the factor doesn't move the P&L | Rebuild revenue as LY × factor |
 | Hidden `Plan Settings` copied from the source | Points at the customer's original SharePoint item | Drop it; validator `PROTOCOL` |
-| Settings header `value` (lower-case) | Add-in reads every setting as blank → "not a SmartModel" | Header literals; validator `PROTOCOL` |
+| Settings header `value` (lower-case) | Add-in reads every setting as blank. The plan still connects; publish and the add-in see no settings | Header literals `id` and `Value`; validator `PROTOCOL` |
 | Uncalculated workbook | Add-in reads NaN; Plan Save fails | Recalc; validator `CALC` |
 | Source bridge silently inherited | Customer's 1H/2H total was short a line | Non-negotiable 8; profiler "bridges" |
 | Their layout kept under our tab names | DTC / AMZN / Product lost their SKU, cohort and cost builds; reviewer can't find the Drivepoint tab | Phase 0 scope; standard sections |
@@ -405,7 +424,7 @@ The user should never have to ask these. If any answer is "no", fix it first.
 | Labels moved F:J → C:G, H:J left without cells | White gap in the blue header band and every section band | Style each gap cell like the band; `style_gaps.py` |
 | Unused external link inherited from the customer file | Excel's "links to external sources" bar on every open | Remove it; `lint_xlsx.py` |
 | `recalculated=False` with `formulas` installed | openpyxl ≥3.1 writes `<v></v>`; the cache writer only matched `<v/>` and shipped uncached files | Fixed in the engine; a test asserts recalc |
-| One Index row per tab for a shared template | The protocol wants one row per template id | `save()` merges; audit `INDEX` |
+| One Index row per tab for a shared template | House style is one row per template id. A missing Index is a warning, not a sync failure | `save()` merges; audit `INDEX` |
 | Hard-coded rate in a formula (`*0.0262`) | A reviewer can't find or change it; it silently goes stale | Put it on an input row; audit `HARDCODE` |
 | Forecast % carried from the last actual month | A one-month spike becomes the run-rate (broker % Aug → Sep–Dec) | Use a Jan–YTD ratio, or read the row's first budget input |
 | Checker reads an open-month GL cell as 0 | A false gap in the month the GL isn't closed | `IF(ISNUMBER(…))` guard; audit `REFS` lists empty targets |
