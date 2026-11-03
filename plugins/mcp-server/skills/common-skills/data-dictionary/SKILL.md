@@ -63,6 +63,12 @@ inventory/distribution snapshots, and shipments, at retailer and store grain,
 weekly and monthly. They are empty for brands with no retail feed. Full schema
 in the "Retail domain" section at the bottom of this document.
 
+**Inventory marts (warehouse / 3PL position).** Brands with a Trackstar WMS or
+Cin7 Core connection also have three `inventory_*` tables in this same dataset:
+current and daily on-hand / sellable / committed by SKU and warehouse, plus
+per-connection freshness. They are empty for brands with no inventory
+connection. Full schema in the "Inventory domain" section below.
+
 **Materialization matters for cost.** The table-materialized marts above
 (both ecommerce tables and the two `*_actuals_vs_forecast` tables) are
 unpartitioned and unclustered: date filters help latency but do not reduce
@@ -636,6 +642,123 @@ WHERE source_name = 'alloy'
     WHERE source_name = 'alloy')
 GROUP BY 1, 2
 ORDER BY in_stock_rate
+```
+
+---
+
+## Inventory domain
+
+Warehouse / 3PL inventory position, present for brands with a Trackstar WMS
+connection (ShipHero, ShipBob, Deposco, FBA and other 3PLs) or Cin7 Core.
+Same dataset, `{{env_prefix}}_dwh_mart`. This is the brand's **own stock in
+its warehouses** — not retail on-shelf inventory (that is
+`retail_inventory_snapshot_*`) and not Amazon Vendor (1P) inventory.
+
+**Only populated for brands with an inventory connection.** dbt builds all
+three tables for every tenant; they are empty otherwise. Probe with
+`SELECT source_name, connection_key, wms_name, COUNT(*) … GROUP BY 1, 2, 3`
+on the latest table before assuming data exists.
+
+### Tables
+
+| Table | Grain | Use for |
+|---|---|---|
+| `inventory_position_sku_warehouse_latest` | connection × inventory item × warehouse (the connection's latest snapshot day) | Default for "what do we have on hand / sellable / committed, by SKU and warehouse". |
+| `inventory_position_sku_warehouse_day` | connection × inventory item × warehouse × `snapshot_date` | Position history and day-over-day change. Partitioned by `snapshot_date`, clustered by `source_name, connection_key, warehouse_id` — filter on them. |
+| `inventory_source_freshness` | one row per connection | Is the feed current? Last extract per Trackstar stream, `hours_since_inventory_extract`, how many snapshot days exist. Includes configured connections whose data never landed. |
+
+History starts the day the snapshot shipped (plus whatever raw history the
+connection already held). Days before that cannot be backfilled — say so when
+asked for older positions.
+
+### Key columns
+
+| Column | Notes |
+|---|---|
+| `company_id` | Provenance |
+| `source_name` | `trackstar` \| `cin7core` |
+| `connection_key` | One inventory connection. A brand can have several (e.g. a 3PL plus FBA). |
+| `wms_name` | Readable WMS name (e.g. `ShipHero`), `Cin7 Core` for Cin7 rows. **Can be NULL** when the connection config has no name yet — fall back to `channel_store_name`. |
+| `channel_store_name` | Free-text store label from the connection config. |
+| `warehouse_id`, `warehouse_name`, `warehouse_code` | Warehouse. `warehouse_id = 'unassigned'` (with `has_warehouse_breakdown = FALSE`) means the WMS sent only item-level totals. For Cin7 Core, `warehouse_id` and `warehouse_name` are the location name. |
+| `brand_id`, `brand_name` | Trackstar warehouse customer — the brand on a shared 3PL account. NULL when the WMS does not send it. |
+| `inventory_item_id` | **The key.** Trackstar inventory item id or Cin7 product id. |
+| `sku`, `product_name`, `is_active` | As the WMS reports them. `sku` is an attribute, not unique: the same sku can appear on several connections and warehouses. |
+| `snapshot_date` | UTC date of the extract. |
+| `data_complete_through_date` *(day table)* | The connection's latest `snapshot_date`. State "data through" from it. |
+| `last_synced_at`, `days_since_sync` *(latest table)* | When the connection last extracted, and how many days old its latest snapshot is. |
+
+### Quantity measures
+
+| Column | Meaning | Sources |
+|---|---|---|
+| `on_hand_quantity` | Total units in the warehouse | both |
+| `sellable_quantity` | Available to sales channels (Cin7 `Available`) | both |
+| `committed_quantity` | Already assigned to orders (Cin7 `Allocated`) | both |
+| `fulfillable_quantity` | Can be picked and shipped | Trackstar |
+| `awaiting_quantity` | Expected to arrive (inbound) | Trackstar |
+| `unfulfillable_quantity` | Damaged, quarantined, etc. | Trackstar |
+| `unsellable_quantity` | Held back from channels (reserved); Trackstar marks it deprecated | Trackstar |
+| `on_order_quantity`, `in_transit_quantity` | Open PO / in transit | Cin7 Core |
+| `wms_unit_cost` | Unit cost as the source sends it (Trackstar `unit_cost`, Cin7 `AverageCost`) | both, where sent |
+
+`warehouse_metrics_json` keeps the raw Trackstar per-warehouse object, in case
+a WMS sends a key beyond those listed.
+
+### Inventory footguns
+
+1. **Snapshot, not flow — never SUM quantities across days.** Quantities add
+   up across items and warehouses within one `snapshot_date`. For "now", use
+   the latest table; for history, pick a day (or average deliberately).
+2. **NULL is not zero.** A NULL quantity means that WMS does not send the
+   metric. Do not `COALESCE(…, 0)` it into a total, and say which metrics a
+   connection lacks. 0 means the WMS reported zero.
+3. **One source per warehouse; don't double-count connections.** Each
+   connection reports its own warehouses. The same sku on two connections
+   (3PL + FBA, Deposco + FBA) is stock in two places — sum it only when the
+   question is total units across locations, and break it out by
+   `connection_key` / `warehouse_name` otherwise.
+4. **Check freshness before calling it current.** A stale connection keeps its
+   last day in the latest table. Report `snapshot_date` / `days_since_sync`
+   with every position answer, and flag connections with
+   `days_since_sync > 1` or a large `hours_since_inventory_extract`.
+5. **`wms_unit_cost` is not a valuation.** It is the WMS's own cost field,
+   often blank and not reconciled with Shopify cost or COGS. Do not present
+   `on_hand_quantity × wms_unit_cost` as inventory value without that caveat.
+6. **No demand or inbound PO lines here yet.** Weeks of cover, stock-out
+   dates and reorder points need shipped units and open POs, which these
+   tables do not carry.
+
+### Grain keys (uniqueness tuple per table)
+
+- `inventory_position_sku_warehouse_day`: `connection_key, inventory_item_id, warehouse_id, snapshot_date`
+- `inventory_position_sku_warehouse_latest`: `connection_key, inventory_item_id, warehouse_id`
+- `inventory_source_freshness`: `connection_key`
+
+### Inventory discovery patterns
+
+```sql
+-- Which inventory connections exist, and how fresh are they?
+SELECT source_name, connection_key, wms_name, channel_store_name,
+       connection_status, inventory_last_extracted_at,
+       hours_since_inventory_extract, last_snapshot_date, snapshot_day_count
+FROM `{{env_prefix}}_dwh_mart.inventory_source_freshness`
+ORDER BY hours_since_inventory_extract DESC
+```
+
+```sql
+-- Which metrics does each connection actually send? (NULL = not sent)
+SELECT connection_key, wms_name,
+       COUNT(*)                     AS rows,
+       COUNT(on_hand_quantity)      AS has_on_hand,
+       COUNT(sellable_quantity)     AS has_sellable,
+       COUNT(committed_quantity)    AS has_committed,
+       COUNT(fulfillable_quantity)  AS has_fulfillable,
+       COUNT(awaiting_quantity)     AS has_awaiting,
+       COUNT(wms_unit_cost)         AS has_unit_cost,
+       COUNT(brand_id)              AS has_brand
+FROM `{{env_prefix}}_dwh_mart.inventory_position_sku_warehouse_latest`
+GROUP BY 1, 2
 ```
 
 ---
