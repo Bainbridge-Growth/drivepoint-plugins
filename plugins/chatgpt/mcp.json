@@ -1,0 +1,26 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "drivepoint": {
+      "type": "streamable-http",
+      "url": "https://mcp.drivepoint.ai/mcp",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "oauth",
+            "client": {
+              "mode": "dcr"
+            },
+            "authorizationServerBase": "https://mcp.drivepoint.ai",
+            "authorizationUrl": "https://mcp.drivepoint.ai/mcp/connect",
+            "tokenUrl": "https://mcp.drivepoint.ai/mcp/auth/exchange",
+            "registrationUrl": "https://mcp.drivepoint.ai/mcp/auth/register",
+            "resource": "https://mcp.drivepoint.ai/mcp",
+            "baseScopes": ["mcp"],
+            "oidcEnabled": false
+          }
+        }
+      }
+    }
+  }
+}
