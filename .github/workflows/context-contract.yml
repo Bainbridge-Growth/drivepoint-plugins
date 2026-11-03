@@ -1,0 +1,27 @@
+name: context-contract
+
+on:
+  pull_request:
+    paths:
+      - "plugins/mcp-server/context-templates/**"
+      - ".github/workflows/context-contract.yml"
+      - "scripts/check_context_contract.py"
+      - "scripts/test_context_contract.py"
+
+jobs:
+  context-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Unit tests
+        run: python3 scripts/test_context_contract.py -v
+
+      - name: Context contract check
+        run: python3 scripts/check_context_contract.py
