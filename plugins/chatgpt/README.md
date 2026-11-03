@@ -34,11 +34,28 @@ install **Drivepoint** from the Drivepoint marketplace.
 
 ## Local server
 
-The committed server URL is production. To point a local plugin at a
-dev server, change `mcp.json` `url` to that server's `/mcp` endpoint
-(the mcp-server app listens on port 8081 by default) and match
-`authorizationUrl`, `tokenUrl`, `registrationUrl`, `resource`, and the
-OIDC URLs to the same origin.
+The committed URLs are production. To point a local plugin at a dev
+server, change every one of these to that server. The mcp-server app
+listens on port 8081 by default, so a local origin is
+`http://localhost:8081`.
+
+In `mcp.json`:
+
+- `url` → `http://localhost:8081/mcp`
+- `authorizationServerBase` → `http://localhost:8081`
+- `authorizationUrl`, `tokenUrl`, `registrationUrl`, `resource`, and the
+  OIDC URLs (`oidcConfigurationUrl`, `oidcUserinfoEndpoint`) → the same
+  origin
+
+In both skill dependency files, change `url` to
+`http://localhost:8081/mcp`:
+
+- `plugins/chatgpt/skills/setup/agents/openai.yaml`
+- `plugins/chatgpt/skills/answer-finance-question/agents/openai.yaml`
+
+Leave any of these on `https://mcp.drivepoint.ai` and the local plugin
+still calls production. Do not commit the local URLs. The published
+plugin stays on `https://mcp.drivepoint.ai/mcp`.
 
 ```bash
 cd apps/mcp-server
