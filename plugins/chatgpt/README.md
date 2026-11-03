@@ -9,6 +9,13 @@ Sign-in is the existing Drivepoint OAuth flow. The manifest uses dynamic
 client registration (`client.mode: "dcr"`). There is no client secret in
 this package.
 
+The server is OAuth only, not OpenID Connect. The only scope is `mcp`, and
+the OAuth `resource` must be exactly `https://mcp.drivepoint.ai/mcp`. Account
+linking uses the `get_profile` tool. The server also has a custom
+`/mcp/auth/userinfo` endpoint that returns `sub`, `email`, and
+`email_verified`. It is not an OpenID Connect userinfo endpoint, and there
+is no OpenID discovery document.
+
 ## Connect in ChatGPT
 
 1. Open [ChatGPT Plugins](https://chatgpt.com/plugins).
@@ -43,9 +50,8 @@ In `mcp.json`:
 
 - `url` → `http://localhost:8081/mcp`
 - `authorizationServerBase` → `http://localhost:8081`
-- `authorizationUrl`, `tokenUrl`, `registrationUrl`, `resource`, and the
-  OIDC URLs (`oidcConfigurationUrl`, `oidcUserinfoEndpoint`) → the same
-  origin
+- `authorizationUrl`, `tokenUrl`, and `registrationUrl` → the same origin
+- `resource` → `http://localhost:8081/mcp`
 
 In both skill dependency files, change `url` to
 `http://localhost:8081/mcp`:

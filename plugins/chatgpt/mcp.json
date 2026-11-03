@@ -15,12 +15,9 @@
             "authorizationUrl": "https://mcp.drivepoint.ai/mcp/connect",
             "tokenUrl": "https://mcp.drivepoint.ai/mcp/auth/exchange",
             "registrationUrl": "https://mcp.drivepoint.ai/mcp/auth/register",
-            "resource": "https://mcp.drivepoint.ai",
-            "baseScopes": ["mcp", "openid", "email"],
-            "oidcEnabled": true,
-            "oidcConfigurationUrl": "https://mcp.drivepoint.ai/.well-known/openid-configuration",
-            "oidcUserinfoEndpoint": "https://mcp.drivepoint.ai/mcp/auth/userinfo",
-            "oidcScopesSupported": ["openid", "email"]
+            "resource": "https://mcp.drivepoint.ai/mcp",
+            "baseScopes": ["mcp"],
+            "oidcEnabled": false
           }
         }
       }
