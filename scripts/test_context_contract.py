@@ -79,6 +79,12 @@ class DateTests(unittest.TestCase):
         violations = c.validate_file("context/metrics.md", text, CONTRACT)
         self.assertTrue(any("ISO date" in v.message for v in violations))
 
+    def test_impossible_calendar_dates_are_flagged(self):
+        for value in ("2026-02-30", "2026-13-01"):
+            text = CONTEXT.replace("2026-11-03", value)
+            violations = c.validate_file("context/metrics.md", text, CONTRACT)
+            self.assertTrue(any("ISO date" in v.message for v in violations), value)
+
 
 class SkillNameTests(unittest.TestCase):
     def test_unprefixed_skill_name_is_flagged(self):

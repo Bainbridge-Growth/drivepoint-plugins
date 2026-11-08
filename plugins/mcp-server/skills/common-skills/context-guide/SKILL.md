@@ -71,23 +71,30 @@ Add to the existing file for a topic before creating a new one. Create a new
    - Skills: `name`, `description`, `owner`, `updated`.
 2. **`description` is the only thing the model sees in the index.** One line,
    at most 150 characters, starting with "Use when…".
-3. **One topic per file.** Context files are at most 8,000 characters and
-   skills at most 6,000. `profile.md` and `preferences.md` are at most 2,000.
-   If a file grows past its limit, split it by heading.
+3. **One topic per file.** Limits apply to the body, after the frontmatter:
+   context files at most 8,000 characters, skills at most 6,000,
+   `guidance.md` and `security.md` at most 4,000, and `profile.md` and
+   `preferences.md` at most 2,000. If a file grows past its limit, split it
+   by heading.
 4. **Definitions, not numbers.** "Net revenue = net sales + shipping, before
    marketplace fees" belongs in context. "Q2 revenue was $4.1M" does not — it
    goes stale and the data tools already answer it. If a number must appear,
    date it ("as of 2026-07-06").
 5. **Cite the source** for anything non-obvious: the conversation, a ticket,
-   a table name, or a person.
+   a table name, or a person. Context files use the `source` field; skills
+   have no `source` field, so note provenance in the body.
 6. **Use real identifiers exactly**: table, column, `metric_id`, `plan_id`,
    and channel values as they appear in the warehouse.
 7. **Never save** credentials, raw personal data, customer addresses, or
    anything the user asked you not to keep.
-8. **Short, plain bullets.** No marketing tone, no hedging.
-9. **Agents write like people.** Set `owner` to the user who asked, set
-   `source` to the conversation, and set `updated` to today's date from a
-   query (`SELECT CURRENT_DATE()`), not from memory.
+8. **Save only what every reader could already see.** Everyone who can read
+   company context can read what you write, so never copy in data from
+   outside this company's marts, another company's data, benchmarks, or
+   Drivepoint-internal notes — even if your session can reach them.
+9. **Short, plain bullets.** No marketing tone, no hedging.
+10. **Agents write like people.** Set `owner` to the user who asked, set
+    `source` to the conversation (context files only), and set `updated` to
+    today's date from a query (`SELECT CURRENT_DATE()`), not from memory.
 
 ## 5. Before you call `write_context`
 

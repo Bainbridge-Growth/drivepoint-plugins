@@ -23,6 +23,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -88,6 +89,16 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str] | None, str, str | None
     return fields, body, None
 
 
+def is_iso_date(value: str) -> bool:
+    if not ISO_DATE_RE.match(value):
+        return False
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
 def body_limit(contract: dict[str, Any], rel: str, kind: str) -> int:
     limits = contract["body_max_chars"]
     by_file = limits.get("by_file", {})
@@ -127,7 +138,7 @@ def validate_file(rel: str, text: str, contract: dict[str, Any], template: bool 
             continue
         if template and value == placeholder:
             continue
-        if not ISO_DATE_RE.match(value):
+        if not is_iso_date(value):
             violations.append(Violation(rel, f"`{key}` must be an ISO date (YYYY-MM-DD), got `{value}`"))
 
     if kind == "skill":
