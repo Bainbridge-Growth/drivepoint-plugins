@@ -14,6 +14,7 @@
     "run_query",
     "list_import_definitions",
     "import_data",
+    "get_import_status",
     "list_company_plans",
     "get_plan",
     "get_valid_plan_tabs",
@@ -35,6 +36,7 @@
     "get_skill"
   ],
   "allow_non_tool": [
-    "get_data_from_warehouse"
+    "get_data_from_warehouse",
+    "import_id"
   ]
 }

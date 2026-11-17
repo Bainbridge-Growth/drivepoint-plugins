@@ -9,12 +9,15 @@ Reading this skill is required any time the user asks to "import",
 or names one of the stock imports (e.g. "DTC Retention", "Shopify raw
 pivot", "Amazon monthly", "Wholesale DC", "TikTok retention").
 
-The MCP server exposes exactly two import tools:
+The MCP server exposes exactly three import tools:
 
 - `list_import_definitions` — read-only; returns every import available
   to the current company, with each input already enriched by the
   server.
-- `import_data` — writes rows into a plan's destination worksheet tab.
+- `import_data` — starts an import that writes rows into a plan's
+  destination worksheet tab. Imports can take several minutes, so it runs
+  in the background on the server.
+- `get_import_status` — checks on a running import by `import_id`.
 
 Everything else is out of scope. Do not use `run_query`,
 `list_datasets`, `list_tables`, `describe_table`, or any other
@@ -75,9 +78,27 @@ Follow these steps in order. Never skip a step, never reorder them.
      (rare; the field will be referenced in the definition or the
      server will tell you it is missing).
 
-A successful `import_data` returns `{status: "success", tabName,
-rowCount}`. Report both to the user so they know where the data
-landed.
+`import_data` waits up to `wait_seconds` (default 20) and then returns one
+of two results:
+
+- `{status: "success", import_id, tabName, rowCount}` — finished. Report
+  `tabName` and `rowCount` so the user knows where the data landed.
+- `{status: "running", import_id}` — still in progress. The import keeps
+  running on the server no matter what happens to this call. Call
+  `get_import_status({company_id, import_id})` repeatedly until it returns
+  `success` or an error. Tell the user it is still importing between polls.
+
+**Never call `import_data` again because an import is still running, took
+long, or a call timed out.** The previous call may have already finished or
+may still be running. Re-running replaces the tab again. Always check
+`get_import_status` with the `import_id` first. If you lost the
+`import_id`, check the tab's contents with the read tools before retrying.
+Calling `import_data` with identical arguments while one is running attaches
+to the running import instead of starting another.
+
+If `get_import_status` reports `failed` or `interrupted`, the destination
+tab may be empty or only partly written. Tell the user, include the error
+verbatim, and only then offer to re-run `import_data`.
 
 ---
 
