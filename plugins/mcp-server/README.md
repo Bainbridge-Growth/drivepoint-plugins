@@ -15,6 +15,18 @@ Once connected, the Drivepoint MCP server exposes tools such as:
 - `run_query` — read-only GoogleSQL against the brand's marts
 - `get_plan` / `list_company_plans` — Drivepoint financial plans
 - `get_drivepoint_user` — the connected user's context
+- `list_context` / `read_context` / `write_context` / `get_context_history` —
+  the company's and the user's own context (facts, definitions, preferences),
+  with history. Company writes need a company admin.
+
+## Context templates
+
+`context-templates/` holds the starting files for a company's context library
+and each user's personal context, plus `context-contract.json` (frontmatter
+fields, description rule, size limits). CI checks the templates with
+`scripts/check_context_contract.py`, and webapp-server applies the same
+contract on every `write_context` call. The writing rules for people and
+agents are in the `context-guide` common skill.
 
 ## Configuration
 

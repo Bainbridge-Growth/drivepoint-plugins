@@ -1,0 +1,36 @@
+{
+  "_comment": "Contract for company and personal context files. Read by scripts/check_context_contract.py (validates the templates in this folder) and by webapp-server (validates every write_context call). Change limits here and in context-guide/SKILL.md together.",
+  "frontmatter": {
+    "format": "flat key: value lines between --- fences; no nesting, lists, or multi-line values",
+    "date_fields": ["updated", "review_by"],
+    "template_date_placeholder": "YYYY-MM-DD"
+  },
+  "kinds": {
+    "context": {
+      "required": ["title", "description", "owner", "updated", "source"],
+      "optional": ["review_by"]
+    },
+    "skill": {
+      "required": ["name", "description", "owner", "updated"],
+      "optional": []
+    }
+  },
+  "description": {
+    "max_chars": 150,
+    "prefix": "Use when"
+  },
+  "skill_name": {
+    "pattern": "^(company|me):[a-z0-9]+(-[a-z0-9]+)*$"
+  },
+  "body_max_chars": {
+    "context": 8000,
+    "skill": 6000,
+    "by_file": {
+      "profile.md": 2000,
+      "preferences.md": 2000,
+      "guidance.md": 4000,
+      "security.md": 4000
+    }
+  },
+  "pinned_files": ["profile.md", "preferences.md", "guidance.md", "security.md"]
+}

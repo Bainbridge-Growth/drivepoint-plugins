@@ -1,0 +1,1 @@
+How to read and write company and personal context: what is context vs. a skill vs. guidance, company vs. personal, the file layout, frontmatter, size limits, and what never to save. Read before ANY `write_context` call.
