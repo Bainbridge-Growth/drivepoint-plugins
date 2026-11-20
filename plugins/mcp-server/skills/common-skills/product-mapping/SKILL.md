@@ -436,8 +436,33 @@ Rules that keep pages consistent with each other:
 
 ### Presenting a drafted roster
 
-Build the artifact from `review_product_mapping_draft`, not from the
-roster pages:
+Run step 4 first: the artifact never replaces the conflict check.
+
+**In Neo** (`create_artifact` accepts `data_ref`): call `create_artifact`
+with `data_ref: "product_mapping_draft"` and **no `data`**. Neo loads
+the whole draft into `props.data` each time the artifact opens, so you
+write only the component and never type rows into it:
+
+- Shape: `{state, updatedAt, counts, rows, bom}`. `state` is `draft`,
+  `published` (after publish the artifact shows the live mappings), or
+  `empty`. `counts` has rows, confirmed, rejected, unmapped,
+  canonicals, kits. Each row has sourceKey, channel, stores, sku,
+  title, status, drivepointMappedId, drivepointMappedProductName,
+  drivepointMappedSku, productFamily, productCategory, productFormat,
+  sizeVariant, unitsSold, lastSoldAt. Each `bom` line has
+  parentSourceKey, kitType, componentDrivepointMappedId,
+  componentMappedName, componentMappedSku, componentQty.
+- `props.data` is null until it loads: render a short loading line.
+- Compute the totals, the family/category rollup, and the canonical
+  groups (confirmed rows grouped by `drivepointMappedId`) from `rows`
+  inside the component.
+- The per-row table must page (100 rows per page) with a search box
+  and channel and status filters. Never render every row at once.
+- To change the component, call `update_artifact` without `data` so
+  the reference stays.
+
+**Elsewhere** (no `data_ref`, e.g. Claude), build the artifact from
+`review_product_mapping_draft`, not from the roster pages:
 
 1. **Totals** — drafted rows, confirmed, rejected, demoted, kits,
    canonical products, and rows in scope that were not drafted.
@@ -449,8 +474,8 @@ roster pages:
 4. **Coverage summary** — per channel the user chose, as in the
    single-pass artifact, using the counts you noted while drafting.
 
-There is no per-row table: a drafted roster is too large for one. If
-the user wants to check specific products, answer from
+Outside Neo there is no per-row table: a drafted roster is too large
+to type into one. If the user wants to check specific products, answer from
 `review_product_mapping_draft` pages or a fresh read of the relevant
 roster page.
 
