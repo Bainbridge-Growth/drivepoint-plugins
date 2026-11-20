@@ -4,7 +4,7 @@
   "skills_root": "plugins/mcp-server/skills/common-skills",
   "tool_verb_prefixes": [
     "get", "list", "save", "read", "run", "import",
-    "preview", "publish", "search", "add", "mark"
+    "preview", "publish", "search", "add", "mark", "review"
   ],
   "valid_tools": [
     "get_drivepoint_user",
@@ -32,6 +32,9 @@
     "read_product_mapping_source",
     "save_product_mappings",
     "publish_product_mappings",
+    "save_product_mapping_draft",
+    "review_product_mapping_draft",
+    "publish_product_mapping_draft",
     "list_skills",
     "get_skill"
   ],

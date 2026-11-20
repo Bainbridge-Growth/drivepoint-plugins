@@ -13,18 +13,24 @@ resolution / master-data-reconciliation_ workflow — the vocabulary
 varies, the job is the same: one canonical product per physical unit,
 every channel row tied back to it.
 
-The MCP server exposes exactly three product-mapping tools:
+The MCP server exposes six product-mapping tools. The first three are
+the single-pass workflow; the last three are the draft workflow for a
+roster that spans more than one page (see "Large rosters — draft, then
+review once").
 
 - `read_product_mapping_source` — read-only; returns the cross-channel
   product roster (one row per `channel/stores/sku/title`) from the
   customer's BigQuery warehouse, **one page at a time** (`page_size`
-  default 200, max 500, sorted by `sourceKey`). Each record also
-  carries an `existing` field: the last saved decision for that
-  sourceKey (or `null` on first-run). The response's
-  `existingMappingCount` (whole roster) tells you whether this is a
-  re-run; `totalRecordCount`, `remainingRecordCount`, `hasMore`, and
-  `nextCursor` tell you how much of the roster is left. See "Large
-  rosters — work page by page".
+  default 100, max 500, sorted by `sourceKey`). Optional `sold_since`
+  (`YYYY-MM-DD`) keeps only products sold on or after that date; the
+  cursor carries the filter. Each record also carries an `existing`
+  field (the last saved decision for that sourceKey, or `null` on
+  first-run) and a `draft` field (the decision already in the
+  unpublished draft, or `null`). The response's `existingMappingCount`
+  tells you whether this is a re-run; `totalRecordCount`,
+  `remainingRecordCount`, `hasMore`, and `nextCursor` tell you how much
+  of the roster is left; `draftedRecordCount` tells you how much of it
+  an earlier draft already covers.
 - `save_product_mappings` — **DELTA-MERGES** your changes
   into the company's Firestore mapping document. Firestore stores
   **decisions only** (`confirmed` + `rejected`); `unmapped` is
@@ -37,6 +43,20 @@ The MCP server exposes exactly three product-mapping tools:
 - `publish_product_mappings` — reads the confirmed
   decisions out of Firestore and **fully OVERWRITES** the mapped-
   products catalog table in BigQuery.
+- `save_product_mapping_draft` — same inputs and CSV rules as
+  `save_product_mappings`, but stages the decisions in an unpublished
+  draft. Nothing in the draft is saved or live, so it needs no
+  customer approval. A later draft for the same sourceKey replaces the
+  earlier one. `reset: true` discards an earlier draft first.
+- `review_product_mapping_draft` — read-only summary of the draft:
+  totals, a family/category rollup, attribute **conflicts** (rows
+  sharing a `drivepointMappedId` whose name, SKU, family, category,
+  format, or size differ), and a page of canonical products with row
+  counts and channels.
+- `publish_product_mapping_draft` — after the customer's
+  `Approve & publish`: applies the whole draft to the saved decisions,
+  clears the draft, and overwrites the BigQuery catalog like
+  `publish_product_mappings`.
 
 Four read-only data-catalog tools are used **only** in the discovery
 phase that opens every session (see "Discover before you map"):
@@ -82,11 +102,12 @@ menu, and if a new kind of connection shows up, it is.
    and published today. When `hasMore` is true the first page does
    not show every channel or the per-channel counts. Get them with
    one `run_query` aggregate on the roster table named in
-   `sourceTable` (`SELECT channel, stores, COUNT(*) … GROUP BY 1, 2`).
-   If that table is not queryable for this company, show the
-   channels the first page shows, put `totalRecordCount` under the
-   table, and say the per-channel counts were not available. Never
-   page through the whole roster just to build the discovery table.
+   `sourceTable`: per `channel, stores`, the row count and the count
+   with `last_sold_at` in the last 12 months. If that table is not
+   queryable for this company, show the channels the first page
+   shows, put `totalRecordCount` under the table, and say the
+   per-channel counts were not available. Never page through the
+   whole roster just to build the discovery table.
 3. Call `list_datasets` **once**. Raw connector landing datasets
    follow a `<source>Raw…` naming convention (for example
    `shopifyRawRecent11`, `amazonSPRawRecent1`, `quickbooksRaw1`, a
@@ -184,7 +205,7 @@ Finally, split the product-bearing connections into two buckets:
 - **Connected, not yet in the roster** — live product data exists in
   the warehouse but the dbt roster does not union it yet (3PL /
   inventory streams such as Trackstar-Finale or Cin7, and QuickBooks
-  invoice line items, are the usual case). You can *review* these read-only in this session, but
+  invoice line items, are the usual case). You can _review_ these read-only in this session, but
   `save_product_mappings` drops any sourceKey that is not in the
   live roster (`staleSourceKeyCount`), so nothing can be persisted
   for them until the roster includes that stream. Say so plainly.
@@ -195,12 +216,12 @@ Present one compact plain-text table (no artifact yet — the artifact
 is for the mapping review later). One row per product-bearing
 connection:
 
-| Source (system · store/account) | Status | Carries | Roster rows | Mappable today? |
-| --- | --- | --- | --- | --- |
-| Shopify · acme-store | live | catalog, sales line items | 312 | yes |
-| Amazon Seller · A1XYZ | live | sales line items | 88 | yes |
-| Trackstar-Finale · main warehouse | live | products (is_kit, unit_quantity), shipments | 0 | review only — not in roster yet |
-| QuickBooks · main | live | invoice line items (ItemRef, not the GL) | 0 | review only — not in roster yet |
+| Source (system · store/account)   | Status | Carries                                     | Roster rows | Mappable today?                 |
+| --------------------------------- | ------ | ------------------------------------------- | ----------- | ------------------------------- |
+| Shopify · acme-store              | live   | catalog, sales line items                   | 312         | yes                             |
+| Amazon Seller · A1XYZ             | live   | sales line items                            | 88          | yes                             |
+| Trackstar-Finale · main warehouse | live   | products (is_kit, unit_quantity), shipments | 0           | review only — not in roster yet |
+| QuickBooks · main                 | live   | invoice line items (ItemRef, not the GL)    | 0           | review only — not in roster yet |
 
 The rows above are the shape of the table, not a menu. Omit any
 source discovery did not find, including QuickBooks when `invoices`
@@ -217,6 +238,15 @@ Then ask, and end your turn:
 _"Which of these do you want to map / organize in this session? Reply
 with the sources (or `all`), and tell me if you also want the
 review-only sources included."_
+
+When the first read said `hasMore: true`, add one more question: map
+everything, or only products sold in the last 12 months? Give both
+counts when you have them (from the D1 aggregate). Recommend the
+12-month option for a roster over about 1,000 rows: products that
+have not sold in a year rarely matter for reporting, and they stay
+unmapped, not lost. Also say that you will draft the mapping page by
+page without stopping, then show one review for a single
+`Approve & publish`.
 
 Rules for this gate:
 
@@ -236,8 +266,9 @@ Rules for this gate:
   every key in `newSinceLastReviewKeys`, this is a deliberately
   partial batch — omit `acknowledge_human_review` and
   `reviewed_source_keys` at publish time (see step 11) and tell the
-  user the remaining products stay New. A roster that spans more than
-  one page is always handled this way.
+  user the remaining products stay New. A drafted roster (more than
+  one page) never acknowledges the review: `publish_product_mapping_draft`
+  leaves products New.
 - **For review-only sources the user included:** run one capped
   `run_query` (aggregate to distinct SKU / name / GTIN / kit flag /
   case-pack field, at most a few hundred rows, never raw shipments
@@ -330,64 +361,98 @@ everything. There's just no prior state to preserve yet.
 
 ---
 
-## Large rosters — work page by page
+## Large rosters — draft, then review once
 
 `read_product_mapping_source` is paginated. A roster that fits on one
 page (`hasMore: false` on the first read, no cursor passed) uses the
-single-pass workflow below unchanged. When `hasMore` is true, the
-roster is too large to hold in one context — a 14,000-row roster is
-millions of tokens — so you map it **one page per review cycle**:
+single-pass workflow below unchanged: one artifact, one
+`Approve & publish`, `save_product_mappings`, `publish_product_mappings`.
 
-1. **Read a page.** The first page is the one discovery already
-   read. Every later page is
-   `read_product_mapping_source` with `cursor` = the previous page's
-   `nextCursor`, copied verbatim, and the same `page_size`. The
-   cursor is opaque — never build, edit, or guess one.
-2. **Map only that page.** Run workflow steps 2–8 on this page's rows
-   that belong to the sources the user chose in D3. Skip rows from
-   other channels; they keep their prior state.
-3. **Get approval for that page.** On a page with `hasMore: true` the
-   customer action is **`Approve & continue`**. On the final page
-   (`hasMore: false`) it is **`Approve & publish`**. The approval gate
-   applies to every page exactly as written below.
-4. **Save that page.** After approval, call `save_product_mappings`
-   with only this page's decisions. Save is a delta merge, so earlier
-   pages stay saved.
-5. **Move on.** On a page with `hasMore: true`, read the next page right
-   after the save succeeds. Do not publish yet. After the final page
-   is saved, call `publish_product_mappings` once.
+When `hasMore` is true, the roster is too large to hold in one
+context or one reply — a 14,000-row roster is millions of tokens — so
+you **draft** it page by page and review it **once** at the end. Never
+call `save_product_mappings` or `publish_product_mappings` in this
+flow.
+
+1. **Scope the read.** If the user chose the 12-month option in D3,
+   start over with one `read_product_mapping_source` call with
+   `sold_since` set to the date 12 months ago and no cursor. Otherwise
+   the first page is the one discovery already read.
+2. **Draft a page.** Run workflow steps 2–7 on this page's rows that
+   belong to the sources the user chose in D3, then call
+   `save_product_mapping_draft` with only this page's decisions. Skip
+   rows from other channels, and skip rows whose `draft` is already
+   set unless you are changing them. Do **not** render an artifact and
+   do **not** ask for approval: a draft is not saved and not live.
+3. **Next page.** Call `read_product_mapping_source` with `cursor` =
+   the previous page's `nextCursor`, copied verbatim, and the same
+   `page_size`. The cursor is opaque and carries `sold_since`; never
+   build, edit, or guess one, and do not pass `sold_since` with it.
+   Repeat from step 2 until `hasMore` is false.
+4. **Review the draft.** After the final page is drafted, call
+   `review_product_mapping_draft`. If it reports conflicts, re-draft
+   the listed sourceKeys with `save_product_mapping_draft` so every
+   row of a canonical carries identical attributes, then review again.
+   Repeat until `conflictCount` is 0.
+5. **One approval.** Render the review artifact from the draft review
+   (see "Presenting a drafted roster"), end your turn, and ask for
+   `Approve & publish`. The approval gate below applies exactly as
+   written.
+6. **Publish.** After explicit approval, call
+   `publish_product_mapping_draft` once. If it reports that the draft
+   was applied but BigQuery failed, retry with `publish_product_mappings`;
+   never re-draft.
 
 Rules that keep pages consistent with each other:
 
-- **Carry a canonical ledger, not rows.** The same physical product
+- **Reuse canonical values across pages.** The same physical product
   often lands on several pages (Amazon rows sort before Shopify
   rows). The derived id already matches across pages; the canonical
-  values must match too. Keep a compact ledger — one line per
-  canonical: `drivepointMappedId`, name, SKU, family, category,
-  format, size — and reuse it verbatim when a later page's row joins
-  an existing canonical. The Canonical products section of each
-  page's artifact is that ledger; reuse it instead of re-deciding.
-  Never carry earlier pages' source rows forward — they are saved.
-- **Pick a page size the client can carry.** Start with the default
-  (200). If the client rejects a response as too large, retry the
-  **same cursor** with a smaller `page_size` (50 is safe for clients
-  that cap tool output around 25k tokens). Never page the roster
-  just to look at it.
-- **Show progress on every page.** Above the artifact, say which rows
-  this page covers and how many remain, from `recordCount`,
-  `totalRecordCount`, and `remainingRecordCount`.
-- **Never acknowledge the review on a multi-page run.** Omit
-  `acknowledge_human_review` and `reviewed_source_keys` on publish;
-  tell the user the products stay marked New until a future
-  single-page review.
-- **Stopping early.** If the user stops partway, the saved pages stay
-  in Firestore but are not in reporting until a publish runs. Tell
-  them that. If they ask to publish what is done so far, call
-  `publish_product_mappings` (without acknowledgement) and continue
-  from the last `nextCursor` later.
-- **Resuming in a new session.** Start a new read without a cursor.
-  Earlier decisions arrive as `existing`, so you treat them as a
-  re-run and the pages already finished go quickly.
+  values (name, SKU, family, category, format, size) must match too.
+  Keep a compact ledger of the canonicals you drafted — one line per
+  `drivepointMappedId` — and reuse it verbatim when a later page's row
+  joins an existing canonical. Never carry earlier pages' source rows
+  forward; they are in the draft. If the ledger gets lost, the
+  conflict check in step 4 catches the drift.
+- **Keep the default page size.** Omit `page_size` (default 100).
+  Each draft call's CSV must fit in one reply. If the client rejects
+  a response as too large, or a reply is cut off, retry the **same
+  cursor** with a smaller `page_size` (50). Never page the roster just
+  to look at it.
+- **Report progress, briefly.** Between pages, at most one short line
+  ("Drafted rows 301–400 of 4,612"). No tables, no artifact.
+- **Step limits.** If the chat stops you mid-run (step or turn limit),
+  tell the user how far the draft got and that replying "continue"
+  resumes from the next page.
+- **Resuming in a new session.** Start a new read without a cursor
+  (with the same `sold_since`, if any). When `draftedRecordCount > 0`,
+  an earlier draft exists: tell the user and continue it, skipping
+  drafted rows. Only if they ask to start over, pass `reset: true` on
+  the first `save_product_mapping_draft` call.
+- **Stopping early.** An unfinished draft is not saved and not live.
+  To put part of it live, the user must still review it and approve
+  `Approve & publish`; `publish_product_mapping_draft` publishes
+  everything drafted so far.
+
+### Presenting a drafted roster
+
+Build the artifact from `review_product_mapping_draft`, not from the
+roster pages:
+
+1. **Totals** — drafted rows, confirmed, rejected, demoted, kits,
+   canonical products, and rows in scope that were not drafted.
+2. **Rollup** — the `rollup` table: family, category, canonical
+   count, row count.
+3. **Canonical products** — the first page of `canonicals`: id, name,
+   SKU, family, category, format, size, row count, channels. Say how
+   many more there are; page with `nextCursor` only when the user asks.
+4. **Coverage summary** — per channel the user chose, as in the
+   single-pass artifact, using the counts you noted while drafting.
+
+There is no per-row table: a drafted roster is too large for one. If
+the user wants to check specific products, answer from
+`review_product_mapping_draft` pages or a fresh read of the relevant
+roster page.
 
 ---
 
@@ -402,10 +467,10 @@ the scope for everything below.
    first `read_product_mapping_source` call already happened in
    discovery step D1 — that page is in your context. When it said
    `hasMore: false`, that is the entire roster: do NOT call the tool
-   again. When it said `hasMore: true`, later pages come only from
-   `nextCursor`, one per review cycle (see "Large rosters — work page
-   by page"). Never split a read by channel, by key type, or by SKU
-   presence. Each record
+   again. When it said `hasMore: true`, follow "Large rosters — draft,
+   then review once" instead of steps 8–11: later pages come only from
+   `nextCursor`, and each page is drafted, not saved. Never split a
+   read by channel, by key type, or by SKU presence. Each record
    carries an `existing` field with the last saved decision — check
    `existingMappingCount` to see if this is a re-run. Work only the
    rows whose `channel` / `stores` the user chose. **Once the roster
@@ -456,12 +521,11 @@ the scope for everything below.
    On re-runs, call out what CHANGED since the last mapping (new
    rows, drift, corrections) — that's the useful review, not the
    unchanged baseline.
-9. **STOP. Wait for the single customer approval: `Approve & publish`**
-   (or `Approve & continue` on a page with `hasMore: true`).
+9. **STOP. Wait for the single customer approval: `Approve & publish`**.
    See the "Approval gate" block below — this is a hard stop, not a
    soft one. Do not ask the customer to separately save, publish, or
    acknowledge the review.
-10. **Call `save_product_mappings` ONCE per approved page**, serializing
+10. **Call `save_product_mappings` ONCE**, serializing
     your in-head decision set from step 7 into the CSV — one row per
     confirmed sourceKey, with the shared canonical attributes copied
     across each alias — plus the rejections into
@@ -474,12 +538,10 @@ the scope for everything below.
     into the Firestore doc.** On re-runs the payload is typically
     small — only the rows whose decisions changed. Do not pass
     `acknowledge_human_review`; publishing must succeed before the
-    review is complete. On a page with `hasMore: true`, the next step
-    is reading the next page, not publishing.
-11. **Call `publish_product_mappings` ONCE**, after the final page's
-    save. **Overwrites
-    the BigQuery catalog table.** On a multi-page run, omit both
-    acknowledgement options. On a single-page run, if the artifact covered every key in
+    review is complete.
+11. **Call `publish_product_mappings` ONCE**, right after the save.
+    **Overwrites
+    the BigQuery catalog table.** If the artifact covered every key in
     `newSinceLastReviewKeys`, pass `acknowledge_human_review: true` so
     the successful publish also completes the review, and pass
     `reviewed_source_keys` containing every `records[].sourceKey` from
@@ -514,7 +576,7 @@ the scope for everything below.
 **Reason inline. Do not script the decision-making.** The mapping
 judgment — normalization, grouping, canonical id derivation, value
 selection, rejection calls — happens in your head against the roster
-page in your context. The tool response IS the roster; do not try to
+in your context. The tool response IS the roster; do not try to
 re-materialize it as a file, do not build a "decision engine" script
 that iterates over it, do not spend turns hand-transcribing 500+
 source rows into records.json so a script can read them. Your script
@@ -542,19 +604,16 @@ a **hard stop**. The user reviews the artifact and explicitly chooses
 the single customer-facing completion action, **Approve & publish**.
 You do not save until they do.
 
-On a paginated roster the gate runs once per page. A page with
-`hasMore: true` uses **Approve & continue**: save that page, then read
-the next one. The final page uses **Approve & publish**: save it, then
-publish. Everything below applies to `Approve & continue` the same
-way. The only difference is that it leads to the next page, not to
-publishing.
+For a drafted roster the gate sits between the draft review artifact
+and `publish_product_mapping_draft`. Drafting pages is not saving and
+needs no approval; publishing the draft does. Everything below applies
+to `publish_product_mapping_draft` exactly as it does to
+`save_product_mappings`.
 
 - After rendering the artifact, your next message ends with a short
   prompt: _"Review the map above. Reply `Approve & publish` to apply
   these mappings and refresh reporting where it is live, or tell me
-  what to change."_ On a page with `hasMore: true`: _"Review page N
-  above (rows X–Y of T). Reply `Approve & continue` to save it and
-  move to the next page, or tell me what to change."_
+  what to change."_
 - **Do NOT call `save_product_mappings` on the same turn
   as the artifact.** The artifact is for the user's eyes, not a
   self-triggering signal.
@@ -579,7 +638,7 @@ unsure whether the user has approved, the answer is no — ask.
 `acknowledge_human_review` are implementation details. Never present
 them as three customer choices. After **Approve & publish**, perform
 the save and publish calls back-to-back. Acknowledge the review on the
-publish call only on a single-page run whose artifact covered the complete current
+publish call only when the artifact covered the complete current
 new-product batch, and include the full `records[].sourceKey` snapshot
 in `reviewed_source_keys`. Report one outcome to the customer:
 published, or catalog published but reporting refresh failed (retry
@@ -1032,10 +1091,7 @@ nobody reviews it.
    discovery**. Columns: `channel`, `totalRows`, `confirmed`,
    `rejected`, `unmapped`. Channels that were connected but not
    chosen are not rows here; name them in one line under the table so
-   the user remembers they were left untouched. On a paginated
-   roster the counts cover this page only; add one line under the
-   table with the running progress (pages saved so far, rows covered
-   out of `totalRecordCount`).
+   the user remembers they were left untouched.
 5. **Connected, not in roster (review only)** — render this section
    only when the user included a review-only source in D3. One row
    per distinct warehouse / 3PL SKU. Columns: `source`, `sku`,
@@ -1049,8 +1105,7 @@ artifacts.
 
 **End your turn here.** Ask the user to review and reply with
 `Approve & publish` to apply the mappings and refresh reporting where
-it is live (`Approve & continue` on a page with `hasMore: true`), or
-to tell you what to change. **Do NOT call
+it is live, or to tell you what to change. **Do NOT call
 `save_product_mappings`
 on the same turn as the artifact.** See "Approval gate — DO NOT SKIP"
 above; save is step 10, and only after explicit approval.
@@ -1078,16 +1133,22 @@ above; save is step 10, and only after explicit approval.
 - **Never use the data-catalog tools after the user has chosen.**
   `list_datasets`, `list_tables`, `get_schema`, and `run_query` are
   discovery tools (plus the one capped aggregate for a review-only
-  source the user opted into). Once mapping starts, the roster page in
+  source the user opted into). Once mapping starts, the roster in
   your context is the only data you reason over.
 - **Never split the read yourself.** The first
   `read_product_mapping_source` call happens in discovery step D1.
-  The only other reads are the next page via `nextCursor` after the
-  previous page is approved and saved, or the same cursor retried
-  with a smaller `page_size` when the client rejects a response as
-  too large. Do not call it per channel, per SKU prefix, or per
-  anything else, do not fetch pages ahead of approval, and do not
+  The only other reads are: one restart with `sold_since` when the
+  user chose the 12-month option, the next page via `nextCursor`
+  after the previous page is drafted, and the same cursor retried with
+  a smaller `page_size` when a response is too large. Do not call it
+  per channel, per SKU prefix, or per anything else, and do not
   re-read a page you already have.
+- **Never mix the two workflows.** A roster with `hasMore: true` is
+  drafted with `save_product_mapping_draft` and published with
+  `publish_product_mapping_draft`. Never call `save_product_mappings`
+  or `publish_product_mappings` for it, except the documented retry
+  of `publish_product_mappings` after a failed BigQuery step. Never
+  ask for approval between drafted pages.
 - **Never try to re-materialize the roster as a file.** Your script
   environment cannot access the tool response — the roster only
   exists in your context. Do not spend turns hand-typing 500+ rows
