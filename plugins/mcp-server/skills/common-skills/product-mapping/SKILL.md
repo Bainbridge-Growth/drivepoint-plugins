@@ -13,17 +13,15 @@ resolution / master-data-reconciliation_ workflow — the vocabulary
 varies, the job is the same: one canonical product per physical unit,
 every channel row tied back to it.
 
-The MCP server exposes six product-mapping tools. The first three are
-the single-pass workflow; the last three are the draft workflow for a
-roster that spans more than one page (see "Large rosters — draft, then
-review once").
+The MCP server exposes seven product-mapping tools. The first three are
+the single-pass workflow; the last four are the draft workflow for a
+roster that spans more than one page (see "Large rosters — map on the
+server, then review once").
 
 - `read_product_mapping_source` — read-only; returns the cross-channel
   product roster (one row per `channel/stores/sku/title`) from the
   customer's BigQuery warehouse, **one page at a time** (a fixed 200
-  rows per page, sorted by `sourceKey`). Optional `sold_since`
-  (`YYYY-MM-DD`) keeps only products sold on or after that date; the
-  cursor carries the filter. Each record also carries an `existing`
+  rows per page, sorted by `sourceKey`). Each record also carries an `existing`
   field (the last saved decision for that sourceKey, or `null` on
   first-run) and a `draft` field (the decision already in the
   unpublished draft, or `null`). The response's `existingMappingCount`
@@ -43,6 +41,14 @@ review once").
 - `publish_product_mappings` — reads the confirmed
   decisions out of Firestore and **fully OVERWRITES** the mapped-
   products catalog table in BigQuery.
+- `map_product_roster` — maps the **whole roster** on the server in
+  one call: it splits the rows into chunks, maps every chunk in
+  parallel with these same rules, writes the results to the
+  unpublished draft, then merges duplicate canonical products and
+  aligns their attributes. By default it maps only rows with no saved
+  mapping and keeps rows already in the draft. `include_mapped: true`
+  re-maps saved rows too (only when the user explicitly asks to
+  update existing mappings); `reset: true` discards the draft first.
 - `save_product_mapping_draft` — same inputs and CSV rules as
   `save_product_mappings`, but stages the decisions in an unpublished
   draft. Nothing in the draft is saved or live, so it needs no
@@ -102,8 +108,7 @@ menu, and if a new kind of connection shows up, it is.
    and published today. When `hasMore` is true the first page does
    not show every channel or the per-channel counts. Get them with
    one `run_query` aggregate on the roster table named in
-   `sourceTable`: per `channel, stores`, the row count and the count
-   with `last_sold_at` in the last 12 months. If that table is not
+   `sourceTable`: per `channel, stores`, the row count. If that table is not
    queryable for this company, show the channels the first page
    shows, put `totalRecordCount` under the table, and say the
    per-channel counts were not available. Never page through the
@@ -239,13 +244,10 @@ _"Which of these do you want to map / organize in this session? Reply
 with the sources (or `all`), and tell me if you also want the
 review-only sources included."_
 
-When the first read said `hasMore: true`, add one more question: map
-everything, or only products sold in the last 12 months? Give both
-counts when you have them (from the D1 aggregate). Recommend the
-12-month option for a roster over about 1,000 rows: products that
-have not sold in a year rarely matter for reporting, and they stay
-unmapped, not lost. Also say that you will draft the mapping page by
-page without stopping, then show one review for a single
+When the first read said `hasMore: true`, also say that the roster is
+mapped on the server in one run covering every unmapped product, that
+products already mapped are left as they are unless they ask to update
+them, and that you will then show one review for a single
 `Approve & publish`.
 
 Rules for this gate:
@@ -361,35 +363,33 @@ everything. There's just no prior state to preserve yet.
 
 ---
 
-## Large rosters — draft, then review once
+## Large rosters — map on the server, then review once
 
 `read_product_mapping_source` is paginated. A roster that fits on one
 page (`hasMore: false` on the first read, no cursor passed) uses the
 single-pass workflow below unchanged: one artifact, one
 `Approve & publish`, `save_product_mappings`, `publish_product_mappings`.
 
-When `hasMore` is true, the roster is too large to hold in one
-context or one reply — a 14,000-row roster is millions of tokens — so
-you **draft** it page by page and review it **once** at the end. Never
-call `save_product_mappings` or `publish_product_mappings` in this
-flow.
+When `hasMore` is true, the roster is too large to map in the chat — a
+14,000-row roster is millions of tokens — so the server maps it and
+you review it **once**. Never page through the roster, never draft
+pages yourself, and never call `save_product_mappings` or
+`publish_product_mappings` in this flow.
 
-1. **Scope the read.** If the user chose the 12-month option in D3,
-   start over with one `read_product_mapping_source` call with
-   `sold_since` set to the date 12 months ago and no cursor. Otherwise
-   the first page is the one discovery already read.
-2. **Draft a page.** Run workflow steps 2–7 on this page's rows that
-   belong to the sources the user chose in D3, then call
-   `save_product_mapping_draft` with only this page's decisions. Skip
-   rows from other channels, and skip rows whose `draft` is already
-   set unless you are changing them. Do **not** render an artifact and
-   do **not** ask for approval: a draft is not saved and not live.
-3. **Next page.** Call `read_product_mapping_source` with `cursor` =
-   the previous page's `nextCursor`, copied verbatim. The cursor is
-   opaque and carries `sold_since`; never
-   build, edit, or guess one, and do not pass `sold_since` with it.
-   Repeat from step 2 until `hasMore` is false.
-4. **Review the draft.** After the final page is drafted, call
+1. **Map.** Call `map_product_roster` once, with no arguments unless
+   the user explicitly asked to update existing mappings
+   (`include_mapped: true`) or to start over (`reset: true`). It maps
+   every unmapped row in the roster, across all of its channels, and
+   writes the results to the draft. Tell the user in one short line
+   that the run started; it can take a few minutes.
+2. **Failures.** If the result reports failed rows, call
+   `map_product_roster` again once with no arguments: it maps only the
+   rows not yet in the draft. If rows still fail, tell the user how
+   many and continue with the review.
+3. **Fix individual rows.** When the user asks to change specific
+   products, re-draft just those sourceKeys with
+   `save_product_mapping_draft`. Never use it to draft whole pages.
+4. **Review the draft.** After the run, call
    `review_product_mapping_draft`. If it reports conflicts, re-draft
    the listed sourceKeys with `save_product_mapping_draft` so every
    row of a canonical carries identical attributes, then review again.
@@ -403,31 +403,12 @@ flow.
    was applied but BigQuery failed, retry with `publish_product_mappings`;
    never re-draft.
 
-Rules that keep pages consistent with each other:
+Rules for this flow:
 
-- **Reuse canonical values across pages.** The same physical product
-  often lands on several pages (Amazon rows sort before Shopify
-  rows). The derived id already matches across pages; the canonical
-  values (name, SKU, family, category, format, size) must match too.
-  Keep a compact ledger of the canonicals you drafted — one line per
-  `drivepointMappedId` — and reuse it verbatim when a later page's row
-  joins an existing canonical. Never carry earlier pages' source rows
-  forward; they are in the draft. If the ledger gets lost, the
-  conflict check in step 4 catches the drift.
-- **One draft call per page.** Pages are a fixed 200 rows. Decide the
-  page briefly and emit its draft CSV in one call; keep reasoning
-  short so the CSV fits in the reply. Never page the roster just to
-  look at it.
-- **Report progress, briefly.** Between pages, at most one short line
-  ("Drafted rows 401–600 of 4,612"). No tables, no artifact.
-- **Step limits.** If the chat stops you mid-run (step or turn limit),
-  tell the user how far the draft got and that replying "continue"
-  resumes from the next page.
-- **Resuming in a new session.** Start a new read without a cursor
-  (with the same `sold_since`, if any). When `draftedRecordCount > 0`,
-  an earlier draft exists: tell the user and continue it, skipping
-  drafted rows. Only if they ask to start over, pass `reset: true` on
-  the first `save_product_mapping_draft` call.
+- **Resuming in a new session.** When the first read reports
+  `draftedRecordCount > 0`, an earlier draft exists: tell the user.
+  `map_product_roster` keeps it and maps only the rest. Only if they
+  ask to start over, pass `reset: true`.
 - **Stopping early.** An unfinished draft is not saved and not live.
   To put part of it live, the user must still review it and approve
   `Approve & publish`; `publish_product_mapping_draft` publishes
@@ -471,7 +452,8 @@ write only the component and never type rows into it:
    SKU, family, category, format, size, row count, channels. Say how
    many more there are; page with `nextCursor` only when the user asks.
 4. **Coverage summary** — per channel the user chose, as in the
-   single-pass artifact, using the counts you noted while drafting.
+   single-pass artifact, using the D1 counts and the counts
+   `map_product_roster` returned.
 
 Outside Neo there is no per-row table: a drafted roster is too large
 to type into one. If the user wants to check specific products, answer from
@@ -491,9 +473,9 @@ the scope for everything below.
    first `read_product_mapping_source` call already happened in
    discovery step D1 — that page is in your context. When it said
    `hasMore: false`, that is the entire roster: do NOT call the tool
-   again. When it said `hasMore: true`, follow "Large rosters — draft,
-   then review once" instead of steps 8–11: later pages come only from
-   `nextCursor`, and each page is drafted, not saved. Never split a
+   again. When it said `hasMore: true`, stop here and follow "Large
+   rosters — map on the server, then review once" instead of these
+   steps: `map_product_roster` maps the roster, not you. Never split a
    read by channel, by key type, or by SKU presence. Each record
    carries an `existing` field with the last saved decision — check
    `existingMappingCount` to see if this is a re-run. Work only the
@@ -1161,17 +1143,15 @@ above; save is step 10, and only after explicit approval.
   your context is the only data you reason over.
 - **Never split the read yourself.** The first
   `read_product_mapping_source` call happens in discovery step D1.
-  The only other reads are: one restart with `sold_since` when the
-  user chose the 12-month option, the next page via `nextCursor`
-  after the previous page is drafted. Do not call it
+  For a roster with `hasMore: true` there are no other reads:
+  `map_product_roster` reads the whole roster itself. Do not call it
   per channel, per SKU prefix, or per anything else, and do not
   re-read a page you already have.
 - **Never mix the two workflows.** A roster with `hasMore: true` is
-  drafted with `save_product_mapping_draft` and published with
+  mapped with `map_product_roster` and published with
   `publish_product_mapping_draft`. Never call `save_product_mappings`
   or `publish_product_mappings` for it, except the documented retry
-  of `publish_product_mappings` after a failed BigQuery step. Never
-  ask for approval between drafted pages.
+  of `publish_product_mappings` after a failed BigQuery step.
 - **Never try to re-materialize the roster as a file.** Your script
   environment cannot access the tool response — the roster only
   exists in your context. Do not spend turns hand-typing 500+ rows
