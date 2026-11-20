@@ -20,8 +20,8 @@ review once").
 
 - `read_product_mapping_source` — read-only; returns the cross-channel
   product roster (one row per `channel/stores/sku/title`) from the
-  customer's BigQuery warehouse, **one page at a time** (`page_size`
-  default 100, max 500, sorted by `sourceKey`). Optional `sold_since`
+  customer's BigQuery warehouse, **one page at a time** (a fixed 200
+  rows per page, sorted by `sourceKey`). Optional `sold_since`
   (`YYYY-MM-DD`) keeps only products sold on or after that date; the
   cursor carries the filter. Each record also carries an `existing`
   field (the last saved decision for that sourceKey, or `null` on
@@ -385,8 +385,8 @@ flow.
    set unless you are changing them. Do **not** render an artifact and
    do **not** ask for approval: a draft is not saved and not live.
 3. **Next page.** Call `read_product_mapping_source` with `cursor` =
-   the previous page's `nextCursor`, copied verbatim, and the same
-   `page_size`. The cursor is opaque and carries `sold_since`; never
+   the previous page's `nextCursor`, copied verbatim. The cursor is
+   opaque and carries `sold_since`; never
    build, edit, or guess one, and do not pass `sold_since` with it.
    Repeat from step 2 until `hasMore` is false.
 4. **Review the draft.** After the final page is drafted, call
@@ -414,13 +414,12 @@ Rules that keep pages consistent with each other:
   joins an existing canonical. Never carry earlier pages' source rows
   forward; they are in the draft. If the ledger gets lost, the
   conflict check in step 4 catches the drift.
-- **Keep the default page size.** Omit `page_size` (default 100).
-  Each draft call's CSV must fit in one reply. If the client rejects
-  a response as too large, or a reply is cut off, retry the **same
-  cursor** with a smaller `page_size` (50). Never page the roster just
-  to look at it.
+- **One draft call per page.** Pages are a fixed 200 rows. Decide the
+  page briefly and emit its draft CSV in one call; keep reasoning
+  short so the CSV fits in the reply. Never page the roster just to
+  look at it.
 - **Report progress, briefly.** Between pages, at most one short line
-  ("Drafted rows 301–400 of 4,612"). No tables, no artifact.
+  ("Drafted rows 401–600 of 4,612"). No tables, no artifact.
 - **Step limits.** If the chat stops you mid-run (step or turn limit),
   tell the user how far the draft got and that replying "continue"
   resumes from the next page.
@@ -1164,8 +1163,7 @@ above; save is step 10, and only after explicit approval.
   `read_product_mapping_source` call happens in discovery step D1.
   The only other reads are: one restart with `sold_since` when the
   user chose the 12-month option, the next page via `nextCursor`
-  after the previous page is drafted, and the same cursor retried with
-  a smaller `page_size` when a response is too large. Do not call it
+  after the previous page is drafted. Do not call it
   per channel, per SKU prefix, or per anything else, and do not
   re-read a page you already have.
 - **Never mix the two workflows.** A roster with `hasMore: true` is
