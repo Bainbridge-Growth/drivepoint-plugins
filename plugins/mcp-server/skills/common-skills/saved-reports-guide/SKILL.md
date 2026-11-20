@@ -24,9 +24,16 @@ page," or "edit the retention scorecard," this guide applies.
   stub or missing field, so a truncated object just fails the save. If the object
   is large, write it out in full anyway.
 - **Never call `save_report` unless the user explicitly asks to save.** A
-  preview is not permission to save. Wait for a clear instruction, and let the
-  user pick **save as new** (create) or **update** (overwrite an existing
-  definition by `report_id`).
+  preview is not permission to save, and write access being enabled is not
+  permission either. Wait for a clear instruction in the user's latest message,
+  then pass `user_requested_save: true`; the server refuses a save without it.
+  Let the user pick **save as new** (create) or **update** (overwrite an
+  existing definition by `report_id`). Never save to test a fix or to see a
+  change: every save is a new version. If the saved report looks wrong in the
+  app but the definition is correct, say so and stop instead of saving again.
+- **Follow the report conventions below by default.** They are the standard for
+  every saved report and match the report gallery templates. Set one aside only
+  when the user explicitly asks for that choice, and say which one.
 - **The artifact, the definition, and what gets saved are one object.** Build the
   full `report` ({header, blocks}) first; render an auto-opened JSX artifact (per
   `artifact-style-guide`) directly from it, every block in order; and pass that
@@ -61,6 +68,49 @@ page," or "edit the retention scorecard," this guide applies.
   one-line recap is plenty. When you must ask whether to overwrite or create,
   make it a single plain question naming the report by title (see step 6).
 
+## Report conventions (standard for every report)
+
+These come from the report gallery templates. Every report you build or edit
+follows them unless the user explicitly asks otherwise in this conversation.
+`preview_report` (when you pass the draft `report`) and `save_report` return
+`convention_warnings` for anything off-convention. Fix each warning before you
+show or save the report, unless the user asked for that deviation.
+
+1. **A definition, not an artifact.** A report the user may keep is a structured
+   definition (`header`, `controls`, `blocks`) with live queries. Do not save a
+   React artifact as the report: an artifact-linked report is a static copy
+   whose numbers never refresh, with no native controls or CSV download.
+2. **Controls live in the Controls side panel.** Put every filter and view
+   control in `report.controls`; Drivepoint draws them in the side panel. Never
+   put controls, pickers, or "use the filter above" instructions in the report
+   body, a `text` block, or a title.
+3. **Queries bind to controls.** A `requery` control's `key` appears as
+   `${$CONTEXT.<key>}` in every query it should scope (a `dateRange` uses
+   `${$CONTEXT.<key>_start}` and `${$CONTEXT.<key>_end}`), unquoted, with a
+   default on the control or in `context`. Use `clientData` only when no KPI,
+   table total, or text token depends on the filtered rows and every filtered
+   block carries the column.
+4. **One standard date control.** A report with a date axis gets one
+   `dateRange` control with `presets` `last_12_months`, `year_to_date`,
+   `this_month`, `last_month`, `last_quarter` and `defaultPreset`
+   `last_12_months`.
+5. **Header.** A plain title and a `subtitle` that names the source and anything
+   the report does not cover.
+6. **Structure.** Every block has a stable `id`. Order: a `kpiGroup` when there
+   are headline numbers, then a chart, then the detail table built from the same
+   query as the chart, with the same title. Text blocks frame; they never hold
+   data tables.
+7. **Tables.** A `title`, `sortable: true`, and a `format` on every column
+   (`text` for labels and dates; `currency`, `number`, or `percent` for values).
+   Every table block gets the native CSV download.
+8. **Charts.** Set `valueFormat`. A chart with three or more series gets a
+   `seriesVisibility` control with a short `default` list.
+9. **Copy.** Column, series, KPI, and control labels in Title Case. No em
+   dashes anywhere.
+10. **One report per title.** Before creating, call `list_reports`. If a report
+    with the same title exists, update it by `report_id` or ask the user; never
+    leave two copies in the Reports list.
+
 ## What a saved report is
 
 A versioned, tenant-scoped **report definition**: named SELECT-only SQL
@@ -76,26 +126,37 @@ with built-in components, running each block's query when the page is viewed.
   "queries": [
     {
       "key": "headline",
-      "query": "SELECT net_sales AS netSales, orders, aov, net_sales_wow AS netSalesWow FROM {ENV}_dwh_mart.sales_pulse_summary WHERE weeks = ${$CONTEXT.weeks}"
+      "query": "SELECT SUM(net_sales) AS netSales, SUM(orders) AS orders, SAFE_DIVIDE(SUM(net_sales), SUM(orders)) AS aov FROM {ENV}_dwh_mart.sales_pulse_weekly WHERE week BETWEEN ${$CONTEXT.period_start} AND ${$CONTEXT.period_end}"
     },
     {
       "key": "weekly",
-      "query": "SELECT week, net_sales AS netSales FROM {ENV}_dwh_mart.sales_pulse_weekly ORDER BY week"
+      "query": "SELECT week, net_sales AS netSales FROM {ENV}_dwh_mart.sales_pulse_weekly WHERE week BETWEEN ${$CONTEXT.period_start} AND ${$CONTEXT.period_end} ORDER BY week"
     },
     {
       "key": "weeklyTotal",
-      "query": "SELECT 'Total' AS week, SUM(net_sales) AS netSales FROM {ENV}_dwh_mart.sales_pulse_weekly"
+      "query": "SELECT 'Total' AS week, SUM(net_sales) AS netSales FROM {ENV}_dwh_mart.sales_pulse_weekly WHERE week BETWEEN ${$CONTEXT.period_start} AND ${$CONTEXT.period_end}"
     }
   ],
   "report": {
     "header": {
       "title": "Weekly DTC Sales Pulse",
-      "subtitle": "Last 12 weeks",
+      "subtitle": "Net sales, orders, and AOV by week from the ecommerce mart. Returns and fees are not included.",
       "generatedAt": "2026-01-31T00:00:00Z"
     },
+    "controls": [
+      {
+        "type": "dateRange",
+        "key": "period",
+        "label": "Period",
+        "bind": "requery",
+        "presets": ["last_12_months", "year_to_date", "this_month", "last_month", "last_quarter"],
+        "defaultPreset": "last_12_months"
+      }
+    ],
     "blocks": [
       {
         "type": "text",
+        "id": "overview",
         "text": {
           "title": "Overview",
           "body": "Two sentences of plain-language context for the period."
@@ -103,39 +164,39 @@ with built-in components, running each block's query when the page is viewed.
       },
       {
         "type": "kpiGroup",
+        "id": "headline",
         "query": "headline",
         "kpis": [
-          {
-            "label": "Net sales",
-            "column": "netSales",
-            "format": "currency",
-            "highlight": true,
-            "delta": { "column": "netSalesWow", "goodDirection": "up" }
-          },
+          { "label": "Net Sales", "column": "netSales", "format": "currency", "highlight": true },
           { "label": "Orders", "column": "orders", "format": "number" },
           { "label": "AOV", "column": "aov", "format": "currency" }
         ]
       },
       {
         "type": "chart",
+        "id": "chart",
         "chart": {
           "chartType": "bar",
+          "title": "Weekly Net Sales",
           "query": "weekly",
           "xKey": "week",
-          "series": [{ "key": "netSales", "label": "Net sales" }],
+          "series": [{ "key": "netSales", "label": "Net Sales" }],
           "valueFormat": "currency"
         }
       },
       {
         "type": "table",
+        "id": "table",
         "table": {
+          "title": "Weekly Net Sales",
           "query": "weekly",
           "totalQuery": "weeklyTotal",
+          "sortable": true,
           "columns": [
-            { "key": "week", "label": "Week" },
+            { "key": "week", "label": "Week", "format": "text" },
             {
               "key": "netSales",
-              "label": "Net sales",
+              "label": "Net Sales",
               "format": "currency",
               "emphasize": true
             }
@@ -144,7 +205,7 @@ with built-in components, running each block's query when the page is viewed.
       }
     ]
   },
-  "context": { "weeks": 12 },
+  "context": { "period_start": "2025-02-01", "period_end": "2026-01-31" },
   "status": "active"
 }
 ```
@@ -175,7 +236,8 @@ rolled back — but treat saves as real: preview first, always.
    columns and rows its block renders: a `kpiGroup` query returns a **single
    row** with one column per KPI (and per delta); chart/table queries return
    the rows to plot or list. Do the rounding, aliasing, and formatting in SQL.
-3. **Preview the data.** `preview_report` with the draft `queries`. Confirm
+3. **Preview the data.** `preview_report` with the draft `queries`, `controls`,
+   and `report`. Fix every `convention_warnings` entry it returns. Confirm
    every key returns rows, the shape matches the block that will consume it
    (KPI row has the right columns; chart/table rows have `xKey`/column keys),
    the numbers are sane (spot-check against a known figure), and nothing is
@@ -213,7 +275,8 @@ rolled back — but treat saves as real: preview first, always.
    good, not to "finish the task". Saving is a deliberate user action. Only
    call `save_report` when the user explicitly asks, and let them choose:
    - **"save as new"** (or "create") → call `save_report` **without**
-     `report_id` (creates a new definition).
+     `report_id` (creates a new definition). Check `list_reports` first; if a
+     report with the same title exists, ask whether to update it instead.
    - **"update"** (or "save over the existing one") → call `save_report`
      **with** the `report_id` of the definition being edited.
 
@@ -221,7 +284,8 @@ rolled back — but treat saves as real: preview first, always.
    e.g. _"Want me to update the **Cash Inflow Report**, or save this as a new
    report?"_ — do **not** surface the `report_id` or other internal fields.
 
-   Always pass a short `change_summary` describing what this save changed or
+   Always pass `user_requested_save: true` (only after that explicit ask) and a
+   short `change_summary` describing what this save changed or
    added (e.g. `"Added a channel-split bar chart and a % of total data bar."`).
    It's shown in the report's version history so a reader can scan who changed
    what, when. On a brand-new report it defaults to "Report was created", so you
@@ -265,8 +329,9 @@ query whose rows it renders.
 **header** — `{title, subtitle?, eyebrow?, generatedAt?}`. `generatedAt` is an
 ISO timestamp, rendered as an "Updated <date>" line.
 
-**blocks** — an ordered array rendered top to bottom. Each block is one of four
-types:
+**blocks** — an ordered array rendered top to bottom. Each block is one of five
+types (`financialStatement` renders a trended P&L, balance sheet, or cash flow
+with periods as columns):
 
 - **`kpiGroup`** — a row of KPI cards.
   `{"type": "kpiGroup", "query": "<key>", "kpis": [{...}]}`. The named query
@@ -336,23 +401,21 @@ Rules that keep reports clean:
 - **One focused query per block.** Shape data in SQL (round, alias to the exact
   column keys the block uses, return only the rows it needs); do not over-fetch
   or reshape client-side.
-- **Blocks are optional — compose to the ask.** No block type is required.
-  Include only what the data and the user's request call for: a report can be a
-  single `table`, KPIs only, a chart plus takeaways, or `text`-only (which needs
-  no `queries`). Let the request and the data drive the shape, not a template.
-  As a rule of thumb, KPIs suit headline metrics, charts suit trend/mix, tables
-  suit detail, and text suits narrative; a fuller report often runs `text`
-  overview → `kpiGroup` → chart(s) → detail `table` → `text` takeaways, but drop
-  anything that doesn't serve the question.
+- **Standard structure, sized to the data.** Follow the order in the report
+  conventions: `kpiGroup` for headline numbers, then the chart, then the detail
+  `table` from the same query, with optional `text` framing at the top and
+  takeaways at the bottom. Drop a block only when the data for it is missing,
+  and say which. Do not invent a new layout for each report.
 - **Drivepoint house style.** Concise, plain language. **No em dashes** in any
   copy (titles, labels, body) — use commas, periods, or "to" for ranges.
 
-## Controls (optional interactivity)
+## Controls (in the side panel)
 
-A report may carry a top-level `controls` array (a sibling of `header`/`blocks`)
-of renderer-owned interactive controls. Add them only when the user wants to
-slice or reshape the report themselves; a report with no `controls` is still
-complete. Every control is `{type, key, label, ...}` where `key` is a unique id.
+A report carries a top-level `controls` array (a sibling of `header`/`blocks`)
+of renderer-owned interactive controls. Drivepoint draws every one of them in
+the Controls side panel, never in the report body. A report with a date axis
+always gets the standard `dateRange` control (see the conventions); add other
+controls when the user wants to slice or reshape the report. Every control is `{type, key, label, ...}` where `key` is a unique id.
 There are two families:
 
 - **View controls** change what the reader sees without touching data. They
@@ -416,9 +479,13 @@ Limits (state these honestly, don't imply otherwise):
   say so.
 - Every query key a block references must exist in `queries`; a definition that
   points a block at an unknown key is rejected on save.
-- Saves are versioned and audited (who, when, what changed). Use
-  `status: "archived"` to retire a report; do not overwrite a report with an
-  empty `report` to "delete" it.
+- Saves are versioned and audited (who, when, what changed). A save that
+  changes nothing returns `action: "unchanged"` and creates no version. Use
+  `status: "archived"` to retire a report, only when the user agrees; do not
+  overwrite a report with an empty `report` to "delete" it.
+- An artifact-linked save (`artifact_id`) is a static copy. Make one only when
+  the user explicitly asks to keep that exact artifact as a static report, and
+  pass `allow_static_snapshot: true`.
 - A save is always user-initiated (see Golden rules). Do not auto-save, save
   "to be helpful", or re-save on your own after an edit.
 - One tenant per definition. For the same report across tenants, save the
