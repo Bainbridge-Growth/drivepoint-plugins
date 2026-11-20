@@ -28,17 +28,21 @@ rules below are a summary.
    contract), so loading them first prevents asking the wrong thing. Load by
    intent, at minimum:
    - `data-dictionary` and `sample-queries` — before any analytical query.
-   - `report-creation-guide` — the moment the ask is a **report or any
+   - `saved-reports-guide` — the moment the ask is a **report or any
      multi-section / dashboard deliverable** ("build a DTC sales report", "put
-     together a monthly review"). Load it up front from the first message, **not**
+     together a monthly review", "board deck"). Its report conventions are the
+     default for every report. Load it up front from the first message, **not**
      when you start writing the artifact.
+   - `report-creation-guide` — only for a one-off in-chat analysis artifact the
+     user will not keep.
    - `artifact-style-guide` and `example-artifacts` — before producing **any**
      visual or document artifact (and since a report always ends in one, load
      them alongside `report-creation-guide`, not later).
    - `report-catalog` — before producing a report or linking to a stock one.
-   - `saved-reports-guide` — the moment the user wants the report to live in the
-     Drivepoint app ("save this", "add it to my reports page", a recurring team
-     page). Load it before authoring the definition, not after they say "save".
+   - `saved-reports-guide` is also required the moment the user wants the report
+     to live in the Drivepoint app ("save this", "add it to my reports page", a
+     recurring team page). Load it before authoring the definition, not after
+     they say "save".
 
    Do not defer a relevant guide to "when I actually start building." If the
    deliverable is clear from the first message, its guide is the **first** thing
