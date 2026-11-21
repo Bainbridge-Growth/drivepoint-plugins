@@ -15,6 +15,7 @@ Once connected, the Drivepoint MCP server exposes tools such as:
 - `run_query` — read-only GoogleSQL against the brand's marts
 - `get_plan` / `list_company_plans` — Drivepoint financial plans
 - `get_drivepoint_user` — the connected user's context
+- `get_profile` — stable account id for ChatGPT multi-account linking
 
 ## Configuration
 

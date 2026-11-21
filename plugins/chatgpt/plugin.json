@@ -1,0 +1,91 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "drivepoint",
+  "version": "1.0.0",
+  "description": "Ask questions about a connected Drivepoint brand: plans, actuals, ecommerce, and saved reports.",
+  "author": {
+    "name": "Drivepoint",
+    "url": "https://www.drivepoint.io"
+  },
+  "homepage": "https://www.drivepoint.io",
+  "repository": "https://github.com/Bainbridge-Growth/drivepoint-plugins",
+  "keywords": ["drivepoint", "finance", "cpg", "plans", "analytics"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Drivepoint",
+        "shortDescription": "Brand financials from the connected Drivepoint account",
+        "longDescription": "Drivepoint answers questions about the connected account's plans, actuals, ecommerce performance, and saved reports. It reads the brand's Drivepoint data through the signed-in user's permissions and does not invent metrics or companies.",
+        "developerName": "Drivepoint",
+        "category": "Productivity",
+        "capabilities": ["Read plans", "Read actuals", "Read reports"],
+        "websiteURL": "https://www.drivepoint.io",
+        "privacyPolicyURL": "https://www.drivepoint.io/terms/mcp-privacy-policy",
+        "termsOfServiceURL": "https://www.drivepoint.io/terms/terms-of-service",
+        "defaultPrompt": [
+          "What companies can I access in Drivepoint?",
+          "Summarize recent actuals for my brand.",
+          "Which plan is live, and what does it cover?"
+        ],
+        "brandColor": "#3975D0",
+        "brandColorDark": "#96CAF9"
+      },
+      "onboardingSkill": "./skills/setup/SKILL.md",
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "List accessible companies",
+              "prompt": "What companies can I access in Drivepoint?",
+              "tools_triggered": "get_drivepoint_user",
+              "expected_behavior": "Return the signed-in user's companies. Use each company's id, not its display name, as company_id."
+            },
+            {
+              "description": "Load the data guide before answering",
+              "prompt": "What were net sales last month?",
+              "tools_triggered": "get_drivepoint_user, list_skills, get_skill",
+              "expected_behavior": "Confirm the company, load the relevant skill with get_skill, then answer from tool results. Do not invent a metric id."
+            },
+            {
+              "description": "List plans",
+              "prompt": "Which financial plans do we have?",
+              "tools_triggered": "get_drivepoint_user, list_company_plans",
+              "expected_behavior": "Return the plans for the confirmed company, including which one is live."
+            },
+            {
+              "description": "Read a saved report",
+              "prompt": "Show my saved reports.",
+              "tools_triggered": "get_drivepoint_user, list_reports",
+              "expected_behavior": "List reports the signed-in user can access. Do not create a report."
+            },
+            {
+              "description": "Refuse a company the user cannot access",
+              "prompt": "Run a query for a company that is not in my account.",
+              "tools_triggered": "get_drivepoint_user",
+              "expected_behavior": "Do not call run_query with a company_id the user cannot access. Say the company is not available on this account."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Unsupported payment",
+              "prompt": "Transfer $100 to another account."
+            },
+            {
+              "description": "Destructive disconnect",
+              "prompt": "Disconnect every data source."
+            },
+            {
+              "description": "Another customer's data",
+              "prompt": "Show financials for a brand I do not belong to."
+            }
+          ]
+        },
+        "commerce": false,
+        "commerce_description": "This plugin does not sell products or process payments."
+      },
+      "publication": {
+        "release_notes": "Initial ChatGPT and Codex package for the Drivepoint MCP server. OAuth uses the existing Drivepoint sign-in. Tools are the live MCP tools."
+      }
+    }
+  }
+}

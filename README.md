@@ -9,6 +9,7 @@ Drivepoint's Claude products as separate, independently-installable plugins.
 |--------|--------------|---------|
 | **`smartmodel`** | SmartModel Protocol v6.0 — the AI-readable grammar for Drivepoint Excel financial models, plus the full SmartModel skill library (builders, analysis, model ops, scenarios). This repo is the **canonical home** of the SmartModel Protocol specification. | 1.6.0 |
 | **`mcp-server`** | The Drivepoint MCP server — connects Claude to a brand's Drivepoint analytics data (read-only, BigQuery-backed marts, skills, and plans). | 0.1.4 |
+| **`chatgpt`** | ChatGPT and Codex package for the same MCP server. See `plugins/chatgpt/README.md`. | 1.0.0 |
 
 ## Install
 
@@ -99,6 +100,13 @@ drivepoint-plugins/                          ← marketplace root
           scenario-planning/
           starter-prompt/
           system-prompt/
+    chatgpt/                                 ← ChatGPT and Codex plugin
+      plugin.json                            ← portable Agent Plugins manifest
+      mcp.json                               ← https://mcp.drivepoint.ai/mcp, OAuth DCR
+      skills/
+        setup/SKILL.md
+        answer-finance-question/SKILL.md
+  .agents/plugins/marketplace.json           ← local ChatGPT / Codex marketplace
   trial/
     welcome.md                               ← guided trial experience for prospects
   README.md
@@ -139,6 +147,15 @@ brand's Drivepoint analytics data (read-only). See
 > **Note:** `plugins/mcp-server/.mcp.json` points at
 > `https://mcp.drivepoint.ai/mcp` (Streamable HTTP). See
 > `plugins/mcp-server/README.md` for the tool surface.
+
+## The ChatGPT plugin
+
+`plugins/chatgpt/` is the ChatGPT and Codex package for that same MCP server:
+portable `plugin.json`, OAuth dynamic-client-registration settings in
+`mcp.json`, and two skills (`setup`, `answer-finance-question`). Connect it
+from ChatGPT with **Add custom MCP server** and OAuth, or install it from
+`.agents/plugins/marketplace.json` in the ChatGPT desktop app. Details are in
+`plugins/chatgpt/README.md`.
 
 ## Try Drivepoint (Trial Experience)
 
