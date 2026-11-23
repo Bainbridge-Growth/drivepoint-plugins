@@ -226,14 +226,18 @@ class AnswerFormatTests(unittest.TestCase):
         self.assertNotIn("Decide the deliverable", text)
         self.assertNotIn("suggest or produce", text)
         self.assertIn("The default deliverable for a data question is a visual artifact.", text)
-        self.assertIn("A trend, a split, or a comparison is an artifact even when it is short.", text)
+        self.assertIn("Unless the user asked for text", text)
+        self.assertIn("explicitly asked for text", text)
+        self.assertIn("the March P&L", text)
+        self.assertIn("text-only", readme.lower())
         self.assertIn("artifact", readme.lower())
 
     def test_style_guide_does_not_treat_one_dimension_as_text(self) -> None:
         text = STYLE_GUIDE.read_text()
         self.assertNotIn("suggest or produce", text)
         self.assertNotIn("≤5 rows or 1 dimension", text)
-        self.assertIn("Plain text is the exception", text)
+        self.assertIn("Plain text when the user asked for it.", text)
+        self.assertIn("Text response only for now", text)
         self.assertIn("badge", text)
         self.assertIn("const CompactHeader = ({ kind, period, title, subtitle, badge })", text)
 
@@ -241,6 +245,9 @@ class AnswerFormatTests(unittest.TestCase):
         text = REPORT_GUIDE.read_text()
         self.assertNotIn("wordmark sit top-right", text)
         self.assertNotIn("Return text +", text)
+        self.assertNotIn("A single-question ask is **not** a report.", text)
+        self.assertIn("meets **none** of the criteria above", text)
+        self.assertIn("March P&L", text)
         self.assertIn("No lockup, no logomark, and no", text)
         self.assertIn('`badge`', text)
 

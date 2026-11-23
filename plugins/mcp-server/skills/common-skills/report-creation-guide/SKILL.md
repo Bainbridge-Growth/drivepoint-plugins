@@ -57,10 +57,13 @@ A report is warranted when **any** of these is true:
 - A previous answer is being expanded ("now break that down by channel and
   show the trend") — the cumulative output now has report shape; promote it.
 
-A single-question ask is **not** a report. Answer it as one artifact under
-`artifact-style-guide.md` (plain text only for the 5-row, single-dimension
-exception that is not a trend, split, or comparison). Don't pad a small
-question into a long deliverable.
+A small, single-view ask that meets **none** of the criteria above is not a
+report. Answer it as one artifact under `artifact-style-guide.md` (plain
+text only for the 5-row, single-dimension exception that is not a trend,
+split, or comparison, or when the user explicitly asked for text). Don't
+pad that small question into a long deliverable. One sentence can still be
+a report: "Can you show the March P&L?" names a report, so it gets the
+badge and the anatomy below.
 
 ---
 

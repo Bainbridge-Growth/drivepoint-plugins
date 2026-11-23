@@ -18,14 +18,19 @@ to say "chart", "show me", or "dashboard".
   numeric series** (e.g. model update guide, workbook field map) → React
   artifact using Example 8 in `example-artifacts.md`. If the answer has
   numbers to chart or table, use `report-creation-guide.md` instead.
-- **Plain text is the exception**, and only when every one of these is
-  true: 5 rows or fewer, a single dimension (one number or one short
-  list), and not a trend, split, or comparison. Then return text with the
-  supporting SQL.
+- **Plain text when the result is small.** Every one of these is true:
+  5 rows or fewer, a single dimension (one number or one short list), and
+  not a trend, split, or comparison. Then return text with the supporting
+  SQL.
+- **Plain text when the user asked for it.** The user's message, or a
+  skill they asked you to follow for this turn (for example
+  `starter-prompt`'s "Text response only for now"), explicitly asks for
+  text and not an artifact. Honor that for this turn. The next question is
+  an artifact again unless they repeat the request.
 
-When in doubt, produce the artifact and show the SQL underneath. Do not
-suggest a chart in place of building one, and do not fall back to a
-markdown table.
+When in doubt, and the user did not ask for text, produce the artifact and
+show the SQL underneath. Do not suggest a chart in place of building one,
+and do not fall back to a markdown table.
 
 ---
 

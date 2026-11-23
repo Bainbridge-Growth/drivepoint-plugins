@@ -23,7 +23,9 @@ rules below are a summary.
 2. **The default deliverable for a data question is a visual artifact.** Do
    not choose plain text because the user did not say "chart", "report", or
    "dashboard", and do not wait to classify the ask as a "quick answer"
-   before loading the visual guides. `get_skill` the guides the answer
+   before loading the visual guides. If the user explicitly asks for text
+   only, honor that for this turn and still load the data guides.
+   `get_skill` the guides the answer
    needs **before you query, and before you ask the user any clarifying or
    format questions.** Those guides already cover period defaults, report
    anatomy, chart-type choice, and the save contract, so loading them first
@@ -322,16 +324,24 @@ Every artifact opens with `CompactHeader` and closes with `BuiltWithFooter`
 (Hard rule §8 and `artifact-style-guide.md` § "Customer-built compact
 header"). No lockup and no logomark in the header.
 
-**Inline exception — the only one.** Return a text answer with the
-supporting SQL only when all three are true:
+**Inline exceptions.** Return text in either of these cases, and otherwise
+build the artifact:
 
-- the result is 5 rows or fewer, and
-- it is a single dimension (one number, or one short list), and
-- it is not a trend, a split (channel, segment, store, product, geo), or a
-  comparison (versus a prior period, a plan, or another segment).
+1. The user explicitly asked for text and not an artifact, in this message
+   or in a skill they asked you to follow for this turn (for example
+   `starter-prompt`'s "Text response only for now"). Honor that for this
+   turn. The next question is an artifact again unless they repeat the
+   request.
+2. All three of these are true, and the user did not ask for an artifact:
+   - the result is 5 rows or fewer, and
+   - it is a single dimension (one number, or one short list), and
+   - it is not a trend, a split (channel, segment, store, product, geo), or a
+     comparison (versus a prior period, a plan, or another segment).
 
-A trend, a split, or a comparison is an artifact even when it is short. Do
-not offer to visualize it later. Build it.
+When case 2 applies, include the supporting SQL under the text answer.
+
+Unless the user asked for text, a trend, a split, or a comparison is an
+artifact even when it is short. Do not offer to visualize it later. Build it.
 
 **Minimum bar for every artifact.** The style guide is the full spec. Do
 not ship below this, and do not invent chrome the guide does not define:
@@ -352,12 +362,14 @@ not ship below this, and do not invent chrome the guide does not define:
   artifact, then what to look at next. The assumptions live in the
   artifact, not in a long preamble.
 
-**A report** — a review, a dashboard, "how did we do", a trend plus a
-split, or any answer that needs three or more views — follows
-`report-creation-guide.md` on top of that bar: a status badge on
-`CompactHeader`, a TL;DR of the headline movement, three to five KPI
-cards, one primary chart, the breakdown that changes the story, and a
-supporting table. A single unlabeled chart is not a report.
+**A report** — a review, a dashboard, "how did we do", a named report such
+as "the March P&L", a trend plus a split, or any answer that needs three or
+more views — follows `report-creation-guide.md` on top of that bar: a
+status badge on `CompactHeader`, a TL;DR of the headline movement, three to
+five KPI cards, one primary chart, the breakdown that changes the story,
+and a supporting table. One sentence that names a report is still a report.
+A single unlabeled chart is not a report. A small single-view ask that
+meets none of those shapes is one artifact, not a report.
 
 ---
 
