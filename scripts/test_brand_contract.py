@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -253,11 +254,40 @@ class AnswerFormatTests(unittest.TestCase):
         self.assertIn("meets **none** of the criteria above", text)
         self.assertIn("March P&L", text)
         self.assertIn("No lockup, no logomark, and no", text)
-        examples = EXAMPLES.read_text()
-        self.assertEqual(examples.count('badge="Unsaved draft"'), 3)
-        self.assertIn('kind="Monthly business review"', examples)
-        self.assertIn('kind="Financial statements"', examples)
         self.assertIn('`badge`', text)
+        self._assert_report_example_badges()
+
+    def _assert_report_example_badges(self) -> None:
+        """Count badges on each CompactHeader, not in the surrounding prose."""
+        examples = EXAMPLES.read_text()
+        headers = re.findall(r"<CompactHeader\b.*?\n\s*/>", examples, re.S)
+        badged = set()
+        plain = set()
+        for header in headers:
+            kind = re.search(r'kind="([^"]+)"', header)
+            self.assertIsNotNone(kind, header)
+            name = kind.group(1)
+            if 'badge="Unsaved draft"' in header:
+                badged.add(name)
+            else:
+                plain.add(name)
+        self.assertEqual(
+            badged,
+            {
+                "Monthly business review",
+                "Financial statements",
+                "Plan variance",
+                "Executive flash",
+            },
+        )
+        self.assertTrue(
+            {
+                "Net sales",
+                "Net sales trend",
+                "Gross sales by channel",
+                "Model update guide",
+            }.issubset(plain)
+        )
 
 
 if __name__ == "__main__":
