@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -17,6 +18,12 @@ STYLE_GUIDE = (
 EXAMPLES = REPO_ROOT / "plugins/mcp-server/skills/common-skills/example-artifacts/SKILL.md"
 REPORT_GUIDE = (
     REPO_ROOT / "plugins/mcp-server/skills/common-skills/report-creation-guide/SKILL.md"
+)
+SYSTEM_PROMPT = (
+    REPO_ROOT / "plugins/mcp-server/skills/common-skills/system-prompt/SKILL.md"
+)
+SYSTEM_PROMPT_README = (
+    REPO_ROOT / "plugins/mcp-server/skills/common-skills/system-prompt/README.md"
 )
 CONTRACT = REPO_ROOT / "plugins/mcp-server/skills/brand-contract.json"
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
@@ -206,6 +213,81 @@ class BrandContractTests(unittest.TestCase):
             with self.assertRaises(bcc.ContractError) as ctx:
                 bcc.load_contract(missing)
             self.assertIn("missing contract file", str(ctx.exception))
+
+
+class AnswerFormatTests(unittest.TestCase):
+    """The short project block dropped the standing artifact rule. These
+    skills are what every customer loads, so the default has to live here
+    and the guides that used to contradict it have to agree.
+    """
+
+    def test_system_prompt_defaults_to_an_artifact(self) -> None:
+        text = SYSTEM_PROMPT.read_text()
+        readme = SYSTEM_PROMPT_README.read_text()
+        self.assertNotIn("Decide the deliverable", text)
+        self.assertNotIn("suggest or produce", text)
+        self.assertIn("The default deliverable for a data question is a visual artifact.", text)
+        self.assertIn("Unless the user asked for text", text)
+        self.assertIn("explicitly asked for text", text)
+        self.assertIn("the March P&L", text)
+        self.assertIn("text-only", readme.lower())
+        self.assertIn("artifact", readme.lower())
+
+    def test_style_guide_does_not_treat_one_dimension_as_text(self) -> None:
+        text = STYLE_GUIDE.read_text()
+        self.assertNotIn("suggest or produce", text)
+        self.assertNotIn("≤5 rows or 1 dimension", text)
+        self.assertIn("Plain text when the user asked for it.", text)
+        self.assertIn("did not ask for an", text)
+        self.assertIn("KPI card", text)
+        self.assertIn("Text response only for now", text)
+        self.assertIn("Omit `badge` only on a single-chart", text)
+        self.assertIn("A report keeps `badge`", text)
+        self.assertIn("badge", text)
+        self.assertIn("const CompactHeader = ({ kind, period, title, subtitle, badge })", text)
+
+    def test_report_guide_uses_compact_header_without_a_lockup(self) -> None:
+        text = REPORT_GUIDE.read_text()
+        self.assertNotIn("wordmark sit top-right", text)
+        self.assertNotIn("Return text +", text)
+        self.assertNotIn("A single-question ask is **not** a report.", text)
+        self.assertIn("meets **none** of the criteria above", text)
+        self.assertIn("March P&L", text)
+        self.assertIn("No lockup, no logomark, and no", text)
+        self.assertIn('`badge`', text)
+        self._assert_report_example_badges()
+
+    def _assert_report_example_badges(self) -> None:
+        """Count badges on each CompactHeader, not in the surrounding prose."""
+        examples = EXAMPLES.read_text()
+        headers = re.findall(r"<CompactHeader\b.*?\n\s*/>", examples, re.S)
+        badged = set()
+        plain = set()
+        for header in headers:
+            kind = re.search(r'kind="([^"]+)"', header)
+            self.assertIsNotNone(kind, header)
+            name = kind.group(1)
+            if 'badge="Unsaved draft"' in header:
+                badged.add(name)
+            else:
+                plain.add(name)
+        self.assertEqual(
+            badged,
+            {
+                "Monthly business review",
+                "Financial statements",
+                "Plan variance",
+                "Executive flash",
+            },
+        )
+        self.assertTrue(
+            {
+                "Net sales",
+                "Net sales trend",
+                "Gross sales by channel",
+                "Model update guide",
+            }.issubset(plain)
+        )
 
 
 if __name__ == "__main__":

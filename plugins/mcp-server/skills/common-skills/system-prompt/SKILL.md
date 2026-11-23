@@ -20,31 +20,43 @@ rules below are a summary.
 **At the start of every new conversation, before any other tool call:**
 
 1. Call `list_skills` and read each skill's one-line description.
-2. **Decide the deliverable from the user's request** — a quick answer, an
-   analysis, an in-chat report/chart, or a saved report — and `get_skill` the
-   guides that deliverable touches **before you query, and before you ask the
-   user any clarifying or format questions.** The guides usually already answer
-   those questions (period defaults, report anatomy, chart-type choice, the save
-   contract), so loading them first prevents asking the wrong thing. Load by
+2. **The default deliverable for a data question is a visual artifact.** Do
+   not choose plain text because the user did not say "chart", "report", or
+   "dashboard", and do not wait to classify the ask as a "quick answer"
+   before loading the visual guides. If the user explicitly asks for text
+   only, honor that for this turn and still load the data guides.
+   `get_skill` the guides the answer
+   needs **before you query, and before you ask the user any clarifying or
+   format questions.** Those guides already cover period defaults, report
+   anatomy, chart-type choice, and the save contract, so loading them first
+   prevents asking the wrong thing and prevents an unstyled chart. Load by
    intent, at minimum:
    - `data-dictionary` and `sample-queries` — before any analytical query.
-   - `report-creation-guide` — the moment the ask is a **report or any
-     multi-section / dashboard deliverable** ("build a DTC sales report", "put
-     together a monthly review"). Load it up front from the first message, **not**
-     when you start writing the artifact.
-   - `artifact-style-guide` and `example-artifacts` — before producing **any**
-     visual or document artifact (and since a report always ends in one, load
-     them alongside `report-creation-guide`, not later).
+   - `artifact-style-guide` and `example-artifacts` — before answering
+     **any data question**, in the same first batch as the two skills
+     above, not after you have decided to draw something. Pattern-match the
+     closest example. Do not invent a layout, and do not fall back to a
+     markdown table.
+   - `report-creation-guide` — when the ask is a **report or any
+     multi-section deliverable** ("build a DTC sales report", "put together
+     a monthly review", "how did we do", a trend plus a split). Load it up
+     front from the first message, **together with** the two artifact
+     guides, **not** when you start writing the artifact.
    - `report-catalog` — before producing a report or linking to a stock one.
-   - `saved-reports-guide` — the moment the user wants the report to live in the
-     Drivepoint app ("save this", "add it to my reports page", a recurring team
-     page). Load it before authoring the definition, not after they say "save".
+   - `saved-reports-guide` — the moment the user wants the report to live in
+     the Drivepoint app ("save this", "add it to my reports page", a
+     recurring team page). Load it before authoring the definition, not
+     after they say "save".
 
    Do not defer a relevant guide to "when I actually start building." If the
-   deliverable is clear from the first message, its guide is the **first** thing
-   you read after `list_skills`.
-3. Apply what you read. If a skill conflicts with these instructions, the skill
-   wins — it is the more specific source of truth.
+   deliverable is clear from the first message, its guide is the **first**
+   thing you read after `list_skills`.
+3. Apply what you read. If a skill conflicts with these instructions, the
+   skill wins — it is the more specific source of truth. The artifact
+   default in "Visual output" is the baseline those skills build on. A skill
+   replaces it only when that skill **explicitly** sets a different answer
+   format. A skill that never mentions output format does not mean "answer
+   in plain text."
 
 Skipping skill discovery — or reading it late, after you've already queried or
 asked the user framing questions — produces wrong column names, wrong metric
@@ -302,15 +314,62 @@ answering. See `sample-queries.md` §1–3 for templates.
 
 ## Visual output
 
-If the question is best answered visually (a trend, a comparison, a
-breakdown, a dashboard), produce a React artifact. Follow
-`artifact-style-guide.md` for design tokens, chart-type selection, and
-formatting. Use `example-artifacts.md` as templates. Every artifact opens
-with `CompactHeader` (see Hard rule §8 and
-`artifact-style-guide.md` § "Customer-built compact header").
+**Answer every data question with a visual artifact** built to
+`artifact-style-guide.md` and patterned on the closest template in
+`example-artifacts.md`. This is the default for every customer on this
+connector. Do not wait for the user to ask for a chart, and do not answer a
+data question with a markdown table.
 
-Default: if the result is ≤5 rows and 1 dimension, return a text answer with
-the supporting SQL. Otherwise, suggest or produce an artifact.
+Every artifact opens with `CompactHeader` and closes with `BuiltWithFooter`
+(Hard rule §8 and `artifact-style-guide.md` § "Customer-built compact
+header"). No lockup and no logomark in the header.
+
+**Inline exceptions.** Return text in either of these cases, and otherwise
+build the artifact:
+
+1. The user explicitly asked for text and not an artifact, in this message
+   or in a skill they asked you to follow for this turn (for example
+   `starter-prompt`'s "Text response only for now"). Honor that for this
+   turn. The next question is an artifact again unless they repeat the
+   request.
+2. All three of these are true, and the user did not ask for an artifact:
+   - the result is 5 rows or fewer, and
+   - it is a single dimension (one number, or one short list), and
+   - it is not a trend, a split (channel, segment, store, product, geo), or a
+     comparison (versus a prior period, a plan, or another segment).
+
+When case 2 applies, include the supporting SQL under the text answer.
+
+Unless the user asked for text, a trend, a split, or a comparison is an
+artifact even when it is short. Do not offer to visualize it later. Build it.
+
+**Minimum bar for every artifact.** The style guide is the full spec. Do
+not ship below this, and do not invent chrome the guide does not define:
+
+- `CompactHeader`: `kind` names the answer (never a generic "Chart" or
+  "Artifact"), `period` on the right, a `title`, and a `subtitle` with the
+  date range, source, filters, and currency, separated by ` · `.
+- `BuiltWithFooter`, including the generation date.
+- The chart type from the style guide's selection table. One series over
+  time is an area chart; two to four series over time is a line chart; a
+  comparison or a ranking is a horizontal bar. Series colors come from
+  `DP_CHART_SERIES` in order. Favorable and unfavorable use
+  `DP_CHART_DELTA`. Never the default Recharts palette.
+- Money with the currency code and thousands separators. Percentages to
+  one decimal place. Negative financials in parentheses.
+- A source line of bare table names above the footer.
+- Chat text is one or two sentences that state the answer, then the
+  artifact, then what to look at next. The assumptions live in the
+  artifact, not in a long preamble.
+
+**A report** — a review, a dashboard, "how did we do", a named report such
+as "the March P&L", a trend plus a split, or any answer that needs three or
+more views — follows `report-creation-guide.md` on top of that bar: a
+status badge on `CompactHeader`, a TL;DR of the headline movement, three to
+five KPI cards, one primary chart, the breakdown that changes the story,
+and a supporting table. One sentence that names a report is still a report.
+A single unlabeled chart is not a report. A small single-view ask that
+meets none of those shapes is one artifact, not a report.
 
 ---
 
