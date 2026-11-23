@@ -18,10 +18,11 @@ to say "chart", "show me", or "dashboard".
   numeric series** (e.g. model update guide, workbook field map) → React
   artifact using Example 8 in `example-artifacts.md`. If the answer has
   numbers to chart or table, use `report-creation-guide.md` instead.
-- **Plain text when the result is small.** Every one of these is true:
-  5 rows or fewer, a single dimension (one number or one short list), and
-  not a trend, split, or comparison. Then return text with the supporting
-  SQL.
+- **Plain text when the result is small.** The user did not ask for an
+  artifact, and every one of these is true: 5 rows or fewer, a single
+  dimension (one number or one short list), and not a trend, split, or
+  comparison. Then return text with the supporting SQL. "Show today's
+  revenue as a KPI card" asked for an artifact, so build the card.
 - **Plain text when the user asked for it.** The user's message, or a
   skill they asked you to follow for this turn (for example
   `starter-prompt`'s "Text response only for now"), explicitly asks for
@@ -256,8 +257,9 @@ Default for this connector. Match the D2.1 pattern:
    muted subtitle. Data is the hero; type stays restrained. Reports pass
    `badge` (`"Unsaved draft"` until saved, `"Saved"` once the artifact
    matches a stored definition) and it renders as an ink hairline pill
-   between the title and the subtitle. Omit `badge` on a single-chart
-   answer. Do not color the pill, and do not draw a second status banner.
+   between the title and the subtitle. Omit `badge` only on a single-chart
+   answer that is not a report. A report keeps `badge` even when it has one
+   chart. Do not color the pill, and do not draw a second status banner.
 3. **Footer** — `BuiltWithFooter`: 13px mark + "Built with Drivepoint" left,
    "Generated \<date\>" muted right.
 

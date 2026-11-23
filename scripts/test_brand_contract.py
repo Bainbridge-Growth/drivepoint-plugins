@@ -237,7 +237,11 @@ class AnswerFormatTests(unittest.TestCase):
         self.assertNotIn("suggest or produce", text)
         self.assertNotIn("≤5 rows or 1 dimension", text)
         self.assertIn("Plain text when the user asked for it.", text)
+        self.assertIn("did not ask for an", text)
+        self.assertIn("KPI card", text)
         self.assertIn("Text response only for now", text)
+        self.assertIn("Omit `badge` only on a single-chart", text)
+        self.assertIn("A report keeps `badge`", text)
         self.assertIn("badge", text)
         self.assertIn("const CompactHeader = ({ kind, period, title, subtitle, badge })", text)
 
