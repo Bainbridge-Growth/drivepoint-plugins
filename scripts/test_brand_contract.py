@@ -253,6 +253,10 @@ class AnswerFormatTests(unittest.TestCase):
         self.assertIn("meets **none** of the criteria above", text)
         self.assertIn("March P&L", text)
         self.assertIn("No lockup, no logomark, and no", text)
+        examples = EXAMPLES.read_text()
+        self.assertEqual(examples.count('badge="Unsaved draft"'), 3)
+        self.assertIn('kind="Monthly business review"', examples)
+        self.assertIn('kind="Financial statements"', examples)
         self.assertIn('`badge`', text)
 
 

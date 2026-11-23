@@ -20,7 +20,10 @@ row labels with the customer's real workbook rows, not invented scaffolding.
 > connector examples — that chrome is for sent docs only.
 > Map: `kind` ← former kicker / artifact type; `period` ← date band;
 > `title` ← customer or artifact name; `subtitle` ← context line.
-> Single-answer cards may omit `title` / `subtitle` (metadata band only).
+> Report-shaped examples (a review, a dashboard, a P&L) pass
+> `badge="Unsaved draft"`. A single chart that is not a report omits
+> `badge`. Single-answer cards may omit `title` / `subtitle` (metadata
+> band only).
 > `generated` is the artifact's actual creation date; replace the sample
 > `28 Jul 2026` value in every template.
 >
@@ -126,6 +129,7 @@ export default function App() {
         period={DATE_RANGE}
         title={CUSTOMER_NAME}
         subtitle={`Revenue by channel · ${DATE_RANGE} · all channels · ${CURRENCY}`}
+        badge="Unsaved draft"
       />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <KpiCard label="Net Sales" value={fmtMoney(totalSales, CURRENCY)} sub="6-month total" />
@@ -258,6 +262,7 @@ export default function App() {
         period={DATE_RANGE}
         title={CUSTOMER_NAME}
         subtitle={`P&L summary · ${DATE_RANGE} · live plan actuals · ${CURRENCY}`}
+        badge="Unsaved draft"
       />
       <div className="overflow-x-auto">
         <table className="w-full text-sm tabular-nums">
