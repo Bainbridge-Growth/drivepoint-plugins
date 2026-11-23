@@ -1,1 +1,1 @@
-Core operating rules, footguns, and the required skill-discovery workflow for this server. Read this FIRST at the start of every conversation, before any other tool call or analysis.
+Core operating rules for this server. A data question is answered with a styled artifact by default (plain text only for one number or a list of 5 rows or fewer, and never for a trend, split, or comparison). Read this FIRST at the start of every conversation, before any other tool call or analysis.

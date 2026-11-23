@@ -18,6 +18,12 @@ EXAMPLES = REPO_ROOT / "plugins/mcp-server/skills/common-skills/example-artifact
 REPORT_GUIDE = (
     REPO_ROOT / "plugins/mcp-server/skills/common-skills/report-creation-guide/SKILL.md"
 )
+SYSTEM_PROMPT = (
+    REPO_ROOT / "plugins/mcp-server/skills/common-skills/system-prompt/SKILL.md"
+)
+SYSTEM_PROMPT_README = (
+    REPO_ROOT / "plugins/mcp-server/skills/common-skills/system-prompt/README.md"
+)
 CONTRACT = REPO_ROOT / "plugins/mcp-server/skills/brand-contract.json"
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
@@ -206,6 +212,37 @@ class BrandContractTests(unittest.TestCase):
             with self.assertRaises(bcc.ContractError) as ctx:
                 bcc.load_contract(missing)
             self.assertIn("missing contract file", str(ctx.exception))
+
+
+class AnswerFormatTests(unittest.TestCase):
+    """The short project block dropped the standing artifact rule. These
+    skills are what every customer loads, so the default has to live here
+    and the guides that used to contradict it have to agree.
+    """
+
+    def test_system_prompt_defaults_to_an_artifact(self) -> None:
+        text = SYSTEM_PROMPT.read_text()
+        readme = SYSTEM_PROMPT_README.read_text()
+        self.assertNotIn("Decide the deliverable", text)
+        self.assertNotIn("suggest or produce", text)
+        self.assertIn("The default deliverable for a data question is a visual artifact.", text)
+        self.assertIn("A trend, a split, or a comparison is an artifact even when it is short.", text)
+        self.assertIn("artifact", readme.lower())
+
+    def test_style_guide_does_not_treat_one_dimension_as_text(self) -> None:
+        text = STYLE_GUIDE.read_text()
+        self.assertNotIn("suggest or produce", text)
+        self.assertNotIn("≤5 rows or 1 dimension", text)
+        self.assertIn("Plain text is the exception", text)
+        self.assertIn("badge", text)
+        self.assertIn("const CompactHeader = ({ kind, period, title, subtitle, badge })", text)
+
+    def test_report_guide_uses_compact_header_without_a_lockup(self) -> None:
+        text = REPORT_GUIDE.read_text()
+        self.assertNotIn("wordmark sit top-right", text)
+        self.assertNotIn("Return text +", text)
+        self.assertIn("No lockup, no logomark, and no", text)
+        self.assertIn('`badge`', text)
 
 
 if __name__ == "__main__":

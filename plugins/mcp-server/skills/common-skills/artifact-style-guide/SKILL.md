@@ -7,18 +7,25 @@ system so this file is self-contained.
 
 ## When to create an artifact
 
-- "Show me", "chart", "visualize", "dashboard", "trend", "compare",
-  "breakdown" → React artifact.
-- A simple factual question with ≤5 rows or 1 dimension → text answer with
-  the supporting SQL.
-- A result with >5 rows or ≥2 dimensions → suggest or produce a
-  visualization.
+The default for a data question is a React artifact. The user does not have
+to say "chart", "show me", or "dashboard".
+
+- A trend, a split (channel, segment, store, product, geo), or a
+  comparison (versus a prior period, a plan, or another segment) →
+  artifact, even when the result is short.
+- More than 5 rows, or two or more dimensions → artifact.
 - A structured reference or instruction document with **no charts and no
   numeric series** (e.g. model update guide, workbook field map) → React
   artifact using Example 8 in `example-artifacts.md`. If the answer has
   numbers to chart or table, use `report-creation-guide.md` instead.
+- **Plain text is the exception**, and only when every one of these is
+  true: 5 rows or fewer, a single dimension (one number or one short
+  list), and not a trend, split, or comparison. Then return text with the
+  supporting SQL.
 
-When in doubt, produce the artifact AND show the SQL underneath.
+When in doubt, produce the artifact and show the SQL underneath. Do not
+suggest a chart in place of building one, and do not fall back to a
+markdown table.
 
 ---
 
@@ -196,7 +203,7 @@ const SignatureFooter = ({ sourceLine }) => (
 // --- Customer-built compact chrome (this connector's default) ---
 // No lockup / logomark in the header. Period fills the top-right.
 // Footer is the one Drivepoint brand slot.
-const CompactHeader = ({ kind, period, title, subtitle }) => (
+const CompactHeader = ({ kind, period, title, subtitle, badge }) => (
   <header className="mb-4" style={{ fontFamily: DP_FONT_STACK }}>
     <div className="flex items-baseline justify-between gap-3 pb-[11px]" style={{ borderBottom: `1px solid ${DP_BORDER_SUBTLE}` }}>
       <div className="text-[10.5px] font-bold uppercase tracking-[0.11em]" style={{ color: DP_TEXT_PRIMARY }}>{kind}</div>
@@ -206,6 +213,9 @@ const CompactHeader = ({ kind, period, title, subtitle }) => (
     </div>
     {title ? (
       <h1 className="text-[17px] font-bold leading-tight m-0 mt-4 mb-0.5" style={{ color: DP_TEXT_PRIMARY }}>{title}</h1>
+    ) : null}
+    {badge ? (
+      <div className="inline-block mt-2 mb-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em]" style={{ color: DP_TEXT_PRIMARY, border: `1px solid ${DP_BORDER_SUBTLE}` }}>{badge}</div>
     ) : null}
     {subtitle ? (
       <div className="text-xs m-0 mb-[18px]" style={{ color: DP_TEXT_MUTED }}>{subtitle}</div>
@@ -238,7 +248,11 @@ Default for this connector. Match the D2.1 pattern:
    (`DP_TEXT_MUTED`, e.g. `JULY 2026`); hairline beneath. Type leads, period
    stays quiet. **No lockup, no logomark, no client mark** in the header.
 2. **Title block** — title (customer or artifact name) at 17px bold + one-line
-   muted subtitle. Data is the hero; type stays restrained.
+   muted subtitle. Data is the hero; type stays restrained. Reports pass
+   `badge` (`"Unsaved draft"` until saved, `"Saved"` once the artifact
+   matches a stored definition) and it renders as an ink hairline pill
+   between the title and the subtitle. Omit `badge` on a single-chart
+   answer. Do not color the pill, and do not draw a second status banner.
 3. **Footer** — `BuiltWithFooter`: 13px mark + "Built with Drivepoint" left,
    "Generated \<date\>" muted right.
 
@@ -399,7 +413,8 @@ Never use:
 
 - **Customer-built (default for this connector):** white `p-6 bg-white`
   shell (max-width ~920). Open with
-  `<CompactHeader kind={…} period={…} title={…} subtitle={…} />`.
+  `<CompactHeader kind={…} period={…} title={…} subtitle={…} />`
+  (reports also pass `badge="Unsaved draft"` or `badge="Saved"`).
   Close with `<BuiltWithFooter generated={…} />`. Do **not** use
   `ArtifactPage`, `ArtifactHeader`, or `SignatureFooter`. Do **not** put
   a lockup or logomark in the header. Map former `kicker` → `kind`,

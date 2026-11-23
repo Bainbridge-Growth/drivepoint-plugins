@@ -1,1 +1,1 @@
-Visual and brand rules for building React (Recharts + Tailwind) artifacts, plus chart-type selection and number formatting. Read before producing ANY chart, visualization, dashboard, or visual artifact — do not fall back to markdown tables.
+Visual and brand rules for React artifacts, including chart type and number formatting. The default for a data question is an artifact built to this guide: read it with example-artifacts before querying, not after you start drawing. Do not fall back to markdown tables.

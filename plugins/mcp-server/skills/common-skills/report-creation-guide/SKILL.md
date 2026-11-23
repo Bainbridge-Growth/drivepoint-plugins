@@ -23,7 +23,7 @@ blocks), the exact mismatch the badge is meant to catch. Only build the hand
 artifact here for a one-shot in-chat answer that is **not** going to be saved.
 
 **Always show the state badge — from the first render.** Every report artifact,
-in-chat or saved, carries a status badge near the title so a report is **never**
+in-chat or saved, passes `badge` on `CompactHeader` so a report is **never**
 shown without one. It reads **"Unsaved draft"** until the report has been saved to
 the app — so a brand-new report shows the badge on its very first render (before
 any save), and a purely in-chat report that isn't saved stays **"Unsaved draft"** —
@@ -57,8 +57,10 @@ A report is warranted when **any** of these is true:
 - A previous answer is being expanded ("now break that down by channel and
   show the trend") — the cumulative output now has report shape; promote it.
 
-A single-question ask with one dimension is **not** a report. Return text +
-SQL, or one artifact. Don't pad a small question into a long deliverable.
+A single-question ask is **not** a report. Answer it as one artifact under
+`artifact-style-guide.md` (plain text only for the 5-row, single-dimension
+exception that is not a trend, split, or comparison). Don't pad a small
+question into a long deliverable.
 
 ---
 
@@ -68,37 +70,41 @@ A report has these sections, in this order. Every section is optional
 except title, source-context line, and the status badge — include any other
 section only when the data justifies it.
 
-1. **Title + lockup + status badge** — render via the `CompactHeader`
-   component (see `artifact-style-guide.md` § "Brand lockup"). Title is
-   `<noun> · <period>` — e.g. "Monthly Business Review · Mar 2026", "DTC
-   Sales · Last 12 Months". The Drivepoint mark + wordmark sit top-right;
-   title and source-context line stack top-left. A **status badge** sits by
-   the title on every render (**"Unsaved draft"** until saved, **"Saved"**
-   once it matches a stored definition) — see the "Always show the state
-   badge" rule above; it is never omitted.
-2. **Source-context line** — one sentence with the date range, plan name
-   (if SmartModel data is used), channel / segment filter, currency, and
-   the last booked month if any actuals are involved. Same content as the
-   subtitle requirement in `system-prompt.md` §"Response style", just
-   surfaced once at the top of the report instead of per-answer.
-3. **TL;DR** — at most two lines. State the headline number and the single
+1. **Header + status badge** — `CompactHeader` from `artifact-style-guide.md`
+   § "Customer-built compact header". No lockup, no logomark, and no
+   wordmark in the header. Pass `badge` so the state is part of that
+   header, not a second invented banner.
+   - `kind`: the report type, small-caps (for example "Monthly business
+     review").
+   - `period`: the window, small-caps, on the right (for example "MAR 2026").
+   - `title`: `<noun> · <period>` — for example "DTC Sales · Last 12 Months".
+   - `badge`: **"Unsaved draft"** until the report is saved, **"Saved"**
+     once it matches a stored definition. See the "Always show the state
+     badge" rule above. It is never omitted on a report, and it is never a
+     colored chip.
+   - `subtitle`: the source-context line, once. Date range, plan name (if
+     SmartModel data is used), channel or segment filter, currency, and the
+     last booked month if any actuals are involved, separated by ` · `.
+     Same facts as `system-prompt.md` §"Response style". Do not repeat them
+     in a second paragraph under the header.
+2. **TL;DR** — at most two lines. State the headline number and the single
    most material movement. Omit if nothing is materially different from
    the prior period. Do not write a TL;DR that says "performance was
    mixed."
-4. **KPI strip** — 3–5 cards across. Each card: label, value, period
+3. **KPI strip** — 3–5 cards across. Each card: label, value, period
    sub-label, and (only if comparison is unambiguous) a delta vs. prior
    period. See §"Comparisons" before adding a delta.
-5. **Primary trend** — one chart, the most-asked-about series over the
+4. **Primary trend** — one chart, the most-asked-about series over the
    report's period. Usually monthly. Area for a single series, line for
    2–4 series, stacked bar for composition over time.
-6. **Breakdowns** — one chart per dimension that materially changes the
+5. **Breakdowns** — one chart per dimension that materially changes the
    story (channel, segment, customer type, product category, geo). One
    dimension per chart — do not pre-pivot two dimensions into one.
-7. **Supporting table** — the underlying numbers for the breakdowns,
+6. **Supporting table** — the underlying numbers for the breakdowns,
    right-aligned, `tabular-nums`, sortable rows. Include the totals row.
-8. **Variance** — if a plan is in scope, one variance view (vs. forecast
+7. **Variance** — if a plan is in scope, one variance view (vs. forecast
    for the same plan, same period). See §"Comparisons".
-9. **Footnotes** — source mart(s), last booked month for SmartModel data,
+8. **Footnotes** — source mart(s), last booked month for SmartModel data,
    any caveats the user should know (currency mix, casing duplicates,
    missing forecast months).
 

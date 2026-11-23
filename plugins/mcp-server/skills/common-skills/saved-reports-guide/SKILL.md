@@ -201,7 +201,8 @@ rolled back — but treat saves as real: preview first, always.
    and `orientation`, same numbers the live queries return. Before saving, diff
    the artifact against the definition block-for-block; if they differ, the
    artifact is wrong (or you edited the definition after building it) — fix and
-   re-render. Show a small **status badge** at the top of the artifact so the
+   re-render. Pass the state as `badge` on `CompactHeader` (the ink hairline
+   pill from `artifact-style-guide.md`; do not invent a second banner) so the
    user can always tell what they are looking at: **"Unsaved draft"** whenever
    there are changes not yet saved (including a brand-new report), and
    **"Saved"** once the artifact matches the saved definition. Flip the badge by
