@@ -1,9 +1,11 @@
 # Sample Queries
 
-14 battle-tested SQL patterns covering the most common questions a CPG
+15 battle-tested SQL patterns covering the most common questions a CPG
 finance person asks. Every literal is a `<placeholder>` — replace before
 running. Every example assumes `{{env_prefix}}_dwh_mart` is the active dataset.
-§§13–14 apply only to brands with a retail feed (`retail_*` marts).
+§§13–14 apply only to brands with a retail feed (`retail_*` marts). §15
+applies only to brands with a Trackstar WMS or Cin7 Core connection
+(`inventory_*` marts).
 
 Use these as templates. Adapt; don't fabricate from scratch.
 
@@ -360,3 +362,39 @@ across periods; take the latest week (or average deliberately). Recompute
 in-stock rate as `stores_in_stock / stores_carrying` — **do not aggregate
 `source_in_stock_pct`** (Alloy-native ratio, traceability only). `stores_*`,
 `on_order_*`, `in_transit_*` are Alloy-native and NULL on Muffin rows.
+
+---
+
+## 15. Inventory position by SKU and warehouse (inventory connection only)
+
+**User asks:** "How much [SKU] do we have on hand / sellable / committed, by
+warehouse?"
+
+```sql
+SELECT COALESCE(wms_name, channel_store_name) AS wms,
+       warehouse_name,
+       sku,
+       product_name,
+       on_hand_quantity,
+       sellable_quantity,
+       committed_quantity,
+       fulfillable_quantity,
+       snapshot_date,
+       days_since_sync
+FROM `{{env_prefix}}_dwh_mart.inventory_position_sku_warehouse_latest`
+WHERE sku = '<sku>'                           -- or drop to list every SKU
+  AND (is_active IS NULL OR is_active)
+ORDER BY wms, warehouse_name
+```
+
+**Notes:** This is a **snapshot** — never SUM quantities across
+`snapshot_date`s; for a past day use `inventory_position_sku_warehouse_day`
+with `WHERE snapshot_date = '<date>'`. A NULL quantity means that WMS does not
+send the metric, not zero — don't `COALESCE` it away, say it isn't reported.
+Each connection (`connection_key`) reports its own warehouses; the same sku on
+a 3PL and FBA is stock in two places, so show it per row and only total it
+when the user asks for units across all locations. Always state
+`snapshot_date` and flag rows with `days_since_sync > 1` as stale (check
+`inventory_source_freshness`). `wms_name` can be NULL until the connection is
+labelled; `channel_store_name` is the fallback label. `wms_unit_cost` is the
+WMS's own cost field, not an inventory valuation.

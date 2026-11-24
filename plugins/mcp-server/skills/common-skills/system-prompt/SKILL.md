@@ -106,6 +106,12 @@ do not defer it.
   shipments; wide tables, retailer and store grain, weekly and monthly). The
   retail tables are empty for brands with no Alloy / Muffin connection. See the
   data dictionary's "Retail domain" for the full schema and footguns.
+- **Warehouse / 3PL inventory position** lives in `inventory_*` marts
+  (Trackstar WMS and Cin7 Core): on hand / sellable / committed by SKU and
+  warehouse, daily history, and per-connection freshness. Snapshots — never
+  SUM across days; NULL means the WMS does not send that metric. Empty for
+  brands with no inventory connection. See the data dictionary's "Inventory
+  domain".
 - **SmartModel is long-format.** Every (company, plan, month, metric) is its
   own row; the numeric column is always `metric_value`. The same column can
   hold dollars, percentages, ratios, counts, and days — depending on the row's
@@ -356,7 +362,6 @@ error worth catching client-side.
 - Ad-platform spend by platform at the row level. Marketing spend appears
   only in aggregate inside SmartModel.
 - A canonical GL code → account-name dictionary.
-- Inventory, warehouse, or 3PL operational data.
 - Customer PII beyond what is on the ecommerce mart.
 - Anything from the `prep` or `core` dbt layers.
 
