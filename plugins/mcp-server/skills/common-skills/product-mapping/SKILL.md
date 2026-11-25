@@ -177,9 +177,12 @@ Finally, split the product-bearing connections into two buckets:
   `read_product_mapping_source`. Decisions can be saved and
   published today.
 - **Connected, not yet in the roster** — live product data exists in
-  the warehouse but the dbt roster does not union it yet (3PL /
-  inventory streams such as Trackstar-Finale or Cin7, and QuickBooks
-  invoice line items, are the usual case). You can *review* these read-only in this session, but
+  the warehouse but the dbt roster does not union it yet (a live
+  connector or table the roster has no branch for, or a connection
+  whose rows have not landed in the roster yet). Shopify, Amazon,
+  TikTok Shop, Trackstar (3PL and ERP), Cin7 and QuickBooks invoice
+  line items are unioned when their raw tables exist, so they are
+  normally in the roster. You can *review* these read-only in this session, but
   `save_product_mappings` drops any sourceKey that is not in the
   live roster (`staleSourceKeyCount`), so nothing can be persisted
   for them until the roster includes that stream. Say so plainly.
@@ -194,8 +197,10 @@ connection:
 | --- | --- | --- | --- | --- |
 | Shopify · acme-store | live | catalog, sales line items | 312 | yes |
 | Amazon Seller · A1XYZ | live | sales line items | 88 | yes |
-| Trackstar-Finale · main warehouse | live | products (is_kit, unit_quantity), shipments | 0 | review only — not in roster yet |
-| QuickBooks · main | live | invoice line items (ItemRef, not the GL) | 0 | review only — not in roster yet |
+| Trackstar-Finale · main warehouse | live | products (is_kit, unit_quantity), shipments | 140 | yes |
+| Fulfil ERP · Fulfil | live | item catalog, sales order line items | 2,260 | yes |
+| QuickBooks · main | live | invoice line items (ItemRef, not the GL) | 57 | yes |
+| Acme feed · retail partner | live | product list | 0 | review only — not in roster yet |
 
 The rows above are the shape of the table, not a menu. Omit any
 source discovery did not find, including QuickBooks when `invoices`
