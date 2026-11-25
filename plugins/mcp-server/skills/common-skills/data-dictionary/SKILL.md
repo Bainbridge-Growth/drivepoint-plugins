@@ -1083,6 +1083,8 @@ ORDER BY total_outstanding DESC
 
 ## NetSuite domain
 
+**Beta - metrics still under testing and validation.**
+
 A fifth mart family, built straight from the NetSuite SuiteQL loader (raw
 dataset `netsuiteSuiteqlRaw1`) instead of the Drivepoint financial mapping
 pipeline. Same dataset, `{{env_prefix}}_dwh_mart`, all names prefixed
