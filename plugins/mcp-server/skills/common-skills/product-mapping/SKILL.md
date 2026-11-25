@@ -78,7 +78,8 @@ menu, and if a new kind of connection shows up, it is.
 3. Call `list_datasets` **once**. Raw connector landing datasets
    follow a `<source>Raw…` naming convention (for example
    `shopifyRawRecent11`, `amazonSPRawRecent1`, `quickbooksRaw1`, a
-   Trackstar / 3PL dataset, a Cin7 dataset) — one dataset per
+   Trackstar / 3PL dataset, a Trackstar ERP dataset such as
+   `trackstarErpRawRecent1`, a Cin7 dataset) — one dataset per
    connected account. Datasets prefixed with the environment
    (`<env>_bainbridgeAnalytics`, `<env>_executiveDashboard`,
    `<env>_productData`, …) are Drivepoint's modeled outputs, not
@@ -151,6 +152,12 @@ mapping so the user can decide with eyes open:
 - **Invoice line items** — product/item + quantity on an AR invoice
   (QuickBooks `SalesItemLineDetail` / `ItemRef`). Wholesale and
   finance-booked sales that never hit a storefront. Not the GL.
+- **ERP item catalog and sales orders** — a Trackstar ERP connection
+  (for example Fulfil, in a `trackstarErpRaw…` dataset) lands an
+  `items` table (id, sku, name, `is_kit`) and `sales_orders` whose
+  `line_items` carry SKU + quantity. It is the ERP's product source of
+  truth. In the roster it appears as `<ERP> ERP` (for example
+  `Fulfil ERP`), and its item ids are `trackstar_erp_item_id`.
 - **3PL / warehouse shipments** — SKU + quantity shipped, usually per
   fulfillment rather than per sale; the same product often appears
   under a warehouse SKU / case-pack name.
