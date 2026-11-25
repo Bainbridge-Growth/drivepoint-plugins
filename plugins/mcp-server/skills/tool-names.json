@@ -8,6 +8,7 @@
   ],
   "valid_tools": [
     "get_drivepoint_user",
+    "get_profile",
     "list_datasets",
     "list_tables",
     "get_schema",
