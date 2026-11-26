@@ -10,7 +10,6 @@ webapp-server change that registers the context MCP tools.
   precedence, and confirmed write-back.
 - New common skill `context-guide`: what goes where, frontmatter, size
   limits, and what never to save.
-- New `context-templates/` with `context-contract.json`, checked in CI by
-  `scripts/check_context_contract.py`.
-- Tool-name pin: adds `list_context`, `read_context`, `write_context`, and
-  `get_context_history`, and the `write` verb.
+- Tool-name pin: adds `list_context`, `read_context`, `write_context`,
+  `get_context_history`, `validate_context_file`, and `create_context_file`,
+  and the `write`, `validate`, and `create` verbs.

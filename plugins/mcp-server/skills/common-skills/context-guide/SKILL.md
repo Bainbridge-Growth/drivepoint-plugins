@@ -1,9 +1,11 @@
 # Context Guide
 
 How to read and write company and personal context. Read this before every
-`write_context` call. The system prompt's "Company and personal context"
-section says *when* to read and write; this skill says *what* a good file
-looks like and *where* it goes.
+`write_context`, `validate_context_file`, or `create_context_file` call. The
+system prompt's "Company and personal context" section says *when* to read
+and write; this skill says *what* a good file looks like and *where* it goes.
+The server enforces the hard limits below and rejects a write that breaks
+them, so treat the error message as the source of truth.
 
 ---
 
@@ -42,35 +44,38 @@ asking, it is personal.**
 
 ## 3. Layout
 
+Use the paths `list_context` returns. They look like this:
+
 ```
 organization/
-  profile.md               always in the prompt; at most 2,000 characters
+  profile.md               always in the prompt
   guidance.md              always in the prompt
   security.md              always in the prompt
-  context/business.md      in the index; read on demand
-  context/data-sources.md
-  context/model.md
-  context/metrics.md
-  context/glossary.md
-  context/team.md
+  context/<topic>.md       in the index; read on demand
+  context/<folder>/<topic>.md   folders are allowed, up to 3 deep
   skills/<name>/SKILL.md
-personal/<email>/
-  preferences.md           always in the prompt; at most 2,000 characters
+personal/
+  preferences.md           always in the prompt
   context/<topic>.md
   skills/<name>/SKILL.md
 ```
 
+Personal paths always mean the signed-in user's own files. File and folder
+names use lowercase letters, numbers, and hyphens.
+
 Add to the existing file for a topic before creating a new one. Create a new
-`context/<topic>.md` only when no existing file fits.
+file only when no existing file fits.
 
 ## 4. Every file
 
-1. **Frontmatter** with flat `key: value` lines:
-   - Context files: `title`, `description`, `owner`, `updated`, `source`,
-     and optionally `review_by`.
-   - Skills: `name`, `description`, `owner`, `updated`.
+1. **Frontmatter** is optional on write and uses flat `key: value` lines.
+   Write only `title` and `description` (skills may also have `name`, the
+   kebab-case skill name, which is also the folder name). Do not write `owner`, `updated`, or `source`:
+   the server stamps them on every save and ignores any you send. Do not
+   write a `company:` or `me:` prefix in `name`; the catalog adds that prefix
+   when it lists the skill.
 2. **`description` is the only thing the model sees in the index.** One line,
-   at most 150 characters, starting with "Use when…".
+   at most 150 characters, starting with "Use when…". `title` is at most 120.
 3. **One topic per file.** Limits apply to the body, after the frontmatter:
    context files at most 8,000 characters, skills at most 6,000,
    `guidance.md` and `security.md` at most 4,000, and `profile.md` and
@@ -80,9 +85,8 @@ Add to the existing file for a topic before creating a new one. Create a new
    marketplace fees" belongs in context. "Q2 revenue was $4.1M" does not — it
    goes stale and the data tools already answer it. If a number must appear,
    date it ("as of 2026-07-06").
-5. **Cite the source** for anything non-obvious: the conversation, a ticket,
-   a table name, or a person. Context files use the `source` field; skills
-   have no `source` field, so note provenance in the body.
+5. **Cite the source** for anything non-obvious in the body: the conversation,
+   a ticket, a table name, or a person.
 6. **Use real identifiers exactly**: table, column, `metric_id`, `plan_id`,
    and channel values as they appear in the warehouse.
 7. **Never save** credentials, raw personal data, customer addresses, or
@@ -92,16 +96,19 @@ Add to the existing file for a topic before creating a new one. Create a new
    outside this company's marts, another company's data, benchmarks, or
    Drivepoint-internal notes — even if your session can reach them.
 9. **Short, plain bullets.** No marketing tone, no hedging.
-10. **Agents write like people.** Set `owner` to the user who asked, set
-    `source` to the conversation (context files only), and set `updated` to
-    today's date from a query (`SELECT CURRENT_DATE()`), not from memory.
 
-## 5. Before you call `write_context`
+## 5. Before you save
 
-- Read the current file with `read_context` first and edit it; never replace
-  a file you have not read.
+- **Changing an existing file:** call `read_context` first and edit what it
+  returned; never replace a file you have not read. Pass the `generation`
+  from `read_context` to `write_context`. If someone changed the file since,
+  the write fails: read it again and redo the edit.
+- **Adding a new file or skill:** call `validate_context_file` to check it
+  without saving, show the user the result, then call `create_context_file`.
+  New files go through a safety review; `read_context` shows the
+  `reviewStatus`, and the file is usable only once it is `active`.
 - Show the user the exact lines you will add or change, and where they go.
-- Write only after the user confirms.
+- Save only after the user confirms.
 - If the new fact contradicts an existing line, replace the old line and say
   so. Do not keep both.
 
@@ -109,10 +116,8 @@ Add to the existing file for a topic before creating a new one. Create a new
 
 ```
 ---
-name: company:<kebab-case-name>
+name: <kebab-case-name>
 description: Use when <the trigger, in the user's words>.
-owner: <email>
-updated: <YYYY-MM-DD>
 ---
 
 # <Title>
@@ -128,5 +133,6 @@ updated: <YYYY-MM-DD>
 ```
 
 - Name the exact tools and tables to use.
-- Personal skills use the `me:` prefix.
+- The skill appears in `list_skills` as `company:<name>` or `me:<name>`,
+  depending on where it is saved.
 - A company or personal skill can never reuse the name of a Drivepoint skill.

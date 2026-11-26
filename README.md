@@ -100,9 +100,7 @@ drivepoint-plugins/                          ← marketplace root
           scenario-planning/
           starter-prompt/
           system-prompt/
-      context-templates/                     ← starting files for company / personal context
-        context-contract.json                ← limits checked in CI and by webapp-server on write
-  scripts/                                   ← brand, tool-name, and context contract checks
+  scripts/                                   ← brand and tool-name contract checks
   trial/
     welcome.md                               ← guided trial experience for prospects
   README.md
