@@ -15,6 +15,11 @@ Once connected, the Drivepoint MCP server exposes tools such as:
 - `run_query` — read-only GoogleSQL against the brand's marts
 - `get_plan` / `list_company_plans` — Drivepoint financial plans
 - `get_drivepoint_user` — the connected user's context
+- `list_context` / `read_context` / `write_context` / `get_context_history` —
+  the company's and the user's own context (facts, definitions, preferences),
+  with history. Company writes need a company admin.
+- `validate_context_file` / `create_context_file` — check and add a new
+  context file or skill. The writing rules are in the `context-guide` skill.
 
 ## Configuration
 
