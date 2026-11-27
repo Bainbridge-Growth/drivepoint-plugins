@@ -15,6 +15,10 @@ reports page," a recurring page the whole team opens — that's a **saved report
 definition**, not this: switch to `saved-reports-guide.md`
 (list_reports / get_report / preview_report / save_report) and author the
 definition object as the single artifact, rendering the JSX *from* it.
+When it is unclear whether the user will keep the report, treat it as a saved
+report: the report conventions in `saved-reports-guide.md` (controls in the
+side panel, queries bound to controls, standard tables with CSV) are the
+default for every report.
 
 **Decide this up front and build only once.** Don't hand-build a free-form
 artifact here and then reconstruct it as a definition after the user says "save"
