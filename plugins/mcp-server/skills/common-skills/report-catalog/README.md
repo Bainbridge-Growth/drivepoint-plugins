@@ -1,1 +1,1 @@
-Catalog of the stock report bundles that ship to every customer, with app deep-links. Read before building a report to check for an existing template that matches the intent and to link the user to the canonical experience.
+Live Neo report gallery (Firestore reportCatalog, seed version 9): 20 structured templates and 3 prompt-only cards, and the two Build paths. Read before linking to a stock report or building one. Structured cards are already saved definitions. Prompt-only cards are authored with saved-reports-guide and save_report.

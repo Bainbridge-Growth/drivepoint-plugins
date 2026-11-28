@@ -227,8 +227,8 @@ const DATE_RANGE = 'Q3 2025';
 const CUSTOMER_NAME = 'Sample Brand';
 const COMPANY_ID = '<RESOLVED_FROM_QUERY>';
 const REPORT_LINK = {
-  name: 'Financial Statements',
-  url: `https://app.drivepoint.io/${COMPANY_ID}/reports/bundle/finance_bundle`,
+  name: 'Profit and Loss Statement',
+  url: `{{app_base_url}}/neo/${COMPANY_ID}/reports/gallery`,
 };
 
 const SUBTOTALS = new Set([
@@ -286,7 +286,7 @@ export default function App() {
       </div>
       {REPORT_LINK && (
         <div className="text-xs text-[#716e6b] mt-4">
-          Also available in Drivepoint:{' '}
+          Also in the report gallery:{' '}
           <a href={REPORT_LINK.url} target="_blank" rel="noopener noreferrer" className="text-[#191815] underline hover:decoration-2">
             {REPORT_LINK.name}
           </a>
@@ -778,7 +778,7 @@ export default function App() {
 
 ## Example 6 — Cohort retention (heavy chart)
 
-**Triggered by:** cohort / LTV questions (`report-catalog` `cohortanalysis_bundle`).
+**Triggered by:** cohort / LTV questions. The live gallery has no cohort card, so leave `REPORT_LINK` null. This example is an in-chat artifact, not a gallery template.
 
 **Tier:** Customer-built compact. **24 monthly cohorts** — saturates PM-314 so adjacent hues can be judged.
 **Legend:** two-column swatch grid (12 × 2) under the chart — keeps 24 entries on-canvas.

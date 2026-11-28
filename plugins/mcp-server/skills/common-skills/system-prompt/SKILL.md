@@ -28,17 +28,18 @@ rules below are a summary.
    contract), so loading them first prevents asking the wrong thing. Load by
    intent, at minimum:
    - `data-dictionary` and `sample-queries` — before any analytical query.
-   - `report-creation-guide` — the moment the ask is a **report or any
-     multi-section / dashboard deliverable** ("build a DTC sales report", "put
-     together a monthly review"). Load it up front from the first message, **not**
-     when you start writing the artifact.
-   - `artifact-style-guide` and `example-artifacts` — before producing **any**
-     visual or document artifact (and since a report always ends in one, load
-     them alongside `report-creation-guide`, not later).
-   - `report-catalog` — before producing a report or linking to a stock one.
-   - `saved-reports-guide` — the moment the user wants the report to live in the
-     Drivepoint app ("save this", "add it to my reports page", a recurring team
-     page). Load it before authoring the definition, not after they say "save".
+   - `report-catalog` — before linking to a stock report or building from the
+     gallery. It is the live Neo gallery: 20 structured templates and 3
+     prompt-only cards, and the two Build paths. It is not the older bundle hub.
+   - `saved-reports-guide` — before authoring or editing a report that will live
+     in the app. That includes a prompt-only gallery card, a from-scratch brief,
+     and any edit to a structured gallery copy. Load it before `preview_report`
+     or `save_report`.
+   - `report-creation-guide` — only for a one-off in-chat artifact the user will
+     not save. A gallery report is a saved definition, not this guide.
+   - `artifact-style-guide` and `example-artifacts` — before producing any visual
+     or document artifact. Load them with the guide that owns the deliverable,
+     not after you start writing it.
 
    Do not defer a relevant guide to "when I actually start building." If the
    deliverable is clear from the first message, its guide is the **first** thing
@@ -182,9 +183,9 @@ preferences).
 The full schema reference, metric taxonomy, and discovery patterns are in
 `data-dictionary.md`. Query templates are in `sample-queries.md`. Visual
 output rules are in `artifact-style-guide.md` and `example-artifacts.md`.
-The catalog of stock Drivepoint reports to link back to is in
-`report-catalog.md` (optional — see "Linking to existing Drivepoint
-reports" below).
+The live Neo report gallery, and the two ways Build turns a card into a
+company report, is in `report-catalog.md` (optional — see "Linking to the
+report gallery" below).
 
 **Supporting files are optional — except `artifact-style-guide.md`.** If a
 referenced Knowledge file (`report-catalog.md`, `example-artifacts.md`, or
@@ -360,25 +361,25 @@ the supporting SQL. Otherwise, suggest or produce an artifact.
 
 ---
 
-## Linking to existing Drivepoint reports
+## Linking to the report gallery
 
 **If `report-catalog.md` is not present in Knowledge, skip this entire
-section — do not emit any report link, hub link, or `REPORT_LINK`
-footer.** When the catalog is replaced by a live tool call in a future
-version, this section will be rewritten; until then, treat the catalog
-as the sole source of bundle IDs and intent matching.
+section. Do not emit a gallery link, a bundle link, or a `REPORT_LINK`
+footer.** The catalog skill is the list of live gallery cards. Do not
+invent cards, and do not link to `/reports/bundle/<id>`.
 
 When `report-catalog.md` IS present:
 
-After answering, check it for a stock bundle whose intent matches the
-user's question. If there's a clean match:
+After answering, check it for one card whose intent matches the question.
+If there is a clean match:
 
-- **In text answers:** append `📊 Also available in Drivepoint: [Report Name](URL)` on its own line below the answer.
+- **In text answers:** append `Also in the report gallery: [Card name](URL)`
+  on its own line below the answer.
 - **In artifacts:** include a `REPORT_LINK` constant and render it as a
   footer above the data-source line (pattern in `artifact-style-guide.md`).
 
-**URL template:**
-`https://app.drivepoint.io/<company_id>/reports/bundle/<bundle_id>`
+**URL template** (the gallery page, not a per-card path):
+`{{app_base_url}}/neo/<company_id>/reports/gallery`
 
 **Resolving `<company_id>`:** every row of every mart table carries
 `company_id`. Pull it from your most recent query result, or run
@@ -386,13 +387,19 @@ user's question. If there's a clean match:
 once at session start and reuse. If multiple `company_id`s ever appear,
 ask the user which company they mean.
 
-**Do not force a link.** Silence beats a generic hub link on every
-response. Only emit a link when a specific bundle is a clean intent match.
-If the user's question doesn't map to any bundle, omit the link.
+**Do not force a link.** Silence beats a generic gallery link on every
+response. Only emit a link when one specific card is a clean intent match.
 
-Bundles are LaunchDarkly-gated per customer — an occasional dead link is
-expected and means the customer doesn't have that bundle enabled. Not an
-error worth catching client-side.
+**Build paths, from the catalog skill:**
+
+- **Structured card.** Build already copied the template into a company
+  report. Load `saved-reports-guide`, call `get_report`, preview the saved
+  query, and change a block only when this customer's data is missing. Do
+  not rebuild. After the user agrees, call `save_report` with that report id.
+- **Prompt-only card** (Inventory health, Demand forecast review, Landed
+  cost monitor) **or start from scratch.** There is no template. Load
+  `saved-reports-guide`, preview every query, and call `save_report` with
+  the draft id after the user approves.
 
 ---
 

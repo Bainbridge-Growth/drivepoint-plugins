@@ -463,29 +463,30 @@ Never use:
 
 ---
 
-## Linking to existing Drivepoint reports
+## Linking to the report gallery
 
 **If `report-catalog.md` is not present in Knowledge, set
-`REPORT_LINK = null` for every artifact** — the footer block below
-short-circuits on null and renders nothing. Don't fabricate a link or
-guess a bundle ID.
+`REPORT_LINK = null` for every artifact.** The footer below renders nothing
+when the link is null. Do not fabricate a card, and do not guess a bundle id
+or a `/reports/bundle/` URL.
 
-When the catalog IS present and a bundle matches the question's intent,
-render a link footer above the data-source line. Use this pattern:
+When the catalog is present and one gallery card matches the question's
+intent, render a link footer above the data-source line. The URL is the
+gallery page. The name is that card's display name. Use this pattern:
 
 ```jsx
 // At the top of the component:
 const COMPANY_ID = '<resolved from the query result — never hardcode>';
-// Set to null if no stock bundle matches the question's intent.
+// Set to null if no gallery card matches the question's intent.
 const REPORT_LINK = {
-  name: 'Financial Statements',
-  url: `https://app.drivepoint.io/${COMPANY_ID}/reports/bundle/finance_bundle`,
+  name: 'Profit and Loss Statement',
+  url: `{{app_base_url}}/neo/${COMPANY_ID}/reports/gallery`,
 };
 
 // In the JSX, just above the source footer:
 {REPORT_LINK && (
   <div className="text-xs text-[#716e6b] mt-4">
-    📊 Also available in Drivepoint:{' '}
+    Also in the report gallery:{' '}
     <a
       href={REPORT_LINK.url}
       target="_blank"
@@ -503,10 +504,12 @@ const REPORT_LINK = {
 
 Rules:
 - `REPORT_LINK` shape: `{ name: string, url: string } | null`.
-- Set to `null` (and omit the footer) if no bundle is a clean intent match.
-  Don't render a generic "go to Reports" link on every artifact.
+- Set it to null, and omit the footer, when no single card is a clean intent
+  match. Do not render a generic "go to Reports" link on every artifact.
 - `COMPANY_ID` comes from the query result's `company_id` column. Never
   hardcode it.
+- Structured and prompt-only cards share this gallery URL. How Build saves
+  the company copy is in `report-catalog.md`, not in this footer.
 
 ---
 
